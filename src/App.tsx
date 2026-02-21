@@ -1,6 +1,23 @@
 import "./App.css";
+import { toPng } from "html-to-image";
 
 export default function App() {
+  async function exportPng() {
+    const node = document.getElementById("cbmx-canvas");
+    if (!node) {
+      alert("Canvas not found.");
+      return;
+    }
+
+    // higher pixel density for sharper exports
+    const dataUrl = await toPng(node, { pixelRatio: 2 });
+
+    const link = document.createElement("a");
+    link.download = "cbmx-blueprint.png";
+    link.href = dataUrl;
+    link.click();
+  }
+
   return (
     <div style={{ padding: 16, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -10,7 +27,7 @@ export default function App() {
           <button type="button" onClick={() => alert("New blueprint (next step)")}>
             New
           </button>
-          <button type="button" onClick={() => alert("Export PNG (next step)")}>
+          <button type="button" onClick={exportPng}>
             Export PNG
           </button>
           <button type="button" onClick={() => alert("Export PDF (next step)")}>
