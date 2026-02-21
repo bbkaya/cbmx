@@ -1,6 +1,75 @@
 import "./App.css";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
+import CBMXTable, { type CBMXBlueprint } from "./components/CBMXTable";
+
+
+const sampleBlueprint: CBMXBlueprint = {
+  meta: { id: "cbmx-001", name: "Sample CBMX" },
+  networkValueProposition: {
+    statement: "Deliver an integrated solution through a collaborative network.",
+    targetCustomer: "Target customer / problem owner",
+  },
+  actors: [
+    {
+      id: "A1",
+      type: "Customer",
+      name: "Actor 1 (Customer)",
+      actorValueProposition: { statement: "Provides demand, feedback, and adoption." },
+      costs: [{ type: "Financial", description: "Subscription fee" }],
+      benefits: [{ type: "Social", description: "Improved accessibility" }],
+      kpis: [{ name: "User satisfaction", rank: 1 }],
+      services: [{ name: "Use service", operations: [{ name: "Request" }, { name: "Rate" }] }],
+    },
+    {
+      id: "A2",
+      type: "Orchestrator",
+      name: "Actor 2 (Orchestrator)",
+      actorValueProposition: { statement: "Coordinates actors and ensures service integration." },
+      costs: [{ type: "OtherNonFinancial", description: "Coordination effort" }],
+      benefits: [{ type: "Financial", description: "Orchestration fee" }],
+      kpis: [{ name: "Network adoption", rank: 1 }],
+      services: [{ name: "Orchestration", operations: [{ name: "Matchmaking" }] }],
+    },
+    {
+      id: "A3",
+      type: "Other",
+      name: "Actor 3",
+      actorValueProposition: { statement: "Provides complementary service capability." },
+      costs: [{ type: "Environmental", description: "Operational footprint" }],
+      benefits: [{ type: "Financial", description: "Usage-based revenue" }],
+      kpis: [{ name: "Utilization", rank: 1 }],
+      services: [{ name: "Service delivery", operations: [] }],
+    },
+    {
+      id: "A4",
+      type: "Other",
+      name: "Actor 4",
+      actorValueProposition: { statement: "Provides data/asset needed for delivery." },
+      costs: [{ type: "Financial", description: "Integration cost" }],
+      benefits: [{ type: "OtherNonFinancial", description: "Reputation uplift" }],
+      kpis: [{ name: "Data quality", rank: 1 }],
+      services: [{ name: "Data provision", operations: [{ name: "Publish" }] }],
+    },
+    {
+      id: "A5",
+      type: "Other",
+      name: "Actor 5",
+      actorValueProposition: { statement: "Provides support and maintenance." },
+      costs: [{ type: "Social", description: "On-call load" }],
+      benefits: [{ type: "Financial", description: "Support contract margin" }],
+      kpis: [{ name: "SLA compliance", rank: 1 }],
+      services: [{ name: "Support", operations: [{ name: "Resolve incidents" }] }],
+    },
+  ],
+  coCreationProcesses: [
+    { id: "P1", name: "Onboarding", participantActorIds: ["A1", "A2", "A4"] },
+    { id: "P2", name: "Service delivery", participantActorIds: ["A1", "A2", "A3"] },
+    { id: "P3", name: "Support & improvement", participantActorIds: ["A1", "A2", "A5"] },
+  ],
+};
+
+
 
 export default function App() {
   async function exportPng() {
@@ -59,44 +128,39 @@ async function exportPdf() {
   pdf.save("cbmx-blueprint.pdf");
 }
 
-  return (
-    <div style={{ padding: 16, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" }}>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <h1 style={{ margin: 0, fontSize: 20 }}>CBMX Blueprint Tool</h1>
+return (
+  <div style={{ padding: 16, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" }}>
+    <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <h1 style={{ margin: 0, fontSize: 20 }}>CBMX Blueprint Tool</h1>
 
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" onClick={() => alert("New blueprint (next step)")}>
-            New
-          </button>
-          <button type="button" onClick={exportPng}>
-            Export PNG
-          </button>
-<button type="button" onClick={exportPdf}>
-  Export PDF
-</button>
-        </div>
-      </header>
-
-      <p style={{ marginTop: 8, color: "#444" }}>
-        Goal: create, edit, and export CBMX blueprints (PNG/PDF). Next we’ll add the actual CBMX table layout.
-      </p>
-
-      <div
-        id="cbmx-canvas"
-        style={{
-          marginTop: 16,
-          border: "1px solid #ccc",
-          borderRadius: 8,
-          padding: 16,
-          minHeight: 480,
-          background: "white",
-        }}
-      >
-        <strong>Canvas placeholder</strong>
-        <div style={{ marginTop: 8, color: "#666" }}>
-          In the next step, we will render the CBMX blueprint table here.
-        </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button type="button" onClick={() => alert("New blueprint (next step)")}>
+          New
+        </button>
+        <button type="button" onClick={exportPng}>
+          Export PNG
+        </button>
+        <button type="button" onClick={exportPdf}>
+          Export PDF
+        </button>
       </div>
+    </header>
+
+    <p style={{ marginTop: 8, color: "#444" }}>
+      Goal: create, edit, and export CBMX blueprints (PNG/PDF).
+    </p>
+
+    {/* This wrapper is what your export code captures */}
+    <div
+      id="cbmx-canvas"
+      style={{
+        marginTop: 16,
+        display: "inline-block", // important: export only the table width, not full page
+        background: "white",
+      }}
+    >
+      <CBMXTable blueprint={sampleBlueprint} actorCount={5} />
     </div>
-  );
+  </div>
+);
 }
