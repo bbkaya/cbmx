@@ -2,7 +2,7 @@ import "./App.css";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 import CBMXTable, { type CBMXBlueprint } from "./components/CBMXTable";
-
+import { useState } from "react";
 
 const sampleBlueprint: CBMXBlueprint = {
   meta: { id: "cbmx-001", name: "Sample CBMX" },
@@ -72,6 +72,8 @@ const sampleBlueprint: CBMXBlueprint = {
 
 
 export default function App() {
+  const [blueprint, setBlueprint] = useState<CBMXBlueprint>(sampleBlueprint);
+  
   async function exportPng() {
     const node = document.getElementById("cbmx-canvas");
     if (!node) {
@@ -159,7 +161,7 @@ return (
         background: "white",
       }}
     >
-      <CBMXTable blueprint={sampleBlueprint} actorCount={5} />
+      <CBMXTable blueprint={blueprint} actorCount={5} onChange={setBlueprint} />
     </div>
   </div>
 );
