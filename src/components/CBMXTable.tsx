@@ -174,7 +174,7 @@ export default function CBMXTable({
 
           {/* Co-creation Processes (merged across all actor subcolumns) */}
           <tr>
-            <td style={rowLabelCell}>Co-creation Processes</td>
+            <td style={rowLabelCell}>Co-Creation Processes</td>
             <td colSpan={colspanNetwork} style={cell}>
               {renderList((bp.coCreationProcesses || []).map((p) => p.name))}
             </td>
