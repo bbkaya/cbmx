@@ -52,7 +52,7 @@ export default function CBMXTable({
     next.networkValueProposition.statement = val;
     onChange(next);
   }
-  
+
   return (
     <div style={{ display: "inline-block", padding: 14, border: "1px solid #ddd", borderRadius: 10, background: "#fff" }}>
       <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
@@ -64,17 +64,33 @@ export default function CBMXTable({
         </colgroup>
 
         <tbody>
-          {/* Network Value Proposition (merged across all actor subcolumns) */}
+          {/* Net. Value Proposition (merged across all actor subcolumns) */}
           <tr>
-            <td style={rowLabelCell}>Network Value Proposition</td>
+            <td style={rowLabelCell}>Net. Value Proposition</td>
+
             <td colSpan={colspanNetwork} style={networkCell}>
-              <div>
-                <strong>Statement:</strong>{" "}
-                {bp.networkValueProposition?.statement ?? ""}
+              {/* Only this field is editable in this patch */}
+              <div
+                onClick={editNetworkVPStatement}
+                title={onChange ? "Click to edit" : undefined}
+                style={{
+                  cursor: onChange ? "pointer" : "default",
+                  padding: 2,
+                  borderRadius: 4,
+                }}
+                onMouseEnter={(e) => {
+                  if (!onChange) return;
+                  (e.currentTarget as HTMLDivElement).style.outline = "2px solid #bbb";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.outline = "none";
+                }}
+              >
+                <strong>Statement:</strong> {bp.networkValueProposition?.statement ?? ""}
               </div>
+
               <div style={smallText}>
-                <strong>Target customer:</strong>{" "}
-                {bp.networkValueProposition?.targetCustomer ?? ""}
+                <strong>Target customer:</strong> {bp.networkValueProposition?.targetCustomer ?? ""}
               </div>
             </td>
           </tr>
@@ -125,9 +141,9 @@ export default function CBMXTable({
           {rowByType("Social", "Social", actors)}
           {rowByType("Other Non-Financial", "OtherNonFinancial", actors)}
 
-          {/* KPIs */}
+          {/* KPIs (ranked) */}
           <tr>
-            <td style={rowLabelCell}>KPIs</td>
+            <td style={rowLabelCell}>KPIs (ranked)</td>
             {actors.map((a) => {
               const kpis = (a.kpis || [])
                 .slice()
