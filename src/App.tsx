@@ -133,7 +133,7 @@ async function exportPdf() {
 return (
   <div style={{ padding: 16, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" }}>
     <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-      <h1 style={{ margin: 0, fontSize: 20 }}>CBMX Blueprint Tool</h1>
+      <h1 style={{ margin: 0, fontSize: 20 }}>CBMX Blueprint Editor</h1>
 
       <div style={{ display: "flex", gap: 8 }}>
         <button type="button" onClick={() => alert("New blueprint (next step)")}>
