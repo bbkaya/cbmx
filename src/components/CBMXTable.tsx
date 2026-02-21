@@ -186,7 +186,6 @@ function normalizeActors(actorsIn: Actor[], actorCount: number) {
 }
 
 function groupItemsByType(items: CBItem[]) {
-  const types: CostBenefitType[] = ["Financial", "Environmental", "Social", "OtherNonFinancial"];
   const map: Record<CostBenefitType, string[]> = {
     Financial: [],
     Environmental: [],
