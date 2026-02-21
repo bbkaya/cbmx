@@ -1,5 +1,6 @@
 import "./App.css";
 import { toPng } from "html-to-image";
+import jsPDF from "jspdf";
 
 export default function App() {
   async function exportPng() {
@@ -18,6 +19,46 @@ export default function App() {
     link.click();
   }
 
+async function exportPdf() {
+  const node = document.getElementById("cbmx-canvas");
+  if (!node) {
+    alert("Canvas not found.");
+    return;
+  }
+
+  // Capture the canvas as an image
+  const dataUrl = await toPng(node, { pixelRatio: 2 });
+
+  // Create an A4 landscape PDF (good default for wide tables)
+  const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  // We need the image dimensions to scale it to fit the page
+  const img = new Image();
+  img.src = dataUrl;
+
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("Failed to load image for PDF export."));
+  });
+
+  const imgWidth = img.width;
+  const imgHeight = img.height;
+
+  // Fit image into page while preserving aspect ratio
+  const scale = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+  const renderWidth = imgWidth * scale;
+  const renderHeight = imgHeight * scale;
+
+  const x = (pageWidth - renderWidth) / 2;
+  const y = (pageHeight - renderHeight) / 2;
+
+  pdf.addImage(dataUrl, "PNG", x, y, renderWidth, renderHeight);
+  pdf.save("cbmx-blueprint.pdf");
+}
+
   return (
     <div style={{ padding: 16, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -30,9 +71,9 @@ export default function App() {
           <button type="button" onClick={exportPng}>
             Export PNG
           </button>
-          <button type="button" onClick={() => alert("Export PDF (next step)")}>
-            Export PDF
-          </button>
+<button type="button" onClick={exportPdf}>
+  Export PDF
+</button>
         </div>
       </header>
 
