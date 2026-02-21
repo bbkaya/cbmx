@@ -7,9 +7,8 @@ import { useState } from "react";
 const sampleBlueprint: CBMXBlueprint = {
   meta: { id: "cbmx-001", name: "Sample CBMX" },
   networkValueProposition: {
-    statement: "Deliver an integrated solution through a collaborative network.",
-    targetCustomer: "Target customer / problem owner",
-  },
+  statement: "Deliver an integrated solution through a collaborative network.",
+},
   actors: [
     {
       id: "A1",
