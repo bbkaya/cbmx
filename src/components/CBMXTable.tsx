@@ -25,13 +25,34 @@ export type CBMXBlueprint = {
   coCreationProcesses?: { id: string; name: string; participantActorIds?: string[] }[];
 };
 
-export default function CBMXTable({ blueprint, actorCount = 5 }: { blueprint: CBMXBlueprint; actorCount?: number }) {
+export default function CBMXTable({
+  blueprint,
+  actorCount = 5,
+  onChange,
+}: {
+  blueprint: CBMXBlueprint;
+  actorCount?: number;
+  onChange?: (next: CBMXBlueprint) => void;
+}) {
   const bp = blueprint;
   validateBlueprint(bp);
 
   const { actors, N } = normalizeActors(bp.actors, actorCount);
   const colspanNetwork = N * 2;
 
+  function editNetworkVPStatement() {
+    if (!onChange) return;
+
+    const current = blueprint.networkValueProposition?.statement ?? "";
+    const val = window.prompt("Edit network value proposition (statement):", current);
+    if (val === null) return; // user cancelled
+
+    const next: CBMXBlueprint = structuredClone(blueprint);
+    next.networkValueProposition = next.networkValueProposition ?? {};
+    next.networkValueProposition.statement = val;
+    onChange(next);
+  }
+  
   return (
     <div style={{ display: "inline-block", padding: 14, border: "1px solid #ddd", borderRadius: 10, background: "#fff" }}>
       <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
