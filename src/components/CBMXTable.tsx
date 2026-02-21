@@ -20,7 +20,7 @@ type Actor = {
 
 export type CBMXBlueprint = {
   meta?: { id?: string; name?: string };
-  networkValueProposition?: { statement?: string; targetCustomer?: string };
+  networkValueProposition?: { statement?: string };
   actors: Actor[];
   coCreationProcesses?: { id: string; name: string; participantActorIds?: string[] }[];
 };
@@ -70,6 +70,8 @@ export default function CBMXTable({
 
             <td colSpan={colspanNetwork} style={networkCell}>
               {/* Only this field is editable in this patch */}
+
+
               <div
                 onClick={editNetworkVPStatement}
                 title={onChange ? "Click to edit" : undefined}
@@ -86,12 +88,9 @@ export default function CBMXTable({
                   (e.currentTarget as HTMLDivElement).style.outline = "none";
                 }}
               >
-                <strong>Statement:</strong> {bp.networkValueProposition?.statement ?? ""}
+                {bp.networkValueProposition?.statement ?? ""}
               </div>
 
-              <div style={smallText}>
-                <strong>Target customer:</strong> {bp.networkValueProposition?.targetCustomer ?? ""}
-              </div>
             </td>
           </tr>
 
@@ -298,8 +297,3 @@ const networkCell: React.CSSProperties = {
   fontWeight: 600,
 };
 
-const smallText: React.CSSProperties = {
-  fontSize: 11,
-  color: "#333",
-  marginTop: 4,
-};
