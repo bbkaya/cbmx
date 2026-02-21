@@ -43,9 +43,9 @@ export default function CBMXTable({ blueprint, actorCount = 5 }: { blueprint: CB
         </colgroup>
 
         <tbody>
-          {/* Net. Value Proposition (merged across all actor subcolumns) */}
+          {/* Network Value Proposition (merged across all actor subcolumns) */}
           <tr>
-            <td style={rowLabelCell}>Net. Value Proposition</td>
+            <td style={rowLabelCell}>Network Value Proposition</td>
             <td colSpan={colspanNetwork} style={networkCell}>
               <div>
                 <strong>Statement:</strong>{" "}
@@ -104,9 +104,9 @@ export default function CBMXTable({ blueprint, actorCount = 5 }: { blueprint: CB
           {rowByType("Social", "Social", actors)}
           {rowByType("Other Non-Financial", "OtherNonFinancial", actors)}
 
-          {/* KPIs (ranked) */}
+          {/* KPIs */}
           <tr>
-            <td style={rowLabelCell}>KPIs (ranked)</td>
+            <td style={rowLabelCell}>KPIs</td>
             {actors.map((a) => {
               const kpis = (a.kpis || [])
                 .slice()
