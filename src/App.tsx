@@ -11,10 +11,12 @@ function makeBlankActor(idNum: number) {
   return {
     id,
     type: "Other" as const,
-    name: "Click to edit actor name",
-    actorValueProposition: { statement: "Click to edit actor value proposition" },
+    name: "Click to edit",
+    actorValueProposition: { statement: "Click to edit" },
+
     costs: [{ type: "Financial" as const, description: "Click to edit" }],
     benefits: [{ type: "Financial" as const, description: "Click to edit" }],
+
     kpis: [],
     services: [
       {
@@ -25,19 +27,14 @@ function makeBlankActor(idNum: number) {
   };
 }
 
-/**
- * Starter blueprint:
- * - Not a “sample”
- * - Contains 5 placeholder actors so validation doesn't block editing
- * - Uses "Click to edit" instead of "Actor 1..5"
- */
 const starterBlueprint: CBMXBlueprint = {
   meta: { id: "cbmx-new", name: "New CBMX Blueprint" },
   networkValueProposition: {
     statement: "Click to edit",
   },
   actors: [makeBlankActor(1), makeBlankActor(2), makeBlankActor(3), makeBlankActor(4), makeBlankActor(5)],
-    coCreationProcesses: [
+
+  coCreationProcesses: [
     {
       name: "Click to edit",
       participantActorIds: ["A1", "A2", "A3", "A4", "A5"],
