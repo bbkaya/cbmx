@@ -1,7 +1,7 @@
 import "./App.css";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
-import CBMXTable, { type CBMXBlueprint, validateCBMXBlueprint } from "./components/CBMXTable";
+import CBMXTable, { type CBMXBlueprint, validateCBMXBlueprint } from "./components/cbmx/CBMXTable";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const sampleBlueprint: CBMXBlueprint = {
