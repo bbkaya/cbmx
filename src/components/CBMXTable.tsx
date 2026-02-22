@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, Fragment } from "react";
 
 type CostBenefitType = "Financial" | "Environmental" | "Social" | "OtherNonFinancial";
 
@@ -329,10 +329,10 @@ export default function CBMXTable({
           <tr>
             <td style={rowLabelCell}>Costs &amp; Benefits</td>
             {actors.map((a) => (
-              <React.Fragment key={a.id}>
+              <Fragment key={a.id}>
                 <th style={thCell}>Costs</th>
                 <th style={thCell}>Benefits</th>
-              </React.Fragment>
+              </Fragment>
             ))}
           </tr>
 
@@ -340,7 +340,7 @@ export default function CBMXTable({
             <tr key={`row-${key}`}>
               <td style={rowLabelIndentCell}>&nbsp;&nbsp;{label}</td>
               {actors.map((a) => (
-                <React.Fragment key={a.id}>
+                <Fragment key={a.id}>
                   <td style={cellLeft}>
                     <SlotStack
                       slots={PER_VALUE_TYPE_SLOTS}
@@ -359,7 +359,7 @@ export default function CBMXTable({
                       onCommit={(i, v) => setNthValueItem(a.id, "benefits", key, i, v)}
                     />
                   </td>
-                </React.Fragment>
+                </Fragment>
               ))}
             </tr>
           ))}
@@ -431,7 +431,7 @@ function EditableText({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!editing) setDraft(value ?? "");
   }, [value, editing]);
 
@@ -460,7 +460,7 @@ function EditableText({
     );
   }
 
-  const commonStyle: React.CSSProperties = {
+  const commonStyle: CSSProperties = {
     width: "100%",
     boxSizing: "border-box",
     font: "inherit",
@@ -635,7 +635,7 @@ function deepClone<T>(x: T): T {
 
 /* ---------------- styles ---------------- */
 
-const baseCell: React.CSSProperties = {
+const baseCell: CSSProperties = {
   border: "1px solid #222",
   verticalAlign: "top",
   padding: 8,
@@ -645,30 +645,30 @@ const baseCell: React.CSSProperties = {
   background: "white",
 };
 
-const cell: React.CSSProperties = { ...baseCell };
+const cell: CSSProperties = { ...baseCell };
 
-const thCell: React.CSSProperties = {
+const thCell: CSSProperties = {
   ...baseCell,
   fontWeight: 700,
   textAlign: "center",
 };
 
-const rowLabelCell: React.CSSProperties = {
+const rowLabelCell: CSSProperties = {
   ...baseCell,
   width: 220,
   fontWeight: 700,
 };
 
-const rowLabelIndentCell: React.CSSProperties = {
+const rowLabelIndentCell: CSSProperties = {
   ...rowLabelCell,
 };
 
-const networkCell: React.CSSProperties = {
+const networkCell: CSSProperties = {
   ...baseCell,
   fontWeight: 600,
 };
 
-const cellLeft: React.CSSProperties = {
+const cellLeft: CSSProperties = {
   ...baseCell,
   textAlign: "left",
 };
