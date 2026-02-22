@@ -27,6 +27,7 @@ import {
   setServiceSlot,
 } from "./cbmxMutators";
 
+
 import { cell, cellLeft, networkCell, rowLabelCell, rowLabelIndentCell, thCell } from "./styles";
 
 /** Default slots per your rule-of-thumb (can be made configurable later) */
