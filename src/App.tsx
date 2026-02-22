@@ -2,7 +2,7 @@ import "./App.css";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 import CBMXTable, { type CBMXBlueprint, validateCBMXBlueprint } from "./components/CBMXTable";
-import { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const sampleBlueprint: CBMXBlueprint = {
   meta: { id: "cbmx-001", name: "Sample CBMX" },
@@ -75,17 +75,40 @@ export default function App() {
   // Draft for editing (what the table edits)
   const [draft, setDraft] = useState<CBMXBlueprint>(() => deepClone(sampleBlueprint));
 
-  // file picker ref for import
+  // JSON import file input
   const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Actions menu
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   // Dirtiness checks
   const blueprintHash = useMemo(() => stableHash(blueprint), [blueprint]);
   const draftHash = useMemo(() => stableHash(draft), [draft]);
   const isDirty = draftHash !== blueprintHash;
 
-  // Keep validation tied to the draft (what user is editing)
+  // Validation tied to draft
   const issues = useMemo(() => validateCBMXBlueprint(draft), [draft]);
   const hasBlocking = issues.some((x) => x.level === "error");
+
+  // Close menu on outside click / escape
+  useEffect(() => {
+    function onDocMouseDown(e: MouseEvent) {
+      if (!menuOpen) return;
+      const target = e.target as Node | null;
+      if (target && menuRef.current && !menuRef.current.contains(target)) setMenuOpen(false);
+    }
+    function onDocKeyDown(e: KeyboardEvent) {
+      if (!menuOpen) return;
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onDocKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onDocKeyDown);
+    };
+  }, [menuOpen]);
 
   function newBlueprint() {
     const fresh = deepClone(sampleBlueprint);
@@ -104,6 +127,10 @@ export default function App() {
     setDraft(deepClone(blueprint));
   }
 
+  // -------- Import/Export gating rule --------
+  // Only allowed when there are no unsaved changes.
+  const ioEnabled = !isDirty;
+
   // ---------------- JSON Export/Import ----------------
 
   function downloadJson(filename: string, obj: unknown) {
@@ -119,12 +146,8 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
-  function exportJsonDraft() {
-    const name = (draft.meta?.name ?? "cbmx-blueprint").trim() || "cbmx-blueprint";
-    downloadJson(`${safeFilename(name)}-draft.json`, draft);
-  }
-
   function exportJsonSaved() {
+    // Only export the committed/saved blueprint
     const name = (blueprint.meta?.name ?? "cbmx-blueprint").trim() || "cbmx-blueprint";
     downloadJson(`${safeFilename(name)}.json`, blueprint);
   }
@@ -144,22 +167,21 @@ export default function App() {
       return;
     }
 
-    // Minimal shape check
     const candidate = parsed as CBMXBlueprint;
     if (!candidate || !Array.isArray(candidate.actors)) {
       alert("Import failed: JSON does not look like a CBMX blueprint (missing actors array).");
       return;
     }
 
-    // Validate; allow import even with warnings; block if errors? (I recommend allow, but Save will be disabled)
+    // Load into draft (not into saved blueprint)
+    setDraft(deepClone(candidate));
+
     const importedIssues = validateCBMXBlueprint(candidate);
     const importedErrors = importedIssues.filter((x) => x.level === "error");
 
-    setDraft(deepClone(candidate));
-
     if (importedErrors.length > 0) {
       alert(
-        `Imported with ${importedErrors.length} validation error(s). You can edit to fix them; Save will remain disabled until resolved.`
+        `Import completed with ${importedErrors.length} validation error(s). Fix them; then click Save to commit.`
       );
     } else {
       alert("Import successful. Review and click Save to commit.");
@@ -167,16 +189,14 @@ export default function App() {
   }
 
   // ---------------- PNG/PDF Export ----------------
-
+  // Export should reflect what is on screen. But per your rule, we only allow it when saved/no unsaved changes.
   async function exportPng() {
     const node = document.getElementById("cbmx-canvas");
     if (!node) {
       alert("Canvas not found.");
       return;
     }
-
     const dataUrl = await toPng(node, { pixelRatio: 2 });
-
     const link = document.createElement("a");
     link.download = "cbmx-blueprint.png";
     link.href = dataUrl;
@@ -219,6 +239,11 @@ export default function App() {
     pdf.save("cbmx-blueprint.pdf");
   }
 
+  function runMenuAction(fn: () => void | Promise<void>) {
+    setMenuOpen(false);
+    void fn();
+  }
+
   return (
     <div style={{ padding: 16, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -246,23 +271,80 @@ export default function App() {
             {isDirty ? "Unsaved changes" : "All changes saved"}
           </span>
 
-          {/* JSON buttons */}
-          <button type="button" onClick={exportJsonDraft}>
-            Export JSON (Draft)
-          </button>
-          <button type="button" onClick={exportJsonSaved}>
-            Export JSON (Saved)
-          </button>
-          <button type="button" onClick={openImportDialog}>
-            Import JSON
-          </button>
+          {/* Actions (kebab) menu */}
+          <div ref={menuRef} style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              title={
+                ioEnabled
+                  ? "Import/Export"
+                  : "Save or discard changes before importing/exporting."
+              }
+              style={{
+                width: 34,
+                height: 34,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 18,
+                lineHeight: 1,
+                borderRadius: 8,
+              }}
+            >
+              ⋯
+            </button>
 
-          <button type="button" onClick={exportPng}>
-            Export PNG
-          </button>
-          <button type="button" onClick={exportPdf}>
-            Export PDF
-          </button>
+            {menuOpen ? (
+              <div
+                role="menu"
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: 40,
+                  minWidth: 220,
+                  background: "white",
+                  border: "1px solid #ddd",
+                  borderRadius: 10,
+                  boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
+                  padding: 6,
+                  zIndex: 50,
+                }}
+              >
+                <MenuItem
+                  disabled={!ioEnabled}
+                  label="Export JSON"
+                  onClick={() => runMenuAction(exportJsonSaved)}
+                />
+                <MenuItem
+                  disabled={!ioEnabled}
+                  label="Export PNG"
+                  onClick={() => runMenuAction(exportPng)}
+                />
+                <MenuItem
+                  disabled={!ioEnabled}
+                  label="Export PDF"
+                  onClick={() => runMenuAction(exportPdf)}
+                />
+
+                <div style={{ height: 1, background: "#eee", margin: "6px 0" }} />
+
+                <MenuItem
+                  disabled={!ioEnabled}
+                  label="Import JSON"
+                  onClick={() => runMenuAction(openImportDialog)}
+                />
+
+                {!ioEnabled ? (
+                  <div style={{ padding: "6px 10px", fontSize: 12, color: "#b45309" }}>
+                    Save or discard changes first.
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -296,6 +378,44 @@ export default function App() {
         <CBMXTable blueprint={draft} actorCount={5} onChange={setDraft} />
       </div>
     </div>
+  );
+}
+
+function MenuItem({
+  label,
+  onClick,
+  disabled,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        width: "100%",
+        textAlign: "left",
+        padding: "8px 10px",
+        borderRadius: 8,
+        border: "none",
+        background: "transparent",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.5 : 1,
+      }}
+      onMouseEnter={(e) => {
+        if (disabled) return;
+        (e.currentTarget as HTMLButtonElement).style.background = "#f3f4f6";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -350,10 +470,11 @@ function stableHash(obj: unknown): string {
 }
 
 function safeFilename(name: string) {
-  // keep it simple and cross-platform
-  return name
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9._-]/g, "")
-    .slice(0, 80) || "cbmx-blueprint";
+  return (
+    name
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-zA-Z0-9._-]/g, "")
+      .slice(0, 80) || "cbmx-blueprint"
+  );
 }
