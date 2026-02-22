@@ -348,7 +348,7 @@ export default function App() {
         </div>
       </header>
 
-      <p style={{ marginTop: 8, color: "#444" }}>Goal: create, edit, and export CBMX blueprints (PNG/PDF).</p>
+      <p style={{ marginTop: 8, color: "#444" }}></p>
 
       <ValidationPanel issues={issues} />
 
