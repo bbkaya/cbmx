@@ -36,6 +36,7 @@ const starterBlueprint: CBMXBlueprint = {
 
   coCreationProcesses: [
     {
+      id: "P1",
       name: "Click to edit",
       participantActorIds: ["A1", "A2", "A3", "A4", "A5"],
     },
