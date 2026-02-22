@@ -11,10 +11,10 @@ function makeBlankActor(idNum: number) {
   return {
     id,
     type: "Other" as const,
-    name: "Click to edit",
-    actorValueProposition: { statement: "Click to edit" },
-    costs: [],
-    benefits: [],
+    name: "Click to edit actor name",
+    actorValueProposition: { statement: "Click to edit actor value proposition" },
+    costs: [{ type: "Financial" as const, description: "Click to edit" }],
+    benefits: [{ type: "Financial" as const, description: "Click to edit" }],
     kpis: [],
     services: [
       {
@@ -37,7 +37,12 @@ const starterBlueprint: CBMXBlueprint = {
     statement: "Click to edit",
   },
   actors: [makeBlankActor(1), makeBlankActor(2), makeBlankActor(3), makeBlankActor(4), makeBlankActor(5)],
-  coCreationProcesses: [],
+    coCreationProcesses: [
+    {
+      name: "Click to edit",
+      participantActorIds: ["A1", "A2", "A3", "A4", "A5"],
+    },
+  ],
 };
 
 export default function App() {
