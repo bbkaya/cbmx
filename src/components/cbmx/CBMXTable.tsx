@@ -189,24 +189,6 @@ function RowLabel({
   );
 }
 
-const rowLabelCellTight = {
-  ...rowLabelCell,
-  padding: PAD_LABEL,
-  lineHeight: LINE,
-  textAlign: "left",
-  verticalAlign: "top",
-} as const;
-
-const rowLabelIndentCellTight = {
-  ...rowLabelIndentCell,
-  padding: PAD_LABEL,
-  lineHeight: LINE,
-  textAlign: "left",
-  verticalAlign: "top",
-} as const;
-
-
-
 export default function CBMXTable({
   blueprint,
   actorCount = 5,
