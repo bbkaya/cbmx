@@ -292,7 +292,7 @@ export default function CBMXTable({
             <td style={rowLabelCell}>Actor Type</td>
             {actors.map((a) => (
               <td key={a.id} colSpan={2} style={cell}>
-                {a.type}
+                {a.type === "Other" ? "" : a.type}
               </td>
             ))}
           </tr>
@@ -341,7 +341,7 @@ export default function CBMXTable({
               <td style={rowLabelIndentCell}>&nbsp;&nbsp;{label}</td>
               {actors.map((a) => (
                 <React.Fragment key={a.id}>
-                  <td style={cell}>
+                  <td style={cellright}>
                     <SlotStack
                       slots={PER_VALUE_TYPE_SLOTS}
                       readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -350,7 +350,7 @@ export default function CBMXTable({
                       onCommit={(i, v) => setNthValueItem(a.id, "costs", key, i, v)}
                     />
                   </td>
-                  <td style={cell}>
+                  <td style={cellright}>
                     <SlotStack
                       slots={PER_VALUE_TYPE_SLOTS}
                       readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -365,9 +365,9 @@ export default function CBMXTable({
           ))}
 
           <tr>
-            <td style={rowLabelCell}>KPIs (ranked)</td>
+            <td style={rowLabelCell}>KPIs</td>
             {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cell}>
+              <td key={a.id} colSpan={2} style={cellRight}>
                 <SlotStack
                   slots={KPI_SLOTS}
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -383,7 +383,7 @@ export default function CBMXTable({
           <tr>
             <td style={rowLabelCell}>Actor Services</td>
             {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cell}>
+              <td key={a.id} colSpan={2} style={cellRight}>
                 <SlotStack
                   slots={SERVICE_SLOTS}
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -397,7 +397,7 @@ export default function CBMXTable({
 
           <tr>
             <td style={rowLabelCell}>Co-Creation Processes</td>
-            <td colSpan={colspanNetwork} style={cell}>
+            <td colSpan={colspanNetwork} style={cellRight}>
               <SlotStack
                 slots={PROCESS_SLOTS}
                 readOnly={!onChange}
@@ -666,4 +666,9 @@ const rowLabelIndentCell: React.CSSProperties = {
 const networkCell: React.CSSProperties = {
   ...baseCell,
   fontWeight: 600,
+};
+
+const cellRight: React.CSSProperties = {
+  ...baseCell,
+  textAlign: "right",
 };
