@@ -27,7 +27,6 @@ import {
   setServiceSlot,
 } from "./cbmxMutators";
 
-
 import { cell, cellLeft, networkCell, rowLabelCell, rowLabelIndentCell, thCell } from "./styles";
 
 /** Default slots per your rule-of-thumb (can be made configurable later) */
@@ -92,7 +91,12 @@ export default function CBMXTable({
     onChange(next);
   }
 
-  function getNthValueItemDescription(a: Actor, kind: "costs" | "benefits", type: CostBenefitType, slotIndex: number) {
+  function getNthValueItemDescription(
+    a: Actor,
+    kind: "costs" | "benefits",
+    type: CostBenefitType,
+    slotIndex: number
+  ) {
     const arr = (a[kind] ?? []) as { type: CostBenefitType; description: string }[];
     const idxs = indicesOfType(arr, type);
     if (slotIndex >= idxs.length) return "";
@@ -125,7 +129,7 @@ export default function CBMXTable({
       <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
         <colgroup>
           <col style={{ width: 220 }} />
-          {Array.from({ length: colspanNetwork }).map((_, i) => (
+          {Array.from({ length: colspanNetwork }).map((_, i: number) => (
             <col key={i} style={{ width: 170 }} />
           ))}
         </colgroup>
@@ -139,7 +143,7 @@ export default function CBMXTable({
                 placeholder={onChange ? "Click to edit…" : ""}
                 multiline
                 readOnly={!onChange}
-                onCommit={(v) => updateBlueprint((next) => setNetworkVP(next, v))}
+                onCommit={(v: string) => updateBlueprint((next) => setNetworkVP(next, v))}
               />
             </td>
           </tr>
@@ -161,7 +165,7 @@ export default function CBMXTable({
                   value={a.name ?? ""}
                   placeholder={onChange ? "Click to edit…" : ""}
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                  onCommit={(v) => updateBlueprint((next) => setActorName(next, a.id, v))}
+                  onCommit={(v: string) => updateBlueprint((next) => setActorName(next, a.id, v))}
                 />
               </td>
             ))}
@@ -176,7 +180,7 @@ export default function CBMXTable({
                   placeholder={onChange ? "Click to edit…" : ""}
                   multiline
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                  onCommit={(v) => updateBlueprint((next) => setActorVP(next, a.id, v))}
+                  onCommit={(v: string) => updateBlueprint((next) => setActorVP(next, a.id, v))}
                 />
               </td>
             ))}
@@ -205,9 +209,9 @@ export default function CBMXTable({
                       <SlotStack
                         slots={costSlots}
                         readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                        getValue={(i) => getNthValueItemDescription(a, "costs", key, i)}
+                        getValue={(i: number) => getNthValueItemDescription(a, "costs", key, i)}
                         placeholder={onChange ? "…" : ""}
-                        onCommit={(i, v) =>
+                        onCommit={(i: number, v: string) =>
                           updateBlueprint((next) => setNthValueItem(next, a.id, "costs", key, i, v))
                         }
                         onAdd={() => updateBlueprint((next) => addCostBenefitSlot(next, a.id, "costs", key))}
@@ -218,9 +222,9 @@ export default function CBMXTable({
                       <SlotStack
                         slots={benefitSlots}
                         readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                        getValue={(i) => getNthValueItemDescription(a, "benefits", key, i)}
+                        getValue={(i: number) => getNthValueItemDescription(a, "benefits", key, i)}
                         placeholder={onChange ? "…" : ""}
-                        onCommit={(i, v) =>
+                        onCommit={(i: number, v: string) =>
                           updateBlueprint((next) => setNthValueItem(next, a.id, "benefits", key, i, v))
                         }
                         onAdd={() => updateBlueprint((next) => addCostBenefitSlot(next, a.id, "benefits", key))}
@@ -239,10 +243,10 @@ export default function CBMXTable({
                 <SlotStack
                   slots={kpiSlots}
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                  getValue={(i) => getKpiSlotNameFlexible(a, i)}
+                  getValue={(i: number) => getKpiSlotNameFlexible(a, i)}
                   placeholder={onChange ? "…" : ""}
-                  prefixLabel={(i) => `${i + 1}.`}
-                  onCommit={(i, v) => updateBlueprint((next) => setKpiSlotFlexible(next, a.id, i, v))}
+                  prefixLabel={(i: number) => `${i + 1}.`}
+                  onCommit={(i: number, v: string) => updateBlueprint((next) => setKpiSlotFlexible(next, a.id, i, v))}
                   onAdd={() => updateBlueprint((next) => addKpiSlot(next, a.id))}
                 />
               </td>
@@ -256,9 +260,9 @@ export default function CBMXTable({
                 <SlotStack
                   slots={serviceSlots}
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                  getValue={(i) => getServiceSlotLine(a, i)}
+                  getValue={(i: number) => getServiceSlotLine(a, i)}
                   placeholder={onChange ? "Service (op1, op2)" : ""}
-                  onCommit={(i, v) => updateBlueprint((next) => setServiceSlot(next, a.id, i, v))}
+                  onCommit={(i: number, v: string) => updateBlueprint((next) => setServiceSlot(next, a.id, i, v))}
                   onAdd={() => updateBlueprint((next) => addServiceSlot(next, a.id))}
                 />
               </td>
@@ -271,9 +275,9 @@ export default function CBMXTable({
               <SlotStack
                 slots={processSlots}
                 readOnly={!onChange}
-                getValue={(i) => getProcessSlotLine(i)}
+                getValue={(i: number) => getProcessSlotLine(i)}
                 placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
-                onCommit={(i, v) => updateBlueprint((next) => setProcessSlot(next, i, v))}
+                onCommit={(i: number, v: string) => updateBlueprint((next) => setProcessSlot(next, i, v))}
                 onAdd={() => updateBlueprint((next) => addProcessSlot(next))}
               />
             </td>
