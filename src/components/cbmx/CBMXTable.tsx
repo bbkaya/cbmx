@@ -34,6 +34,7 @@ export type { CBMXBlueprint } from "./cbmxDomain";
 
 export type ValidationIssue = { level: "error" | "warning"; message: string };
 
+
 /** Minimal, strict-safe validator used by App.tsx */
 export function validateCBMXBlueprint(bp: CBMXBlueprint): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
@@ -69,11 +70,36 @@ export function validateCBMXBlueprint(bp: CBMXBlueprint): ValidationIssue[] {
 
     const avp = (a?.actorValueProposition?.statement ?? "").trim();
     if (!avp) issues.push({ level: "warning", message: `Actor "${id}" Value Proposition is empty.` });
+
+    // Rule 4: at least 1 cost and 1 benefit per actor (any type)
+    const hasAnyCost =
+      Array.isArray(a.costs) && a.costs.some((c) => (c?.description ?? "").trim().length > 0);
+    if (!hasAnyCost) issues.push({ level: "warning", message: `Actor "${id}" has no costs.` });
+
+    const hasAnyBenefit =
+      Array.isArray(a.benefits) && a.benefits.some((b) => (b?.description ?? "").trim().length > 0);
+    if (!hasAnyBenefit) issues.push({ level: "warning", message: `Actor "${id}" has no benefits.` });
+
+    // Rule 5: at least 1 actor service per actor
+    const hasAnyService =
+      Array.isArray(a.services) &&
+      a.services.some((s) => {
+        const sName = (s?.name ?? "").trim();
+        const hasOps = Array.isArray(s?.operations) && s.operations.some((o) => (o?.name ?? "").trim().length > 0);
+        return sName.length > 0 || hasOps;
+      });
+    if (!hasAnyService) issues.push({ level: "warning", message: `Actor "${id}" has no services.` });
+  }
+
+  // Rule 6: at least 1 co-creation process
+  const processes = bp.coCreationProcesses ?? [];
+  if (!Array.isArray(processes) || processes.length === 0) {
+    issues.push({ level: "warning", message: "No co-creation processes defined." });
   }
 
   // Co-creation processes: participant ids should exist
   const actorIds = new Set(bp.actors.map((a) => a.id));
-  for (const p of bp.coCreationProcesses ?? []) {
+  for (const p of processes) {
     const pname = (p?.name ?? "").trim();
     if (!pname) issues.push({ level: "warning", message: "A co-creation process has an empty name." });
 
