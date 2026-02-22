@@ -103,6 +103,80 @@ const VALUE_TYPES: { label: string; key: CostBenefitType }[] = [
   { label: "Other Non-Financial", key: "OtherNonFinancial" },
 ];
 
+/** Tooltip texts for the ⓘ bubbles next to first-column labels */
+const CBMX_HELP: Record<string, string> = {
+  networkValueProposition:
+    "The value the collaborative network collectively offers to a specific customer. It is achieved through joint value creation by the participating actors.",
+  actorType:
+    "The role category of an actor in the network: Customer (problem owner and target), Orchestrator (facilitates interactions and alignment; leadership role), or Other network member.",
+  actor:
+    "A role (and optionally the concrete organization(s)) participating in the collaborative business model.",
+  actorValueProposition:
+    "The distinct value an actor contributes as part of delivering the network value proposition.",
+  costsBenefits:
+    "Actors participate because expected benefits outweigh the costs of joining and contributing to the network.",
+  financial: "Direct economic gains or losses.",
+  environmental:
+    "Impact on the natural environment (e.g., air pollution/emissions, material reuse/recycling, energy use).",
+  social:
+    "Impact on social welfare and well-being (e.g., accessibility, diversity, inclusiveness).",
+  otherNonFinancial:
+    "Other non-financial effects (e.g., reputation and trust, stakeholder relations, brand awareness/recognition).",
+  kpis:
+    "Key Performance Indicators for an actor, used for viability evaluation and performance monitoring.",
+  actorServices:
+    "An actor’s capabilities that collectively realize its value proposition and define how it participates in value co-creation. Services may be detailed into operations (optional), which can map to process tasks/activities.",
+  coCreationProcesses:
+    "Processes that operationalize the network value proposition. Multiple actors (potentially including the customer) participate and exchange services with the customer and each other.",
+};
+
+/** Reusable label renderer (Option B): label + ⓘ icon with native tooltip */
+function RowLabel({
+  text,
+  helpKey,
+  indent = false,
+}: {
+  text: string;
+  helpKey?: keyof typeof CBMX_HELP;
+  indent?: boolean;
+}) {
+  const tip = helpKey ? CBMX_HELP[helpKey] : undefined;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span style={indent ? { paddingLeft: 12 } : undefined}>{text}</span>
+      {tip ? (
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label={`Info: ${text}`}
+          title={tip} // v0: native tooltip (works without extra deps)
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 16,
+            height: 16,
+            borderRadius: 999,
+            fontSize: 12,
+            lineHeight: "16px",
+            cursor: "help",
+            border: "1px solid #bbb",
+            userSelect: "none",
+            flex: "0 0 auto",
+          }}
+          onKeyDown={(e) => {
+            // keeps keyboard interaction clean; later you can upgrade to a Popover on Enter/Space
+            if (e.key === "Enter" || e.key === " ") e.preventDefault();
+          }}
+        >
+          i
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export default function CBMXTable({
   blueprint,
   actorCount = 5,
@@ -197,7 +271,9 @@ export default function CBMXTable({
 
         <tbody>
           <tr>
-            <td style={rowLabelCell}>Net. Value Proposition</td>
+            <td style={rowLabelCell}>
+              <RowLabel text="Network Value Proposition" helpKey="networkValueProposition" />
+            </td>
             <td colSpan={colspanNetwork} style={networkCell}>
               <EditableText
                 value={blueprint.networkValueProposition?.statement ?? ""}
@@ -210,7 +286,9 @@ export default function CBMXTable({
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>Actor Type</td>
+            <td style={rowLabelCell}>
+              <RowLabel text="Actor Type" helpKey="actorType" />
+            </td>
             {actors.map((a) => (
               <td key={a.id} colSpan={2} style={cell}>
                 {a.type === "Other" ? "" : a.type}
@@ -219,7 +297,9 @@ export default function CBMXTable({
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>Actor</td>
+            <td style={rowLabelCell}>
+              <RowLabel text="Actor" helpKey="actor" />
+            </td>
             {actors.map((a) => (
               <td key={a.id} colSpan={2} style={cell}>
                 <EditableText
@@ -233,7 +313,9 @@ export default function CBMXTable({
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>Actor Value Proposition</td>
+            <td style={rowLabelCell}>
+              <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
+            </td>
             {actors.map((a) => (
               <td key={a.id} colSpan={2} style={cell}>
                 <EditableText
@@ -248,7 +330,9 @@ export default function CBMXTable({
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>Costs &amp; Benefits</td>
+            <td style={rowLabelCell}>
+              <RowLabel text="Costs & Benefits" helpKey="costsBenefits" />
+            </td>
             {actors.map((a) => (
               <Fragment key={a.id}>
                 <th style={thCell}>Costs</th>
@@ -261,9 +345,20 @@ export default function CBMXTable({
             const costSlots = costSlotsByType.get(key) ?? DEFAULT_PER_VALUE_TYPE_SLOTS;
             const benefitSlots = benefitSlotsByType.get(key) ?? DEFAULT_PER_VALUE_TYPE_SLOTS;
 
+            const helpKey =
+              key === "Financial"
+                ? "financial"
+                : key === "Environmental"
+                  ? "environmental"
+                  : key === "Social"
+                    ? "social"
+                    : "otherNonFinancial";
+
             return (
               <tr key={`row-${key}`}>
-                <td style={rowLabelIndentCell}>&nbsp;&nbsp;{label}</td>
+                <td style={rowLabelIndentCell}>
+                  <RowLabel text={label} helpKey={helpKey} indent />
+                </td>
                 {actors.map((a) => (
                   <Fragment key={a.id}>
                     <td style={cellLeft}>
@@ -298,7 +393,9 @@ export default function CBMXTable({
           })}
 
           <tr>
-            <td style={rowLabelCell}>KPIs</td>
+            <td style={rowLabelCell}>
+              <RowLabel text="KPIs" helpKey="kpis" />
+            </td>
             {actors.map((a) => (
               <td key={a.id} colSpan={2} style={cellLeft}>
                 <SlotStack
@@ -315,7 +412,9 @@ export default function CBMXTable({
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>Actor Services</td>
+            <td style={rowLabelCell}>
+              <RowLabel text="Actor Services" helpKey="actorServices" />
+            </td>
             {actors.map((a) => (
               <td key={a.id} colSpan={2} style={cellLeft}>
                 <SlotStack
@@ -331,7 +430,9 @@ export default function CBMXTable({
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>Co-Creation Processes</td>
+            <td style={rowLabelCell}>
+              <RowLabel text="Co-Creation Processes" helpKey="coCreationProcesses" />
+            </td>
             <td colSpan={colspanNetwork} style={cellLeft}>
               <SlotStack
                 slots={processSlots}
