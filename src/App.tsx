@@ -348,8 +348,6 @@ export default function App() {
         </div>
       </header>
 
-      <p style={{ marginTop: 8, color: "#444" }}></p>
-
       <ValidationPanel issues={issues} />
 
       {/* Hidden file input for import */}
