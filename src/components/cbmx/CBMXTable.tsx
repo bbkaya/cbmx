@@ -130,6 +130,19 @@ const CBMX_HELP: Record<string, string> = {
     "Processes that operationalize the network value proposition. Multiple actors (potentially including the customer) participate and exchange services with the customer and each other.",
 };
 
+/** --- TIGHT SPACING OVERRIDES (local, no global CSS needed) --- */
+const PAD_TD = "3px 5px";
+const PAD_TH = "3px 5px";
+const PAD_LABEL = "4px 6px";
+const LINE = 1.15;
+
+const cellTight = { ...cell, padding: PAD_TD, lineHeight: LINE } as const;
+const cellLeftTight = { ...cellLeft, padding: PAD_TD, lineHeight: LINE } as const;
+const thCellTight = { ...thCell, padding: PAD_TH, lineHeight: 1.1 } as const;
+const rowLabelCellTight = { ...rowLabelCell, padding: PAD_LABEL, lineHeight: LINE } as const;
+const rowLabelIndentCellTight = { ...rowLabelIndentCell, padding: PAD_LABEL, lineHeight: LINE } as const;
+const networkCellTight = { ...networkCell, padding: PAD_TD, lineHeight: LINE } as const;
+
 /** Reusable label renderer (Option B): label + ⓘ icon with native tooltip */
 function RowLabel({
   text,
@@ -150,7 +163,7 @@ function RowLabel({
           role="button"
           tabIndex={0}
           aria-label={`Info: ${text}`}
-          title={tip} // v0: native tooltip (works without extra deps)
+          title={tip}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -166,7 +179,6 @@ function RowLabel({
             flex: "0 0 auto",
           }}
           onKeyDown={(e) => {
-            // keeps keyboard interaction clean; later you can upgrade to a Popover on Enter/Space
             if (e.key === "Enter" || e.key === " ") e.preventDefault();
           }}
         >
@@ -260,7 +272,15 @@ export default function CBMXTable({
   }
 
   return (
-    <div style={{ display: "inline-block", padding: 14, border: "1px solid #ddd", borderRadius: 10, background: "#fff" }}>
+    <div
+      style={{
+        display: "inline-block",
+        padding: 8, // was 14
+        border: "1px solid #ddd",
+        borderRadius: 10,
+        background: "#fff",
+      }}
+    >
       <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
         <colgroup>
           <col style={{ width: 220 }} />
@@ -271,10 +291,10 @@ export default function CBMXTable({
 
         <tbody>
           <tr>
-            <td style={rowLabelCell}>
+            <td style={rowLabelCellTight}>
               <RowLabel text="Network Value Proposition" helpKey="networkValueProposition" />
             </td>
-            <td colSpan={colspanNetwork} style={networkCell}>
+            <td colSpan={colspanNetwork} style={networkCellTight}>
               <EditableText
                 value={blueprint.networkValueProposition?.statement ?? ""}
                 placeholder={onChange ? "Click to edit…" : ""}
@@ -286,22 +306,22 @@ export default function CBMXTable({
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>
+            <td style={rowLabelCellTight}>
               <RowLabel text="Actor Type" helpKey="actorType" />
             </td>
             {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cell}>
+              <td key={a.id} colSpan={2} style={cellTight}>
                 {a.type === "Other" ? "" : a.type}
               </td>
             ))}
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>
+            <td style={rowLabelCellTight}>
               <RowLabel text="Actor" helpKey="actor" />
             </td>
             {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cell}>
+              <td key={a.id} colSpan={2} style={cellTight}>
                 <EditableText
                   value={a.name ?? ""}
                   placeholder={onChange ? "Click to edit…" : ""}
@@ -313,11 +333,11 @@ export default function CBMXTable({
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>
+            <td style={rowLabelCellTight}>
               <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
             </td>
             {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cell}>
+              <td key={a.id} colSpan={2} style={cellTight}>
                 <EditableText
                   value={a.actorValueProposition?.statement ?? ""}
                   placeholder={onChange ? "Click to edit…" : ""}
@@ -330,13 +350,13 @@ export default function CBMXTable({
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>
+            <td style={rowLabelCellTight}>
               <RowLabel text="Costs & Benefits" helpKey="costsBenefits" />
             </td>
             {actors.map((a) => (
               <Fragment key={a.id}>
-                <th style={thCell}>Costs</th>
-                <th style={thCell}>Benefits</th>
+                <th style={thCellTight}>Costs</th>
+                <th style={thCellTight}>Benefits</th>
               </Fragment>
             ))}
           </tr>
@@ -356,12 +376,12 @@ export default function CBMXTable({
 
             return (
               <tr key={`row-${key}`}>
-                <td style={rowLabelIndentCell}>
+                <td style={rowLabelIndentCellTight}>
                   <RowLabel text={label} helpKey={helpKey} indent />
                 </td>
                 {actors.map((a) => (
                   <Fragment key={a.id}>
-                    <td style={cellLeft}>
+                    <td style={cellLeftTight}>
                       <SlotStack
                         slots={costSlots}
                         readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -374,7 +394,7 @@ export default function CBMXTable({
                       />
                     </td>
 
-                    <td style={cellLeft}>
+                    <td style={cellLeftTight}>
                       <SlotStack
                         slots={benefitSlots}
                         readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -393,11 +413,11 @@ export default function CBMXTable({
           })}
 
           <tr>
-            <td style={rowLabelCell}>
+            <td style={rowLabelCellTight}>
               <RowLabel text="KPIs" helpKey="kpis" />
             </td>
             {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cellLeft}>
+              <td key={a.id} colSpan={2} style={cellLeftTight}>
                 <SlotStack
                   slots={kpiSlots}
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -412,11 +432,11 @@ export default function CBMXTable({
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>
+            <td style={rowLabelCellTight}>
               <RowLabel text="Actor Services" helpKey="actorServices" />
             </td>
             {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cellLeft}>
+              <td key={a.id} colSpan={2} style={cellLeftTight}>
                 <SlotStack
                   slots={serviceSlots}
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -430,10 +450,10 @@ export default function CBMXTable({
           </tr>
 
           <tr>
-            <td style={rowLabelCell}>
+            <td style={rowLabelCellTight}>
               <RowLabel text="Co-Creation Processes" helpKey="coCreationProcesses" />
             </td>
-            <td colSpan={colspanNetwork} style={cellLeft}>
+            <td colSpan={colspanNetwork} style={cellLeftTight}>
               <SlotStack
                 slots={processSlots}
                 readOnly={!onChange}
