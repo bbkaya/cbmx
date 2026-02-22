@@ -246,13 +246,50 @@ export default function App() {
     void fn();
   }
 
+  // ---------------- New button confirmation flow ----------------
+  function confirmNew() {
+    // If nothing to lose, just reset immediately
+    if (!isDirty) {
+      newBlueprint();
+      return;
+    }
+
+    // 1) Confirm discard
+    const discard = window.confirm(
+      "Start a new model?\n\nYou have unsaved changes. This will discard them."
+    );
+
+    if (discard) {
+      newBlueprint();
+      return;
+    }
+
+    // 2) Offer export of the SAVED blueprint (per your gating rule)
+    const exportFirst = window.confirm(
+      "Do you want to export the current saved model to a JSON file first?"
+    );
+
+    if (!exportFirst) return;
+
+    exportJsonSaved();
+
+    // Optional follow-up: after export, ask again whether to start new
+    const discardAfterExport = window.confirm(
+      "Exported.\n\nStart a new model now? This will discard your unsaved changes."
+    );
+
+    if (discardAfterExport) {
+      newBlueprint();
+    }
+  }
+
   return (
     <div style={{ padding: 16, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <h1 style={{ margin: 0, fontSize: 20 }}>CBMX Blueprint Editor</h1>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <button type="button" onClick={newBlueprint}>
+          <button type="button" onClick={confirmNew}>
             New
           </button>
 
