@@ -83,10 +83,10 @@ export function validateCBMXBlueprint(
 }
 
 /** Default slots per your rule-of-thumb (can be made configurable later) */
-const PER_VALUE_TYPE_SLOTS = 2; // costs/benefits per type
-const KPI_SLOTS = 3;
-const SERVICE_SLOTS = 3;
-const PROCESS_SLOTS = 3;
+const DEFAULT_PER_VALUE_TYPE_SLOTS = 2;
+const DEFAULT_KPI_SLOTS = 3;
+const DEFAULT_SERVICE_SLOTS = 3;
+const DEFAULT_PROCESS_SLOTS = 3;
 
 const VALUE_TYPES: { label: string; key: CostBenefitType }[] = [
   { label: "Financial", key: "Financial" },
@@ -94,6 +94,20 @@ const VALUE_TYPES: { label: string; key: CostBenefitType }[] = [
   { label: "Social", key: "Social" },
   { label: "Other Non-Financial", key: "OtherNonFinancial" },
 ];
+
+const costSlots = Math.max(
+  DEFAULT_PER_VALUE_TYPE_SLOTS,
+  countOfType(a.costs, key)
+);
+const benefitSlots = Math.max(
+  DEFAULT_PER_VALUE_TYPE_SLOTS,
+  countOfType(a.benefits, key)
+);
+
+const kpiSlots = Math.max(DEFAULT_KPI_SLOTS, (a.kpis ?? []).length);
+const serviceSlots = Math.max(DEFAULT_SERVICE_SLOTS, (a.services ?? []).length);
+const processSlots = Math.max(DEFAULT_PROCESS_SLOTS, (blueprint.coCreationProcesses ?? []).length);
+
 
 export default function CBMXTable({
   blueprint,
@@ -201,34 +215,42 @@ export default function CBMXTable({
     });
   }
 
-  function getKpiSlotName(a: Actor, slotIndex: number) {
-    const rank = slotIndex + 1;
-    const k = (a.kpis ?? []).find((x) => (x.rank ?? 0) === rank);
-    return k?.name ?? "";
-  }
 
-  function setServiceSlot(actorId: string, slotIndex: number, line: string) {
-    updateBlueprint((next) => {
-      const a = next.actors.find((x) => x.id === actorId);
-      if (!a) return;
 
-      const cleaned = (line ?? "").trim();
-      const arr = (a.services ?? []).slice();
 
-      if (!cleaned) {
-        if (slotIndex < arr.length) arr.splice(slotIndex, 1);
-        a.services = arr;
-        return;
-      }
+  function getKpiSlotNameFlexible(a: Actor, slotIndex: number) {
+  const sorted = (a.kpis ?? []).slice().sort((x, y) => (x.rank ?? 999) - (y.rank ?? 999));
+  return sorted[slotIndex]?.name ?? "";
+}
 
-      const parsed = parseServiceLine(cleaned);
+function setKpiSlotFlexible(actorId: string, slotIndex: number, name: string) {
+  updateBlueprint((next) => {
+    const a = next.actors.find((x) => x.id === actorId);
+    if (!a) return;
 
-      if (slotIndex < arr.length) arr[slotIndex] = parsed;
-      else arr.push(parsed);
+    a.kpis = Array.isArray(a.kpis) ? a.kpis : [];
+    const sorted = a.kpis.slice().sort((x, y) => (x.rank ?? 999) - (y.rank ?? 999));
 
-      a.services = arr;
-    });
-  }
+    const cleaned = (name ?? "").trim();
+    const target = sorted[slotIndex];
+
+    if (!target) {
+      // creating via editing a virtual slot: append with next rank
+      if (!cleaned) return;
+      const maxRank = a.kpis.reduce((m, k) => Math.max(m, k.rank ?? 0), 0);
+      a.kpis.push({ name: cleaned, rank: maxRank + 1 });
+      return;
+    }
+
+    // update/delete existing KPI by rank identity
+    const idx = a.kpis.findIndex((k) => (k.rank ?? 0) === (target.rank ?? 0) && k.name === target.name);
+    if (idx < 0) return;
+
+    if (!cleaned) a.kpis.splice(idx, 1);
+    else a.kpis[idx] = { ...a.kpis[idx], name: cleaned };
+  });
+}
+  
 
   /** Added: render services as "Service (op1, op2)" */
   function getServiceSlotLine(a: Actor, slotIndex: number) {
@@ -285,6 +307,58 @@ export default function CBMXTable({
     return names.length ? `${name} (${names.join(", ")})` : name;
   }
 
+
+
+
+
+
+
+function addCostBenefitSlot(actorId: string, kind: "costs" | "benefits", type: CostBenefitType) {
+  updateBlueprint((next) => {
+    const a = next.actors.find((x) => x.id === actorId);
+    if (!a) return;
+    a[kind] = Array.isArray(a[kind]) ? a[kind] : [];
+    (a[kind] as CBItem[]).push({ type, description: "" });
+    ensureMinCostBenefit(a);
+  });
+}
+
+function addKpiSlot(actorId: string) {
+  updateBlueprint((next) => {
+    const a = next.actors.find((x) => x.id === actorId);
+    if (!a) return;
+    a.kpis = Array.isArray(a.kpis) ? a.kpis : [];
+    // rank: next available (max rank + 1)
+    const maxRank = a.kpis.reduce((m, k) => Math.max(m, k.rank ?? 0), 0);
+    a.kpis.push({ name: "", rank: maxRank + 1 });
+  });
+}
+
+function addServiceSlot(actorId: string) {
+  updateBlueprint((next) => {
+    const a = next.actors.find((x) => x.id === actorId);
+    if (!a) return;
+    a.services = Array.isArray(a.services) ? a.services : [];
+    a.services.push({ name: "", operations: [] });
+  });
+}
+
+function addProcessSlot() {
+  updateBlueprint((next) => {
+    next.coCreationProcesses = Array.isArray(next.coCreationProcesses) ? next.coCreationProcesses : [];
+    const arr = next.coCreationProcesses;
+    arr.push({ id: `P${arr.length + 1}`, name: "", participantActorIds: [] });
+  });
+}
+
+  function countOfType(items: CBItem[] | undefined, type: CostBenefitType) {
+  return (items ?? []).filter((x) => x?.type === type).length;
+}
+  
+
+
+
+  
   return (
     <div style={{ display: "inline-block", padding: 14, border: "1px solid #ddd", borderRadius: 10, background: "#fff" }}>
       <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
@@ -364,21 +438,28 @@ export default function CBMXTable({
                 <Fragment key={a.id}>
                   <td style={cellLeft}>
                     <SlotStack
-                      slots={PER_VALUE_TYPE_SLOTS}
-                      readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                      getValue={(i) => getNthValueItemDescription(a, "costs", key, i)}
-                      placeholder={onChange ? "…" : ""}
-                      onCommit={(i, v) => setNthValueItem(a.id, "costs", key, i, v)}
-                    />
+  slots={costSlots}
+  readOnly={!onChange || a.id.startsWith("EMPTY-")}
+  getValue={(i) => getNthValueItemDescription(a, "costs", key, i)}
+  placeholder={onChange ? "…" : ""}
+  onCommit={(i, v) => setNthValueItem(a.id, "costs", key, i, v)}
+  onAdd={() => addCostBenefitSlot(a.id, "costs", key)}
+/>
+                    
                   </td>
                   <td style={cellLeft}>
+
                     <SlotStack
-                      slots={PER_VALUE_TYPE_SLOTS}
-                      readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                      getValue={(i) => getNthValueItemDescription(a, "benefits", key, i)}
-                      placeholder={onChange ? "…" : ""}
-                      onCommit={(i, v) => setNthValueItem(a.id, "benefits", key, i, v)}
-                    />
+  slots={benefitSlots}
+  readOnly={!onChange || a.id.startsWith("EMPTY-")}
+  getValue={(i) => getNthValueItemDescription(a, "benefits", key, i)}
+  placeholder={onChange ? "…" : ""}
+  onCommit={(i, v) => setNthValueItem(a.id, "benefits", key, i, v)}
+  onAdd={() => addCostBenefitSlot(a.id, "benefits", key)}
+/>
+
+
+                    
                   </td>
                 </Fragment>
               ))}
@@ -389,14 +470,17 @@ export default function CBMXTable({
             <td style={rowLabelCell}>KPIs</td>
             {actors.map((a) => (
               <td key={a.id} colSpan={2} style={cellLeft}>
-                <SlotStack
-                  slots={KPI_SLOTS}
-                  readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                  getValue={(i) => getKpiSlotName(a, i)}
-                  placeholder={onChange ? "…" : ""}
-                  prefixLabel={(i) => `${i + 1}.`}
-                  onCommit={(i, v) => setKpiSlot(a.id, i, v)}
-                />
+                
+<SlotStack
+  slots={kpiSlots}
+  readOnly={!onChange || a.id.startsWith("EMPTY-")}
+  getValue={(i) => getKpiSlotNameFlexible(a, i)}
+  placeholder={onChange ? "…" : ""}
+  prefixLabel={(i) => `${i + 1}.`}
+  onCommit={(i, v) => setKpiSlotFlexible(a.id, i, v)}
+  onAdd={() => addKpiSlot(a.id)}
+/>
+                
               </td>
             ))}
           </tr>
@@ -405,13 +489,16 @@ export default function CBMXTable({
             <td style={rowLabelCell}>Actor Services</td>
             {actors.map((a) => (
               <td key={a.id} colSpan={2} style={cellLeft}>
-                <SlotStack
-                  slots={SERVICE_SLOTS}
-                  readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                  getValue={(i) => getServiceSlotLine(a, i)}
-                  placeholder={onChange ? "Service (op1, op2)" : ""}
-                  onCommit={(i, v) => setServiceSlot(a.id, i, v)}
-                />
+                
+<SlotStack
+  slots={serviceSlots}
+  readOnly={!onChange || a.id.startsWith("EMPTY-")}
+  getValue={(i) => getServiceSlotLine(a, i)}
+  placeholder={onChange ? "Service (op1, op2)" : ""}
+  onCommit={(i, v) => setServiceSlot(a.id, i, v)}
+  onAdd={() => addServiceSlot(a.id)}
+/>
+                
               </td>
             ))}
           </tr>
@@ -419,13 +506,16 @@ export default function CBMXTable({
           <tr>
             <td style={rowLabelCell}>Co-Creation Processes</td>
             <td colSpan={colspanNetwork} style={cellLeft}>
-              <SlotStack
-                slots={PROCESS_SLOTS}
-                readOnly={!onChange}
-                getValue={(i) => getProcessSlotLine(i)}
-                placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
-                onCommit={(i, v) => setProcessSlot(i, v)}
-              />
+              
+<SlotStack
+  slots={processSlots}
+  readOnly={!onChange}
+  getValue={(i) => getProcessSlotLine(i)}
+  placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
+  onCommit={(i, v) => setProcessSlot(i, v)}
+  onAdd={() => addProcessSlot()}
+/>
+              
             </td>
           </tr>
         </tbody>
@@ -525,6 +615,7 @@ function EditableText({
   );
 }
 
+
 function SlotStack({
   slots,
   getValue,
@@ -532,6 +623,7 @@ function SlotStack({
   readOnly,
   placeholder,
   prefixLabel,
+  onAdd,
 }: {
   slots: number;
   getValue: (slotIndex: number) => string;
@@ -539,46 +631,78 @@ function SlotStack({
   readOnly?: boolean;
   placeholder?: string;
   prefixLabel?: (slotIndex: number) => string;
+  onAdd?: () => void; // NEW
 }) {
   const FONT_SIZE = 12;
   const LINE_HEIGHT = 1.25; // must match EditableText commonStyle lineHeight
   const LINE_PX = FONT_SIZE * LINE_HEIGHT; // 15px
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {Array.from({ length: slots }).map((_, i) => (
-        <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-          <div
-            style={{
-              width: 18,
-              flex: "0 0 18px",
-              textAlign: "center",
-              fontSize: FONT_SIZE,
-              lineHeight: `${LINE_PX}px`,
-              height: `${LINE_PX}px`,
-              paddingTop: 6, // matches EditableText padding
-              marginTop: 0,
-              color: "#111",
-              userSelect: "none",
-            }}
-            aria-hidden="true"
-          >
-            {prefixLabel ? prefixLabel(i) : "•"}
-          </div>
+    <div style={{ position: "relative" }}>
+      {/* small + in top-right of the stack */}
+      {onAdd && !readOnly ? (
+        <button
+          type="button"
+          onClick={onAdd}
+          title="Add"
+          style={{
+            position: "absolute",
+            right: 0,
+            top: 0,
+            width: 22,
+            height: 22,
+            borderRadius: 6,
+            border: "1px solid #bbb",
+            background: "white",
+            cursor: "pointer",
+            fontWeight: 700,
+            lineHeight: "18px",
+          }}
+        >
+          +
+        </button>
+      ) : null}
 
-          <div style={{ flex: 1 }}>
-            <EditableText
-              value={getValue(i) ?? ""}
-              placeholder={placeholder ?? "…"}
-              readOnly={readOnly}
-              onCommit={(v) => onCommit(i, v)}
-            />
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingRight: onAdd && !readOnly ? 26 : 0 }}>
+        {Array.from({ length: slots }).map((_, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <div
+              style={{
+                width: 18,
+                flex: "0 0 18px",
+                textAlign: "center",
+                fontSize: FONT_SIZE,
+                lineHeight: `${LINE_PX}px`,
+                height: `${LINE_PX}px`,
+                paddingTop: 6, // matches EditableText padding
+                marginTop: 0,
+                color: "#111",
+                userSelect: "none",
+              }}
+              aria-hidden="true"
+            >
+              {prefixLabel ? prefixLabel(i) : "•"}
+            </div>
+
+            <div style={{ flex: 1 }}>
+              <EditableText
+                value={getValue(i) ?? ""}
+                placeholder={placeholder ?? "…"}
+                readOnly={readOnly}
+                onCommit={(v) => onCommit(i, v)}
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
+
+
+
+
+
 
 /* ---------------- domain helpers ---------------- */
 
