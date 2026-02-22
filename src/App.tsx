@@ -1,14 +1,14 @@
 import "./App.css";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
-import CBMXTable, { type CBMXBlueprint } from "./components/CBMXTable";
-import { useState } from "react";
+import CBMXTable, { type CBMXBlueprint, validateCBMXBlueprint } from "./components/CBMXTable";
+import { useMemo, useState } from "react";
 
 const sampleBlueprint: CBMXBlueprint = {
   meta: { id: "cbmx-001", name: "Sample CBMX" },
   networkValueProposition: {
-  statement: "Deliver an integrated solution through a collaborative network.",
-},
+    statement: "Deliver an integrated solution through a collaborative network.",
+  },
   actors: [
     {
       id: "A1",
@@ -68,11 +68,31 @@ const sampleBlueprint: CBMXBlueprint = {
   ],
 };
 
-
-
 export default function App() {
+  // Canonical persisted blueprint
   const [blueprint, setBlueprint] = useState<CBMXBlueprint>(sampleBlueprint);
-  
+
+  // Draft for editing (what the table edits)
+  const [draft, setDraft] = useState<CBMXBlueprint>(() => deepClone(sampleBlueprint));
+
+  // Keep validation tied to the draft (what user is editing)
+  const issues = useMemo(() => validateCBMXBlueprint(draft), [draft]);
+  const blockingErrors = issues.filter((x) => x.level === "error");
+  const hasBlocking = blockingErrors.length > 0;
+
+  function saveDraft() {
+    if (hasBlocking) return;
+    const committed = deepClone(draft);
+    setBlueprint(committed);
+    setDraft(committed);
+  }
+
+  function discardDraft() {
+    setDraft(deepClone(blueprint));
+  }
+
+  const isDirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(blueprint), [draft, blueprint]);
+
   async function exportPng() {
     const node = document.getElementById("cbmx-canvas");
     if (!node) {
@@ -80,7 +100,6 @@ export default function App() {
       return;
     }
 
-    // higher pixel density for sharper exports
     const dataUrl = await toPng(node, { pixelRatio: 2 });
 
     const link = document.createElement("a");
@@ -89,79 +108,139 @@ export default function App() {
     link.click();
   }
 
-async function exportPdf() {
-  const node = document.getElementById("cbmx-canvas");
-  if (!node) {
-    alert("Canvas not found.");
-    return;
+  async function exportPdf() {
+    const node = document.getElementById("cbmx-canvas");
+    if (!node) {
+      alert("Canvas not found.");
+      return;
+    }
+
+    const dataUrl = await toPng(node, { pixelRatio: 2 });
+
+    const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const img = new Image();
+    img.src = dataUrl;
+
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Failed to load image for PDF export."));
+    });
+
+    const imgWidth = img.width;
+    const imgHeight = img.height;
+
+    const scale = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+    const renderWidth = imgWidth * scale;
+    const renderHeight = imgHeight * scale;
+
+    const x = (pageWidth - renderWidth) / 2;
+    const y = (pageHeight - renderHeight) / 2;
+
+    pdf.addImage(dataUrl, "PNG", x, y, renderWidth, renderHeight);
+    pdf.save("cbmx-blueprint.pdf");
   }
 
-  // Capture the canvas as an image
-  const dataUrl = await toPng(node, { pixelRatio: 2 });
+  return (
+    <div style={{ padding: 16, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" }}>
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <h1 style={{ margin: 0, fontSize: 20 }}>CBMX Blueprint Editor</h1>
 
-  // Create an A4 landscape PDF (good default for wide tables)
-  const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button type="button" onClick={() => alert("New blueprint (next step)")}>
+            New
+          </button>
 
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
+          <button type="button" onClick={discardDraft} disabled={!isDirty}>
+            Discard changes
+          </button>
 
-  // We need the image dimensions to scale it to fit the page
-  const img = new Image();
-  img.src = dataUrl;
+          <button
+            type="button"
+            onClick={saveDraft}
+            disabled={!isDirty || hasBlocking}
+            title={hasBlocking ? "Fix validation errors before saving." : undefined}
+          >
+            Save
+          </button>
 
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error("Failed to load image for PDF export."));
-  });
+          <span style={{ color: isDirty ? "#b45309" : "#15803d", fontSize: 12 }}>
+            {isDirty ? "Unsaved changes" : "All changes saved"}
+          </span>
 
-  const imgWidth = img.width;
-  const imgHeight = img.height;
+          <button type="button" onClick={exportPng}>
+            Export PNG
+          </button>
+          <button type="button" onClick={exportPdf}>
+            Export PDF
+          </button>
+        </div>
+      </header>
 
-  // Fit image into page while preserving aspect ratio
-  const scale = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
-  const renderWidth = imgWidth * scale;
-  const renderHeight = imgHeight * scale;
+      <p style={{ marginTop: 8, color: "#444" }}>Goal: create, edit, and export CBMX blueprints (PNG/PDF).</p>
 
-  const x = (pageWidth - renderWidth) / 2;
-  const y = (pageHeight - renderHeight) / 2;
+      <ValidationPanel issues={issues} />
 
-  pdf.addImage(dataUrl, "PNG", x, y, renderWidth, renderHeight);
-  pdf.save("cbmx-blueprint.pdf");
+      <div
+        id="cbmx-canvas"
+        style={{
+          marginTop: 16,
+          display: "inline-block",
+          background: "white",
+        }}
+      >
+        {/* Table edits the DRAFT, not the committed blueprint */}
+        <CBMXTable blueprint={draft} actorCount={5} onChange={setDraft} />
+      </div>
+    </div>
+  );
 }
 
-return (
-  <div style={{ padding: 16, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" }}>
-    <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-      <h1 style={{ margin: 0, fontSize: 20 }}>CBMX Blueprint Editor</h1>
+function ValidationPanel({
+  issues,
+}: {
+  issues: { level: "error" | "warning"; message: string }[];
+}) {
+  if (!issues || issues.length === 0) return null;
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <button type="button" onClick={() => alert("New blueprint (next step)")}>
-          New
-        </button>
-        <button type="button" onClick={exportPng}>
-          Export PNG
-        </button>
-        <button type="button" onClick={exportPdf}>
-          Export PDF
-        </button>
-      </div>
-    </header>
+  const errors = issues.filter((x) => x.level === "error");
+  const warnings = issues.filter((x) => x.level === "warning");
 
-    <p style={{ marginTop: 8, color: "#444" }}>
-      Goal: create, edit, and export CBMX blueprints (PNG/PDF).
-    </p>
-
-    {/* This wrapper is what your export code captures */}
+  return (
     <div
-      id="cbmx-canvas"
       style={{
-        marginTop: 16,
-        display: "inline-block", // important: export only the table width, not full page
-        background: "white",
+        marginTop: 12,
+        border: "1px solid #ddd",
+        borderRadius: 10,
+        padding: 12,
+        maxWidth: 1100,
+        background: "#fff",
       }}
     >
-      <CBMXTable blueprint={blueprint} actorCount={5} onChange={setBlueprint} />
+      <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}>
+        <div style={{ fontWeight: 700 }}>Validation</div>
+        {errors.length > 0 ? (
+          <div style={{ color: "#b91c1c", fontSize: 12 }}>{errors.length} error(s) — Save disabled</div>
+        ) : (
+          <div style={{ color: "#15803d", fontSize: 12 }}>No blocking errors</div>
+        )}
+        {warnings.length > 0 ? <div style={{ color: "#b45309", fontSize: 12 }}>{warnings.length} warning(s)</div> : null}
+      </div>
+
+      <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+        {issues.map((it, idx) => (
+          <div key={idx} style={{ fontSize: 12, color: it.level === "error" ? "#b91c1c" : "#b45309" }}>
+            {it.level === "error" ? "⛔" : "⚠️"} {it.message}
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+}
+
+function deepClone<T>(x: T): T {
+  return JSON.parse(JSON.stringify(x));
 }
