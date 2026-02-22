@@ -156,8 +156,8 @@ function RowLabel({
   const tip = helpKey ? CBMX_HELP[helpKey] : undefined;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <span style={indent ? { paddingLeft: 12 } : undefined}>{text}</span>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 8, width: "100%" }}>
+  <span style={indent ? { paddingLeft: 15 } : undefined}>{text}</span>
       {tip ? (
         <span
           role="button"
@@ -188,6 +188,24 @@ function RowLabel({
     </div>
   );
 }
+
+const rowLabelCellTight = {
+  ...rowLabelCell,
+  padding: PAD_LABEL,
+  lineHeight: LINE,
+  textAlign: "left",
+  verticalAlign: "top",
+} as const;
+
+const rowLabelIndentCellTight = {
+  ...rowLabelIndentCell,
+  padding: PAD_LABEL,
+  lineHeight: LINE,
+  textAlign: "left",
+  verticalAlign: "top",
+} as const;
+
+
 
 export default function CBMXTable({
   blueprint,
