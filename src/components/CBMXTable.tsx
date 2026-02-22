@@ -230,39 +230,51 @@ export default function CBMXTable({
     });
   }
 
-  function getServiceSlotLine(a: Actor, slotIndex: number) {
-    const s = (a.services ?? [])[slotIndex];
-    if (!s) return "";
-    const ops = (s.operations ?? []).map((o) => o.name).filter(Boolean);
-    return ops.length ? `${s.name} (${ops.join(", ")})` : `${s.name}`;
-  }
+  function setProcessSlot(slotIndex: number, line: string) {
+  updateBlueprint((next) => {
+    next.coCreationProcesses = next.coCreationProcesses ?? [];
+    const arr = next.coCreationProcesses.slice();
+    const cleaned = (line ?? "").trim();
 
-  function setProcessSlot(slotIndex: number, name: string) {
-    updateBlueprint((next) => {
-      next.coCreationProcesses = next.coCreationProcesses ?? [];
-      const arr = next.coCreationProcesses.slice();
-      const cleaned = (name ?? "").trim();
-
-      if (!cleaned) {
-        if (slotIndex < arr.length) arr.splice(slotIndex, 1);
-        next.coCreationProcesses = arr;
-        return;
-      }
-
-      if (slotIndex < arr.length) {
-        arr[slotIndex] = { ...arr[slotIndex], name: cleaned };
-      } else {
-        arr.push({ id: `P${arr.length + 1}`, name: cleaned, participantActorIds: [] });
-      }
-
+    if (!cleaned) {
+      if (slotIndex < arr.length) arr.splice(slotIndex, 1);
       next.coCreationProcesses = arr;
-    });
-  }
+      return;
+    }
 
-  function getProcessSlotName(slotIndex: number) {
-    const p = (blueprint.coCreationProcesses ?? [])[slotIndex];
-    return p?.name ?? "";
-  }
+    const parsed = parseProcessLine(cleaned, next.actors ?? []);
+
+    if (slotIndex < arr.length) {
+      arr[slotIndex] = {
+        ...arr[slotIndex],
+        name: parsed.name,
+        participantActorIds: parsed.participantActorIds,
+      };
+    } else {
+      arr.push({
+        id: `P${arr.length + 1}`,
+        name: parsed.name,
+        participantActorIds: parsed.participantActorIds,
+      });
+    }
+
+    next.coCreationProcesses = arr;
+  });
+}
+
+function getProcessSlotLine(slotIndex: number) {
+  const p = (blueprint.coCreationProcesses ?? [])[slotIndex];
+  if (!p) return "";
+
+  const name = (p.name ?? "").trim();
+  const ids = p.participantActorIds ?? [];
+
+  // Map ids -> actor names (fallback to id if missing)
+  const idToName = new Map((actors ?? []).map((a) => [a.id, a.name]));
+  const names = ids.map((id) => idToName.get(id) ?? id).filter(Boolean);
+
+  return names.length ? `${name} (${names.join(", ")})` : name;
+}
 
   return (
     <div style={{ display: "inline-block", padding: 14, border: "1px solid #ddd", borderRadius: 10, background: "#fff" }}>
@@ -395,18 +407,18 @@ export default function CBMXTable({
             ))}
           </tr>
 
-          <tr>
-            <td style={rowLabelCell}>Co-Creation Processes</td>
-            <td colSpan={colspanNetwork} style={cellLeft}>
-              <SlotStack
-                slots={PROCESS_SLOTS}
-                readOnly={!onChange}
-                getValue={(i) => getProcessSlotName(i)}
-                placeholder={onChange ? "…" : ""}
-                onCommit={(i, v) => setProcessSlot(i, v)}
-              />
-            </td>
-          </tr>
+<tr>
+  <td style={rowLabelCell}>Co-Creation Processes</td>
+  <td colSpan={colspanNetwork} style={cell}>
+    <SlotStack
+      slots={PROCESS_SLOTS}
+      readOnly={!onChange}
+      getValue={(i) => getProcessSlotLine(i)}
+      placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
+      onCommit={(i, v) => setProcessSlot(i, v)}
+    />
+  </td>
+</tr>
         </tbody>
       </table>
     </div>
@@ -628,6 +640,36 @@ function parseServiceLine(line: string): Service {
 
   return { name, operations };
 }
+
+function parseProcessLine(
+  line: string,
+  actorsIn: { id: string; name: string }[]
+): { name: string; participantActorIds: string[] } {
+  // Accept: "Process name" OR "Process name (Actor 1, Actor 2)"
+  const trimmed = (line ?? "").trim();
+  const m = trimmed.match(/^(.*?)(?:\s*\((.*?)\))?\s*$/);
+  const name = (m?.[1] ?? "").trim();
+  const raw = (m?.[2] ?? "").trim();
+
+  if (!raw) return { name, participantActorIds: [] };
+
+  // Build lookup: token -> actorId (by id and by name, case-insensitive)
+  const lookup = new Map<string, string>();
+  for (const a of actorsIn ?? []) {
+    if (!a) continue;
+    lookup.set((a.id ?? "").trim().toLowerCase(), a.id);
+    lookup.set((a.name ?? "").trim().toLowerCase(), a.id);
+  }
+
+  const participantActorIds: string[] = [];
+  for (const token of raw.split(",").map((x) => x.trim()).filter(Boolean)) {
+    const id = lookup.get(token.toLowerCase());
+    if (id && !participantActorIds.includes(id)) participantActorIds.push(id);
+  }
+
+  return { name, participantActorIds };
+}
+
 
 function deepClone<T>(x: T): T {
   return JSON.parse(JSON.stringify(x));
