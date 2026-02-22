@@ -2,7 +2,7 @@ import "./App.css";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 import CBMXTable, { type CBMXBlueprint, validateCBMXBlueprint } from "./components/CBMXTable";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const sampleBlueprint: CBMXBlueprint = {
   meta: { id: "cbmx-001", name: "Sample CBMX" },
