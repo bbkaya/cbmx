@@ -6,76 +6,32 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type ValidationIssue = { level: "error" | "warning"; message: string };
 
-const sampleBlueprint: CBMXBlueprint = {
-  meta: { id: "cbmx-001", name: "Sample CBMX" },
+/**
+ * Blank/guided starting template (instead of a filled example).
+ * Keep it minimal so users aren't "editing an example".
+ */
+const starterBlueprint: CBMXBlueprint = {
+  meta: { id: "cbmx-new", name: "New CBMX Blueprint" },
+
+  // Network VP (single statement field in your latest design)
   networkValueProposition: {
-    statement: "Deliver an integrated solution through a collaborative network.",
+    statement:
+      "Write ONE clear value proposition statement for the whole network (e.g., “We enable … by … for …”).",
   },
-  actors: [
-    {
-      id: "A1",
-      type: "Customer",
-      name: "Actor 1 (Customer)",
-      actorValueProposition: { statement: "Provides demand, feedback, and adoption." },
-      costs: [{ type: "Financial", description: "Subscription fee" }],
-      benefits: [{ type: "Social", description: "Improved accessibility" }],
-      kpis: [{ name: "User satisfaction", rank: 1 }],
-      services: [{ name: "Use service", operations: [{ name: "Request" }, { name: "Rate" }] }],
-    },
-    {
-      id: "A2",
-      type: "Orchestrator",
-      name: "Actor 2 (Orchestrator)",
-      actorValueProposition: { statement: "Coordinates actors and ensures service integration." },
-      costs: [{ type: "OtherNonFinancial", description: "Coordination effort" }],
-      benefits: [{ type: "Financial", description: "Orchestration fee" }],
-      kpis: [{ name: "Network adoption", rank: 1 }],
-      services: [{ name: "Orchestration", operations: [{ name: "Matchmaking" }] }],
-    },
-    {
-      id: "A3",
-      type: "Other",
-      name: "Actor 3",
-      actorValueProposition: { statement: "Provides complementary service capability." },
-      costs: [{ type: "Environmental", description: "Operational footprint" }],
-      benefits: [{ type: "Financial", description: "Usage-based revenue" }],
-      kpis: [{ name: "Utilization", rank: 1 }],
-      services: [{ name: "Service delivery", operations: [] }],
-    },
-    {
-      id: "A4",
-      type: "Other",
-      name: "Actor 4",
-      actorValueProposition: { statement: "Provides data/asset needed for delivery." },
-      costs: [{ type: "Financial", description: "Integration cost" }],
-      benefits: [{ type: "OtherNonFinancial", description: "Reputation uplift" }],
-      kpis: [{ name: "Data quality", rank: 1 }],
-      services: [{ name: "Data provision", operations: [{ name: "Publish" }] }],
-    },
-    {
-      id: "A5",
-      type: "Other",
-      name: "Actor 5",
-      actorValueProposition: { statement: "Provides support and maintenance." },
-      costs: [{ type: "Social", description: "On-call load" }],
-      benefits: [{ type: "Financial", description: "Support contract margin" }],
-      kpis: [{ name: "SLA compliance", rank: 1 }],
-      services: [{ name: "Support", operations: [{ name: "Resolve incidents" }] }],
-    },
-  ],
-  coCreationProcesses: [
-    { id: "P1", name: "Onboarding", participantActorIds: ["A1", "A2", "A4"] },
-    { id: "P2", name: "Service delivery", participantActorIds: ["A1", "A2", "A3"] },
-    { id: "P3", name: "Support & improvement", participantActorIds: ["A1", "A2", "A5"] },
-  ],
+
+  // Start empty: users add actors themselves (preferred for a truly blank start)
+  actors: [],
+
+  // Optional: keep empty (truly blank). If you prefer 1 guided row, add one object here.
+  coCreationProcesses: [],
 };
 
 export default function App() {
   // Canonical persisted blueprint
-  const [blueprint, setBlueprint] = useState<CBMXBlueprint>(sampleBlueprint);
+  const [blueprint, setBlueprint] = useState<CBMXBlueprint>(starterBlueprint);
 
   // Draft for editing (what the table edits)
-  const [draft, setDraft] = useState<CBMXBlueprint>(() => deepClone(sampleBlueprint));
+  const [draft, setDraft] = useState<CBMXBlueprint>(() => deepClone(starterBlueprint));
 
   // JSON import file input
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -113,7 +69,7 @@ export default function App() {
   }, [menuOpen]);
 
   function newBlueprint() {
-    const fresh = deepClone(sampleBlueprint);
+    const fresh = deepClone(starterBlueprint);
     setBlueprint(fresh);
     setDraft(deepClone(fresh));
   }
