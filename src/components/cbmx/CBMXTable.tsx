@@ -2,7 +2,6 @@ import { Fragment, useMemo } from "react";
 import EditableText from "./ui/EditableText";
 import SlotStack from "./ui/SlotStack";
 
-
 import {
   type Actor,
   type CBMXBlueprint,
@@ -29,6 +28,67 @@ import {
 } from "./cbmxMutators";
 
 import { cell, cellLeft, networkCell, rowLabelCell, rowLabelIndentCell, thCell } from "./styles";
+
+/** Re-export the blueprint type so App.tsx can import it from this module */
+export type { CBMXBlueprint } from "./cbmxDomain";
+
+export type ValidationIssue = { level: "error" | "warning"; message: string };
+
+/** Minimal, strict-safe validator used by App.tsx */
+export function validateCBMXBlueprint(bp: CBMXBlueprint): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  if (!bp) {
+    issues.push({ level: "error", message: "Blueprint is missing." });
+    return issues;
+  }
+
+  const name = (bp.meta?.name ?? "").trim();
+  if (!name) issues.push({ level: "warning", message: "Blueprint name is empty (meta.name)." });
+
+  const nvp = (bp.networkValueProposition?.statement ?? "").trim();
+  if (!nvp) issues.push({ level: "warning", message: "Network Value Proposition is empty." });
+
+  if (!Array.isArray(bp.actors) || bp.actors.length === 0) {
+    issues.push({ level: "error", message: "Actors array is missing or empty." });
+    return issues;
+  }
+
+  const ids = new Set<string>();
+  for (const a of bp.actors) {
+    const id = (a?.id ?? "").trim();
+    if (!id) {
+      issues.push({ level: "error", message: "An actor is missing an id." });
+      continue;
+    }
+    if (ids.has(id)) issues.push({ level: "error", message: `Duplicate actor id: ${id}` });
+    ids.add(id);
+
+    const actorName = (a?.name ?? "").trim();
+    if (!actorName) issues.push({ level: "warning", message: `Actor "${id}" has an empty name.` });
+
+    const avp = (a?.actorValueProposition?.statement ?? "").trim();
+    if (!avp) issues.push({ level: "warning", message: `Actor "${id}" Value Proposition is empty.` });
+  }
+
+  // Co-creation processes: participant ids should exist
+  const actorIds = new Set(bp.actors.map((a) => a.id));
+  for (const p of bp.coCreationProcesses ?? []) {
+    const pname = (p?.name ?? "").trim();
+    if (!pname) issues.push({ level: "warning", message: "A co-creation process has an empty name." });
+
+    for (const pid of p?.participantActorIds ?? []) {
+      if (!actorIds.has(pid)) {
+        issues.push({
+          level: "warning",
+          message: `Co-creation process references unknown actor id "${pid}".`,
+        });
+      }
+    }
+  }
+
+  return issues;
+}
 
 /** Default slots per your rule-of-thumb (can be made configurable later) */
 const DEFAULT_PER_VALUE_TYPE_SLOTS = 2;
