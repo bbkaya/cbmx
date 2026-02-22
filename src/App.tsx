@@ -4,6 +4,8 @@ import jsPDF from "jspdf";
 import CBMXTable, { type CBMXBlueprint, validateCBMXBlueprint } from "./components/cbmx/CBMXTable";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+type ValidationIssue = { level: "error" | "warning"; message: string };
+
 const sampleBlueprint: CBMXBlueprint = {
   meta: { id: "cbmx-001", name: "Sample CBMX" },
   networkValueProposition: {
@@ -88,8 +90,8 @@ export default function App() {
   const isDirty = draftHash !== blueprintHash;
 
   // Validation tied to draft
-  const issues = useMemo(() => validateCBMXBlueprint(draft), [draft]);
-  const hasBlocking = issues.some((x) => x.level === "error");
+  const issues = useMemo<ValidationIssue[]>(() => validateCBMXBlueprint(draft), [draft]);
+  const hasBlocking = issues.some((x: ValidationIssue) => x.level === "error");
 
   // Close menu on outside click / escape
   useEffect(() => {
@@ -176,8 +178,8 @@ export default function App() {
     // Load into draft (not into saved blueprint)
     setDraft(deepClone(candidate));
 
-    const importedIssues = validateCBMXBlueprint(candidate);
-    const importedErrors = importedIssues.filter((x) => x.level === "error");
+    const importedIssues: ValidationIssue[] = validateCBMXBlueprint(candidate);
+    const importedErrors = importedIssues.filter((x: ValidationIssue) => x.level === "error");
 
     if (importedErrors.length > 0) {
       alert(
@@ -278,11 +280,7 @@ export default function App() {
               onClick={() => setMenuOpen((v) => !v)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              title={
-                ioEnabled
-                  ? "Import/Export"
-                  : "Save or discard changes before importing/exporting."
-              }
+              title={ioEnabled ? "Import/Export" : "Save or discard changes before importing/exporting."}
               style={{
                 width: 34,
                 height: 34,
@@ -313,29 +311,13 @@ export default function App() {
                   zIndex: 50,
                 }}
               >
-                <MenuItem
-                  disabled={!ioEnabled}
-                  label="Export JSON"
-                  onClick={() => runMenuAction(exportJsonSaved)}
-                />
-                <MenuItem
-                  disabled={!ioEnabled}
-                  label="Export PNG"
-                  onClick={() => runMenuAction(exportPng)}
-                />
-                <MenuItem
-                  disabled={!ioEnabled}
-                  label="Export PDF"
-                  onClick={() => runMenuAction(exportPdf)}
-                />
+                <MenuItem disabled={!ioEnabled} label="Export JSON" onClick={() => runMenuAction(exportJsonSaved)} />
+                <MenuItem disabled={!ioEnabled} label="Export PNG" onClick={() => runMenuAction(exportPng)} />
+                <MenuItem disabled={!ioEnabled} label="Export PDF" onClick={() => runMenuAction(exportPdf)} />
 
                 <div style={{ height: 1, background: "#eee", margin: "6px 0" }} />
 
-                <MenuItem
-                  disabled={!ioEnabled}
-                  label="Import JSON"
-                  onClick={() => runMenuAction(openImportDialog)}
-                />
+                <MenuItem disabled={!ioEnabled} label="Import JSON" onClick={() => runMenuAction(openImportDialog)} />
 
                 {!ioEnabled ? (
                   <div style={{ padding: "6px 10px", fontSize: 12, color: "#b45309" }}>
@@ -417,15 +399,11 @@ function MenuItem({
   );
 }
 
-function ValidationPanel({
-  issues,
-}: {
-  issues: { level: "error" | "warning"; message: string }[];
-}) {
+function ValidationPanel({ issues }: { issues: ValidationIssue[] }) {
   if (!issues || issues.length === 0) return null;
 
-  const errors = issues.filter((x) => x.level === "error");
-  const warnings = issues.filter((x) => x.level === "warning");
+  const errors = issues.filter((x: ValidationIssue) => x.level === "error");
+  const warnings = issues.filter((x: ValidationIssue) => x.level === "warning");
 
   return (
     <div
@@ -445,7 +423,9 @@ function ValidationPanel({
         ) : (
           <div style={{ color: "#15803d", fontSize: 12 }}>No blocking errors</div>
         )}
-        {warnings.length > 0 ? <div style={{ color: "#b45309", fontSize: 12 }}>{warnings.length} warning(s)</div> : null}
+        {warnings.length > 0 ? (
+          <div style={{ color: "#b45309", fontSize: 12 }}>{warnings.length} warning(s)</div>
+        ) : null}
       </div>
 
       <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
