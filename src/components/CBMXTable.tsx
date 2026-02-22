@@ -230,52 +230,61 @@ export default function CBMXTable({
     });
   }
 
-function setProcessSlot(slotIndex: number, line: string) {
-  updateBlueprint((next) => {
-    next.coCreationProcesses = next.coCreationProcesses ?? [];
-    const arr = next.coCreationProcesses.slice();
-    const cleaned = (line ?? "").trim();
+  /** Added: render services as "Service (op1, op2)" */
+  function getServiceSlotLine(a: Actor, slotIndex: number) {
+    const s = (a.services ?? [])[slotIndex];
+    if (!s) return "";
+    const ops = (s.operations ?? []).map((o) => o.name).filter(Boolean);
+    const name = (s.name ?? "").trim();
+    return ops.length ? `${name} (${ops.join(", ")})` : name;
+  }
 
-    if (!cleaned) {
-      if (slotIndex < arr.length) arr.splice(slotIndex, 1);
+  /** Updated: processes accept "Process (Actor1, Actor2)" and store ids */
+  function setProcessSlot(slotIndex: number, line: string) {
+    updateBlueprint((next) => {
+      next.coCreationProcesses = next.coCreationProcesses ?? [];
+      const arr = next.coCreationProcesses.slice();
+      const cleaned = (line ?? "").trim();
+
+      if (!cleaned) {
+        if (slotIndex < arr.length) arr.splice(slotIndex, 1);
+        next.coCreationProcesses = arr;
+        return;
+      }
+
+      const parsed = parseProcessLine(cleaned, next.actors ?? []);
+
+      if (slotIndex < arr.length) {
+        arr[slotIndex] = {
+          ...arr[slotIndex],
+          name: parsed.name,
+          participantActorIds: parsed.participantActorIds,
+        };
+      } else {
+        arr.push({
+          id: `P${arr.length + 1}`,
+          name: parsed.name,
+          participantActorIds: parsed.participantActorIds,
+        });
+      }
+
       next.coCreationProcesses = arr;
-      return;
-    }
+    });
+  }
 
-    const parsed = parseProcessLine(cleaned, next.actors ?? []);
+  function getProcessSlotLine(slotIndex: number) {
+    const p = (blueprint.coCreationProcesses ?? [])[slotIndex];
+    if (!p) return "";
 
-    if (slotIndex < arr.length) {
-      arr[slotIndex] = {
-        ...arr[slotIndex],
-        name: parsed.name,
-        participantActorIds: parsed.participantActorIds,
-      };
-    } else {
-      arr.push({
-        id: `P${arr.length + 1}`,
-        name: parsed.name,
-        participantActorIds: parsed.participantActorIds,
-      });
-    }
+    const name = (p.name ?? "").trim();
+    const ids = p.participantActorIds ?? [];
 
-    next.coCreationProcesses = arr;
-  });
-}
+    const idToName = new Map((actors ?? []).map((a) => [a.id, a.name]));
+    const names = ids.map((id) => idToName.get(id) ?? id).filter(Boolean);
 
-function getProcessSlotLine(slotIndex: number) {
-  const p = (blueprint.coCreationProcesses ?? [])[slotIndex];
-  if (!p) return "";
+    return names.length ? `${name} (${names.join(", ")})` : name;
+  }
 
-  const name = (p.name ?? "").trim();
-  const ids = p.participantActorIds ?? [];
-
-  // Map ids -> actor names (fallback to id if missing)
-  const idToName = new Map((actors ?? []).map((a) => [a.id, a.name]));
-  const names = ids.map((id) => idToName.get(id) ?? id).filter(Boolean);
-
-  return names.length ? `${name} (${names.join(", ")})` : name;
-}
-  
   return (
     <div style={{ display: "inline-block", padding: 14, border: "1px solid #ddd", borderRadius: 10, background: "#fff" }}>
       <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
@@ -407,18 +416,18 @@ function getProcessSlotLine(slotIndex: number) {
             ))}
           </tr>
 
-<tr>
-  <td style={rowLabelCell}>Co-Creation Processes</td>
-  <td colSpan={colspanNetwork} style={cell}>
-    <SlotStack
-      slots={PROCESS_SLOTS}
-      readOnly={!onChange}
-      getValue={(i) => getProcessSlotLine(i)}
-      placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
-      onCommit={(i, v) => setProcessSlot(i, v)}
-    />
-  </td>
-</tr>
+          <tr>
+            <td style={rowLabelCell}>Co-Creation Processes</td>
+            <td colSpan={colspanNetwork} style={cellLeft}>
+              <SlotStack
+                slots={PROCESS_SLOTS}
+                readOnly={!onChange}
+                getValue={(i) => getProcessSlotLine(i)}
+                placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
+                onCommit={(i, v) => setProcessSlot(i, v)}
+              />
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -669,7 +678,6 @@ function parseProcessLine(
 
   return { name, participantActorIds };
 }
-
 
 function deepClone<T>(x: T): T {
   return JSON.parse(JSON.stringify(x));
