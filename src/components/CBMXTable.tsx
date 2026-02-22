@@ -25,6 +25,63 @@ export type CBMXBlueprint = {
   coCreationProcesses?: { id: string; name: string; participantActorIds?: string[] }[];
 };
 
+/** Exported validation (used in App.tsx). No throwing. */
+export function validateCBMXBlueprint(
+  bp: CBMXBlueprint
+): { level: "error" | "warning"; message: string }[] {
+  const issues: { level: "error" | "warning"; message: string }[] = [];
+
+  if (!bp || !Array.isArray(bp.actors)) {
+    issues.push({ level: "error", message: "Blueprint is missing the actors array." });
+    return issues;
+  }
+
+  if (bp.actors.length < 2) {
+    issues.push({ level: "error", message: "At least 2 actors are required (Customer + Orchestrator)." });
+    return issues;
+  }
+
+  const customers = bp.actors.filter((a) => a.type === "Customer").length;
+  const orch = bp.actors.filter((a) => a.type === "Orchestrator").length;
+
+  if (customers !== 1) issues.push({ level: "error", message: "Constraint: exactly 1 Customer actor is required." });
+  if (orch !== 1) issues.push({ level: "error", message: "Constraint: exactly 1 Orchestrator actor is required." });
+
+  // Position-based rule (UI design): 1st=Customer, 2nd=Orchestrator
+  if (bp.actors[0]?.type !== "Customer") {
+    issues.push({ level: "warning", message: "By convention, actor #1 should be the Customer." });
+  }
+  if (bp.actors[1]?.type !== "Orchestrator") {
+    issues.push({ level: "warning", message: "By convention, actor #2 should be the Orchestrator." });
+  }
+
+  for (const a of bp.actors) {
+    const name = (a?.name ?? "").trim() || a?.id || "Unknown actor";
+
+    if (!Array.isArray(a.costs) || a.costs.length < 1) {
+      issues.push({ level: "error", message: `Actor "${name}" must have at least 1 Cost item.` });
+    } else {
+      const nonEmpty = a.costs.some((c) => (c.description ?? "").trim().length > 0);
+      if (!nonEmpty) issues.push({ level: "warning", message: `Actor "${name}" has costs but all descriptions are empty.` });
+    }
+
+    if (!Array.isArray(a.benefits) || a.benefits.length < 1) {
+      issues.push({ level: "error", message: `Actor "${name}" must have at least 1 Benefit item.` });
+    } else {
+      const nonEmpty = a.benefits.some((b) => (b.description ?? "").trim().length > 0);
+      if (!nonEmpty) issues.push({ level: "warning", message: `Actor "${name}" has benefits but all descriptions are empty.` });
+    }
+
+    const vp = (a.actorValueProposition?.statement ?? "").trim();
+    if (!vp) issues.push({ level: "warning", message: `Actor "${name}" value proposition statement is empty.` });
+  }
+
+  const nvp = (bp.networkValueProposition?.statement ?? "").trim();
+  if (!nvp) issues.push({ level: "warning", message: "Network value proposition statement is empty." });
+
+  return issues;
+}
+
 /** Default slots per your rule-of-thumb (can be made configurable later) */
 const PER_VALUE_TYPE_SLOTS = 2; // costs/benefits per type
 const KPI_SLOTS = 3;
@@ -47,21 +104,17 @@ export default function CBMXTable({
   actorCount?: number;
   onChange?: (next: CBMXBlueprint) => void;
 }) {
-  // Normalize actors into a fixed-length rendering list, and enforce fixed actor types by position.
   const { actors, N } = useMemo(() => normalizeActors(blueprint.actors, actorCount), [blueprint.actors, actorCount]);
   const colspanNetwork = N * 2;
 
-  // --- Generic immutable update helper
   function updateBlueprint(mutator: (draft: CBMXBlueprint) => void) {
     if (!onChange) return;
     const next: CBMXBlueprint = deepClone(blueprint);
     mutator(next);
-    // enforce actor types & minimum required arrays on save
     next.actors = normalizeActors(next.actors, next.actors.length).actors;
     onChange(next);
   }
 
-  // --- Network VP
   function setNetworkVP(statement: string) {
     updateBlueprint((next) => {
       next.networkValueProposition = next.networkValueProposition ?? {};
@@ -69,7 +122,6 @@ export default function CBMXTable({
     });
   }
 
-  // --- Actor name / VP statement
   function setActorName(actorId: string, name: string) {
     updateBlueprint((next) => {
       const a = next.actors.find((x) => x.id === actorId);
@@ -87,7 +139,6 @@ export default function CBMXTable({
     });
   }
 
-  // --- Costs/Benefits: slot-based editing (2 per type)
   function setNthValueItem(
     actorId: string,
     kind: "costs" | "benefits",
@@ -107,13 +158,11 @@ export default function CBMXTable({
       if (slotIndex < idxs.length) {
         const realIndex = idxs[slotIndex];
         if (!cleaned) {
-          // delete
           arr.splice(realIndex, 1);
         } else {
           arr[realIndex] = { ...arr[realIndex], type, description: cleaned };
         }
       } else {
-        // create if non-empty
         if (!cleaned) return;
         arr.push({ type, description: cleaned });
       }
@@ -128,9 +177,8 @@ export default function CBMXTable({
     const idxs = indicesOfType(arr, type);
     if (slotIndex >= idxs.length) return "";
     return arr[idxs[slotIndex]]?.description ?? "";
-    }
+  }
 
-  // --- KPIs: 3 slots, rank = slotIndex+1
   function setKpiSlot(actorId: string, slotIndex: number, name: string) {
     updateBlueprint((next) => {
       const a = next.actors.find((x) => x.id === actorId);
@@ -143,14 +191,12 @@ export default function CBMXTable({
       const existingIndex = arr.findIndex((k) => (k.rank ?? 0) === rank);
 
       if (!cleaned) {
-        // delete the KPI of this rank if exists
         if (existingIndex >= 0) arr.splice(existingIndex, 1);
       } else {
         if (existingIndex >= 0) arr[existingIndex] = { ...arr[existingIndex], name: cleaned, rank };
         else arr.push({ name: cleaned, rank });
       }
 
-      // keep ranks stable; do not auto-re-rank others
       a.kpis = arr;
     });
   }
@@ -161,8 +207,6 @@ export default function CBMXTable({
     return k?.name ?? "";
   }
 
-  // --- Services: 3 slots. Edit line supports:
-  // "Service name" OR "Service name (op1, op2)"
   function setServiceSlot(actorId: string, slotIndex: number, line: string) {
     updateBlueprint((next) => {
       const a = next.actors.find((x) => x.id === actorId);
@@ -172,7 +216,6 @@ export default function CBMXTable({
       const arr = (a.services ?? []).slice();
 
       if (!cleaned) {
-        // delete slot if exists
         if (slotIndex < arr.length) arr.splice(slotIndex, 1);
         a.services = arr;
         return;
@@ -180,12 +223,9 @@ export default function CBMXTable({
 
       const parsed = parseServiceLine(cleaned);
 
-      if (slotIndex < arr.length) {
-        arr[slotIndex] = parsed;
-      } else {
-        // create
-        arr.push(parsed);
-      }
+      if (slotIndex < arr.length) arr[slotIndex] = parsed;
+      else arr.push(parsed);
+
       a.services = arr;
     });
   }
@@ -197,7 +237,6 @@ export default function CBMXTable({
     return ops.length ? `${s.name} (${ops.join(", ")})` : `${s.name}`;
   }
 
-  // --- Co-creation processes: 3 slots (name only)
   function setProcessSlot(slotIndex: number, name: string) {
     updateBlueprint((next) => {
       next.coCreationProcesses = next.coCreationProcesses ?? [];
@@ -225,7 +264,6 @@ export default function CBMXTable({
     return p?.name ?? "";
   }
 
-  // ---------- Render ----------
   return (
     <div style={{ display: "inline-block", padding: 14, border: "1px solid #ddd", borderRadius: 10, background: "#fff" }}>
       <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
@@ -237,7 +275,6 @@ export default function CBMXTable({
         </colgroup>
 
         <tbody>
-          {/* Net. Value Proposition (merged across all actor subcolumns) */}
           <tr>
             <td style={rowLabelCell}>Net. Value Proposition</td>
             <td colSpan={colspanNetwork} style={networkCell}>
@@ -251,7 +288,6 @@ export default function CBMXTable({
             </td>
           </tr>
 
-          {/* Actor Type row: one cell per actor (colspan=2) - read-only by design */}
           <tr>
             <td style={rowLabelCell}>Actor Type</td>
             {actors.map((a) => (
@@ -261,7 +297,6 @@ export default function CBMXTable({
             ))}
           </tr>
 
-          {/* Actor row: actor names */}
           <tr>
             <td style={rowLabelCell}>Actor</td>
             {actors.map((a) => (
@@ -276,7 +311,6 @@ export default function CBMXTable({
             ))}
           </tr>
 
-          {/* Actor Value Proposition */}
           <tr>
             <td style={rowLabelCell}>Actor Value Proposition</td>
             {actors.map((a) => (
@@ -292,7 +326,6 @@ export default function CBMXTable({
             ))}
           </tr>
 
-          {/* Costs & Benefits header row */}
           <tr>
             <td style={rowLabelCell}>Costs &amp; Benefits</td>
             {actors.map((a) => (
@@ -303,7 +336,6 @@ export default function CBMXTable({
             ))}
           </tr>
 
-          {/* Costs/Benefits per type, fixed 2 slots each */}
           {VALUE_TYPES.map(({ label, key }) => (
             <tr key={`row-${key}`}>
               <td style={rowLabelIndentCell}>&nbsp;&nbsp;{label}</td>
@@ -332,7 +364,6 @@ export default function CBMXTable({
             </tr>
           ))}
 
-          {/* KPIs (ranked) - 3 slots */}
           <tr>
             <td style={rowLabelCell}>KPIs (ranked)</td>
             {actors.map((a) => (
@@ -342,14 +373,13 @@ export default function CBMXTable({
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
                   getValue={(i) => getKpiSlotName(a, i)}
                   placeholder={onChange ? "…" : ""}
-                  prefixLabel={(i) => `${i + 1}. `}
+                  prefixLabel={(i) => `${i + 1}.`}
                   onCommit={(i, v) => setKpiSlot(a.id, i, v)}
                 />
               </td>
             ))}
           </tr>
 
-          {/* Actor Services - 3 slots (name + optional operations in parentheses) */}
           <tr>
             <td style={rowLabelCell}>Actor Services</td>
             {actors.map((a) => (
@@ -365,7 +395,6 @@ export default function CBMXTable({
             ))}
           </tr>
 
-          {/* Co-creation Processes - 3 slots */}
           <tr>
             <td style={rowLabelCell}>Co-Creation Processes</td>
             <td colSpan={colspanNetwork} style={cell}>
@@ -402,7 +431,6 @@ function EditableText({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
 
-  // Keep draft in sync when not editing
   React.useEffect(() => {
     if (!editing) setDraft(value ?? "");
   }, [value, editing]);
@@ -447,13 +475,7 @@ function EditableText({
   return (
     <div>
       {multiline ? (
-        <textarea
-          autoFocus
-          rows={3}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          style={commonStyle}
-        />
+        <textarea autoFocus rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} style={commonStyle} />
       ) : (
         <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} style={commonStyle} />
       )}
@@ -505,20 +527,16 @@ function SlotStack({
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {Array.from({ length: slots }).map((_, i) => (
         <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-          {/* Left marker: either numbering prefix (KPIs) or bullet dot */}
           <div
             style={{
               width: 18,
               flex: "0 0 18px",
               textAlign: "center",
-
-              // Exact vertical alignment with first text line:
               fontSize: FONT_SIZE,
-              lineHeight: `${LINE_PX}px`, // 15px
-              height: `${LINE_PX}px`,     // lock marker box to 1 line
-              paddingTop: 6,              // must match EditableText padding top
+              lineHeight: `${LINE_PX}px`,
+              height: `${LINE_PX}px`,
+              paddingTop: 6, // matches EditableText padding
               marginTop: 0,
-
               color: "#111",
               userSelect: "none",
             }}
@@ -540,8 +558,6 @@ function SlotStack({
     </div>
   );
 }
-
-
 
 /* ---------------- domain helpers ---------------- */
 
@@ -570,12 +586,11 @@ function normalizeActors(actorsIn: Actor[], actorCount: number) {
     });
   }
 
-  // Enforce fixed actor types by position (1st=Customer, 2nd=Orchestrator, rest=Other)
+  // Enforce fixed actor types by position
   if (actors[0]) actors[0].type = "Customer";
   if (actors[1]) actors[1].type = "Orchestrator";
   for (let i = 2; i < actors.length; i++) actors[i].type = "Other";
 
-  // Ensure each actor has >= 1 cost and >= 1 benefit to satisfy your constraint
   for (const a of actors) ensureMinCostBenefit(a);
 
   return { actors, N };
@@ -598,7 +613,6 @@ function indicesOfType(items: CBItem[], type: CostBenefitType) {
 }
 
 function parseServiceLine(line: string): Service {
-  // Accept: "Name" or "Name (op1, op2)"
   const trimmed = line.trim();
   const m = trimmed.match(/^(.*?)(?:\s*\((.*?)\))?\s*$/);
   const name = (m?.[1] ?? "").trim();
@@ -616,11 +630,10 @@ function parseServiceLine(line: string): Service {
 }
 
 function deepClone<T>(x: T): T {
-  // Avoid relying on structuredClone typing/lib settings across TS configs
   return JSON.parse(JSON.stringify(x));
 }
 
-/* ---------------- styles (matching your HTML CSS closely) ---------------- */
+/* ---------------- styles ---------------- */
 
 const baseCell: React.CSSProperties = {
   border: "1px solid #222",
