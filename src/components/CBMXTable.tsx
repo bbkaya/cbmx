@@ -341,7 +341,7 @@ export default function CBMXTable({
               <td style={rowLabelIndentCell}>&nbsp;&nbsp;{label}</td>
               {actors.map((a) => (
                 <React.Fragment key={a.id}>
-                  <td style={cellright}>
+                  <td style={cellRight}>
                     <SlotStack
                       slots={PER_VALUE_TYPE_SLOTS}
                       readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -350,7 +350,7 @@ export default function CBMXTable({
                       onCommit={(i, v) => setNthValueItem(a.id, "costs", key, i, v)}
                     />
                   </td>
-                  <td style={cellright}>
+                  <td style={cellRight}>
                     <SlotStack
                       slots={PER_VALUE_TYPE_SLOTS}
                       readOnly={!onChange || a.id.startsWith("EMPTY-")}
