@@ -1,5 +1,6 @@
 export type CostBenefitType = "Financial" | "Environmental" | "Social" | "OtherNonFinancial";
 
+
 export type CBItem = { type: CostBenefitType; description: string };
 export type KPI = { name: string; rank: number };
 export type Operation = { name: string };

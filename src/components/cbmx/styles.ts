@@ -33,6 +33,7 @@ export const networkCell: CSSProperties = {
   fontWeight: 600,
 };
 
+
 export const cellLeft: CSSProperties = {
   ...baseCell,
   textAlign: "left",

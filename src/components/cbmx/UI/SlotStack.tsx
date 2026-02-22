@@ -1,6 +1,7 @@
 import React from "react";
 import EditableText from "./EditableText";
 
+
 export default function SlotStack({
   slots,
   getValue,
