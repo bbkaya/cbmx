@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, Fragment } from "react";
+import React, { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
 
 type CostBenefitType = "Financial" | "Environmental" | "Social" | "OtherNonFinancial";
 
@@ -95,20 +95,6 @@ const VALUE_TYPES: { label: string; key: CostBenefitType }[] = [
   { label: "Other Non-Financial", key: "OtherNonFinancial" },
 ];
 
-const costSlots = Math.max(
-  DEFAULT_PER_VALUE_TYPE_SLOTS,
-  countOfType(a.costs, key)
-);
-const benefitSlots = Math.max(
-  DEFAULT_PER_VALUE_TYPE_SLOTS,
-  countOfType(a.benefits, key)
-);
-
-const kpiSlots = Math.max(DEFAULT_KPI_SLOTS, (a.kpis ?? []).length);
-const serviceSlots = Math.max(DEFAULT_SERVICE_SLOTS, (a.services ?? []).length);
-const processSlots = Math.max(DEFAULT_PROCESS_SLOTS, (blueprint.coCreationProcesses ?? []).length);
-
-
 export default function CBMXTable({
   blueprint,
   actorCount = 5,
@@ -120,6 +106,35 @@ export default function CBMXTable({
 }) {
   const { actors, N } = useMemo(() => normalizeActors(blueprint.actors, actorCount), [blueprint.actors, actorCount]);
   const colspanNetwork = N * 2;
+
+  // Slot sizing (aligned across actors)
+  const costSlotsByType = useMemo(() => {
+    const map = new Map<CostBenefitType, number>();
+    for (const { key } of VALUE_TYPES) {
+      const maxCount = Math.max(0, ...actors.map((a) => countOfType(a.costs, key)));
+      map.set(key, Math.max(DEFAULT_PER_VALUE_TYPE_SLOTS, maxCount));
+    }
+    return map;
+  }, [actors]);
+
+  const benefitSlotsByType = useMemo(() => {
+    const map = new Map<CostBenefitType, number>();
+    for (const { key } of VALUE_TYPES) {
+      const maxCount = Math.max(0, ...actors.map((a) => countOfType(a.benefits, key)));
+      map.set(key, Math.max(DEFAULT_PER_VALUE_TYPE_SLOTS, maxCount));
+    }
+    return map;
+  }, [actors]);
+
+  const kpiSlots = useMemo(() => Math.max(DEFAULT_KPI_SLOTS, ...actors.map((a) => (a.kpis ?? []).length)), [actors]);
+  const serviceSlots = useMemo(
+    () => Math.max(DEFAULT_SERVICE_SLOTS, ...actors.map((a) => (a.services ?? []).length)),
+    [actors]
+  );
+  const processSlots = useMemo(
+    () => Math.max(DEFAULT_PROCESS_SLOTS, (blueprint.coCreationProcesses ?? []).length),
+    [blueprint.coCreationProcesses]
+  );
 
   function updateBlueprint(mutator: (draft: CBMXBlueprint) => void) {
     if (!onChange) return;
@@ -193,64 +208,70 @@ export default function CBMXTable({
     return arr[idxs[slotIndex]]?.description ?? "";
   }
 
-  function setKpiSlot(actorId: string, slotIndex: number, name: string) {
+  function getKpiSlotNameFlexible(a: Actor, slotIndex: number) {
+    const sorted = (a.kpis ?? []).slice().sort((x, y) => (x.rank ?? 999) - (y.rank ?? 999));
+    return sorted[slotIndex]?.name ?? "";
+  }
+
+  function setKpiSlotFlexible(actorId: string, slotIndex: number, name: string) {
     updateBlueprint((next) => {
       const a = next.actors.find((x) => x.id === actorId);
       if (!a) return;
 
-      const arr = (a.kpis ?? []).slice();
-      const rank = slotIndex + 1;
+      a.kpis = Array.isArray(a.kpis) ? a.kpis : [];
+      const sorted = a.kpis.slice().sort((x, y) => (x.rank ?? 999) - (y.rank ?? 999));
+
       const cleaned = (name ?? "").trim();
+      const target = sorted[slotIndex];
 
-      const existingIndex = arr.findIndex((k) => (k.rank ?? 0) === rank);
-
-      if (!cleaned) {
-        if (existingIndex >= 0) arr.splice(existingIndex, 1);
-      } else {
-        if (existingIndex >= 0) arr[existingIndex] = { ...arr[existingIndex], name: cleaned, rank };
-        else arr.push({ name: cleaned, rank });
+      if (!target) {
+        // creating via editing a virtual slot: append with next rank
+        if (!cleaned) return;
+        const maxRank = a.kpis.reduce((m, k) => Math.max(m, k.rank ?? 0), 0);
+        a.kpis.push({ name: cleaned, rank: maxRank + 1 });
+        return;
       }
 
-      a.kpis = arr;
+      // update/delete existing KPI by rank identity
+      const idx = a.kpis.findIndex(
+        (k) => (k.rank ?? 0) === (target.rank ?? 0) && (k.name ?? "") === (target.name ?? "")
+      );
+      if (idx < 0) return;
+
+      if (!cleaned) a.kpis.splice(idx, 1);
+      else a.kpis[idx] = { ...a.kpis[idx], name: cleaned };
     });
   }
 
+  function setServiceSlot(actorId: string, slotIndex: number, line: string) {
+    updateBlueprint((next) => {
+      const a = next.actors.find((x) => x.id === actorId);
+      if (!a) return;
 
+      a.services = Array.isArray(a.services) ? a.services : [];
+      const arr = a.services.slice();
+      const cleaned = (line ?? "").trim();
 
+      if (!cleaned) {
+        if (slotIndex < arr.length) arr.splice(slotIndex, 1);
+        a.services = arr;
+        return;
+      }
 
-  function getKpiSlotNameFlexible(a: Actor, slotIndex: number) {
-  const sorted = (a.kpis ?? []).slice().sort((x, y) => (x.rank ?? 999) - (y.rank ?? 999));
-  return sorted[slotIndex]?.name ?? "";
-}
+      const parsed = parseServiceLine(cleaned);
+      if (!parsed.name) {
+        // If user typed only "(op1, op2)" etc., treat as empty -> delete
+        if (slotIndex < arr.length) arr.splice(slotIndex, 1);
+        a.services = arr;
+        return;
+      }
 
-function setKpiSlotFlexible(actorId: string, slotIndex: number, name: string) {
-  updateBlueprint((next) => {
-    const a = next.actors.find((x) => x.id === actorId);
-    if (!a) return;
+      if (slotIndex < arr.length) arr[slotIndex] = parsed;
+      else arr.push(parsed);
 
-    a.kpis = Array.isArray(a.kpis) ? a.kpis : [];
-    const sorted = a.kpis.slice().sort((x, y) => (x.rank ?? 999) - (y.rank ?? 999));
-
-    const cleaned = (name ?? "").trim();
-    const target = sorted[slotIndex];
-
-    if (!target) {
-      // creating via editing a virtual slot: append with next rank
-      if (!cleaned) return;
-      const maxRank = a.kpis.reduce((m, k) => Math.max(m, k.rank ?? 0), 0);
-      a.kpis.push({ name: cleaned, rank: maxRank + 1 });
-      return;
-    }
-
-    // update/delete existing KPI by rank identity
-    const idx = a.kpis.findIndex((k) => (k.rank ?? 0) === (target.rank ?? 0) && k.name === target.name);
-    if (idx < 0) return;
-
-    if (!cleaned) a.kpis.splice(idx, 1);
-    else a.kpis[idx] = { ...a.kpis[idx], name: cleaned };
-  });
-}
-  
+      a.services = arr;
+    });
+  }
 
   /** Added: render services as "Service (op1, op2)" */
   function getServiceSlotLine(a: Actor, slotIndex: number) {
@@ -307,58 +328,43 @@ function setKpiSlotFlexible(actorId: string, slotIndex: number, name: string) {
     return names.length ? `${name} (${names.join(", ")})` : name;
   }
 
+  function addCostBenefitSlot(actorId: string, kind: "costs" | "benefits", type: CostBenefitType) {
+    updateBlueprint((next) => {
+      const a = next.actors.find((x) => x.id === actorId);
+      if (!a) return;
+      a[kind] = Array.isArray(a[kind]) ? a[kind] : [];
+      (a[kind] as CBItem[]).push({ type, description: "" });
+      ensureMinCostBenefit(a);
+    });
+  }
 
+  function addKpiSlot(actorId: string) {
+    updateBlueprint((next) => {
+      const a = next.actors.find((x) => x.id === actorId);
+      if (!a) return;
+      a.kpis = Array.isArray(a.kpis) ? a.kpis : [];
+      const maxRank = a.kpis.reduce((m, k) => Math.max(m, k.rank ?? 0), 0);
+      a.kpis.push({ name: "", rank: maxRank + 1 });
+    });
+  }
 
+  function addServiceSlot(actorId: string) {
+    updateBlueprint((next) => {
+      const a = next.actors.find((x) => x.id === actorId);
+      if (!a) return;
+      a.services = Array.isArray(a.services) ? a.services : [];
+      a.services.push({ name: "", operations: [] });
+    });
+  }
 
+  function addProcessSlot() {
+    updateBlueprint((next) => {
+      next.coCreationProcesses = Array.isArray(next.coCreationProcesses) ? next.coCreationProcesses : [];
+      const arr = next.coCreationProcesses;
+      arr.push({ id: `P${arr.length + 1}`, name: "", participantActorIds: [] });
+    });
+  }
 
-
-
-function addCostBenefitSlot(actorId: string, kind: "costs" | "benefits", type: CostBenefitType) {
-  updateBlueprint((next) => {
-    const a = next.actors.find((x) => x.id === actorId);
-    if (!a) return;
-    a[kind] = Array.isArray(a[kind]) ? a[kind] : [];
-    (a[kind] as CBItem[]).push({ type, description: "" });
-    ensureMinCostBenefit(a);
-  });
-}
-
-function addKpiSlot(actorId: string) {
-  updateBlueprint((next) => {
-    const a = next.actors.find((x) => x.id === actorId);
-    if (!a) return;
-    a.kpis = Array.isArray(a.kpis) ? a.kpis : [];
-    // rank: next available (max rank + 1)
-    const maxRank = a.kpis.reduce((m, k) => Math.max(m, k.rank ?? 0), 0);
-    a.kpis.push({ name: "", rank: maxRank + 1 });
-  });
-}
-
-function addServiceSlot(actorId: string) {
-  updateBlueprint((next) => {
-    const a = next.actors.find((x) => x.id === actorId);
-    if (!a) return;
-    a.services = Array.isArray(a.services) ? a.services : [];
-    a.services.push({ name: "", operations: [] });
-  });
-}
-
-function addProcessSlot() {
-  updateBlueprint((next) => {
-    next.coCreationProcesses = Array.isArray(next.coCreationProcesses) ? next.coCreationProcesses : [];
-    const arr = next.coCreationProcesses;
-    arr.push({ id: `P${arr.length + 1}`, name: "", participantActorIds: [] });
-  });
-}
-
-  function countOfType(items: CBItem[] | undefined, type: CostBenefitType) {
-  return (items ?? []).filter((x) => x?.type === type).length;
-}
-  
-
-
-
-  
   return (
     <div style={{ display: "inline-block", padding: 14, border: "1px solid #ddd", borderRadius: 10, background: "#fff" }}>
       <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
@@ -431,56 +437,55 @@ function addProcessSlot() {
             ))}
           </tr>
 
-          {VALUE_TYPES.map(({ label, key }) => (
-            <tr key={`row-${key}`}>
-              <td style={rowLabelIndentCell}>&nbsp;&nbsp;{label}</td>
-              {actors.map((a) => (
-                <Fragment key={a.id}>
-                  <td style={cellLeft}>
-                    <SlotStack
-  slots={costSlots}
-  readOnly={!onChange || a.id.startsWith("EMPTY-")}
-  getValue={(i) => getNthValueItemDescription(a, "costs", key, i)}
-  placeholder={onChange ? "…" : ""}
-  onCommit={(i, v) => setNthValueItem(a.id, "costs", key, i, v)}
-  onAdd={() => addCostBenefitSlot(a.id, "costs", key)}
-/>
-                    
-                  </td>
-                  <td style={cellLeft}>
+          {VALUE_TYPES.map(({ label, key }) => {
+            const costSlots = costSlotsByType.get(key) ?? DEFAULT_PER_VALUE_TYPE_SLOTS;
+            const benefitSlots = benefitSlotsByType.get(key) ?? DEFAULT_PER_VALUE_TYPE_SLOTS;
 
-                    <SlotStack
-  slots={benefitSlots}
-  readOnly={!onChange || a.id.startsWith("EMPTY-")}
-  getValue={(i) => getNthValueItemDescription(a, "benefits", key, i)}
-  placeholder={onChange ? "…" : ""}
-  onCommit={(i, v) => setNthValueItem(a.id, "benefits", key, i, v)}
-  onAdd={() => addCostBenefitSlot(a.id, "benefits", key)}
-/>
+            return (
+              <tr key={`row-${key}`}>
+                <td style={rowLabelIndentCell}>&nbsp;&nbsp;{label}</td>
+                {actors.map((a) => (
+                  <Fragment key={a.id}>
+                    <td style={cellLeft}>
+                      <SlotStack
+                        slots={costSlots}
+                        readOnly={!onChange || a.id.startsWith("EMPTY-")}
+                        getValue={(i) => getNthValueItemDescription(a, "costs", key, i)}
+                        placeholder={onChange ? "…" : ""}
+                        onCommit={(i, v) => setNthValueItem(a.id, "costs", key, i, v)}
+                        onAdd={() => addCostBenefitSlot(a.id, "costs", key)}
+                      />
+                    </td>
 
-
-                    
-                  </td>
-                </Fragment>
-              ))}
-            </tr>
-          ))}
+                    <td style={cellLeft}>
+                      <SlotStack
+                        slots={benefitSlots}
+                        readOnly={!onChange || a.id.startsWith("EMPTY-")}
+                        getValue={(i) => getNthValueItemDescription(a, "benefits", key, i)}
+                        placeholder={onChange ? "…" : ""}
+                        onCommit={(i, v) => setNthValueItem(a.id, "benefits", key, i, v)}
+                        onAdd={() => addCostBenefitSlot(a.id, "benefits", key)}
+                      />
+                    </td>
+                  </Fragment>
+                ))}
+              </tr>
+            );
+          })}
 
           <tr>
             <td style={rowLabelCell}>KPIs</td>
             {actors.map((a) => (
               <td key={a.id} colSpan={2} style={cellLeft}>
-                
-<SlotStack
-  slots={kpiSlots}
-  readOnly={!onChange || a.id.startsWith("EMPTY-")}
-  getValue={(i) => getKpiSlotNameFlexible(a, i)}
-  placeholder={onChange ? "…" : ""}
-  prefixLabel={(i) => `${i + 1}.`}
-  onCommit={(i, v) => setKpiSlotFlexible(a.id, i, v)}
-  onAdd={() => addKpiSlot(a.id)}
-/>
-                
+                <SlotStack
+                  slots={kpiSlots}
+                  readOnly={!onChange || a.id.startsWith("EMPTY-")}
+                  getValue={(i) => getKpiSlotNameFlexible(a, i)}
+                  placeholder={onChange ? "…" : ""}
+                  prefixLabel={(i) => `${i + 1}.`}
+                  onCommit={(i, v) => setKpiSlotFlexible(a.id, i, v)}
+                  onAdd={() => addKpiSlot(a.id)}
+                />
               </td>
             ))}
           </tr>
@@ -489,16 +494,14 @@ function addProcessSlot() {
             <td style={rowLabelCell}>Actor Services</td>
             {actors.map((a) => (
               <td key={a.id} colSpan={2} style={cellLeft}>
-                
-<SlotStack
-  slots={serviceSlots}
-  readOnly={!onChange || a.id.startsWith("EMPTY-")}
-  getValue={(i) => getServiceSlotLine(a, i)}
-  placeholder={onChange ? "Service (op1, op2)" : ""}
-  onCommit={(i, v) => setServiceSlot(a.id, i, v)}
-  onAdd={() => addServiceSlot(a.id)}
-/>
-                
+                <SlotStack
+                  slots={serviceSlots}
+                  readOnly={!onChange || a.id.startsWith("EMPTY-")}
+                  getValue={(i) => getServiceSlotLine(a, i)}
+                  placeholder={onChange ? "Service (op1, op2)" : ""}
+                  onCommit={(i, v) => setServiceSlot(a.id, i, v)}
+                  onAdd={() => addServiceSlot(a.id)}
+                />
               </td>
             ))}
           </tr>
@@ -506,16 +509,14 @@ function addProcessSlot() {
           <tr>
             <td style={rowLabelCell}>Co-Creation Processes</td>
             <td colSpan={colspanNetwork} style={cellLeft}>
-              
-<SlotStack
-  slots={processSlots}
-  readOnly={!onChange}
-  getValue={(i) => getProcessSlotLine(i)}
-  placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
-  onCommit={(i, v) => setProcessSlot(i, v)}
-  onAdd={() => addProcessSlot()}
-/>
-              
+              <SlotStack
+                slots={processSlots}
+                readOnly={!onChange}
+                getValue={(i) => getProcessSlotLine(i)}
+                placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
+                onCommit={(i, v) => setProcessSlot(i, v)}
+                onAdd={() => addProcessSlot()}
+              />
             </td>
           </tr>
         </tbody>
@@ -615,7 +616,6 @@ function EditableText({
   );
 }
 
-
 function SlotStack({
   slots,
   getValue,
@@ -631,15 +631,14 @@ function SlotStack({
   readOnly?: boolean;
   placeholder?: string;
   prefixLabel?: (slotIndex: number) => string;
-  onAdd?: () => void; // NEW
+  onAdd?: () => void;
 }) {
   const FONT_SIZE = 12;
-  const LINE_HEIGHT = 1.25; // must match EditableText commonStyle lineHeight
-  const LINE_PX = FONT_SIZE * LINE_HEIGHT; // 15px
+  const LINE_HEIGHT = 1.25;
+  const LINE_PX = FONT_SIZE * LINE_HEIGHT;
 
   return (
     <div style={{ position: "relative" }}>
-      {/* small + in top-right of the stack */}
       {onAdd && !readOnly ? (
         <button
           type="button"
@@ -674,8 +673,7 @@ function SlotStack({
                 fontSize: FONT_SIZE,
                 lineHeight: `${LINE_PX}px`,
                 height: `${LINE_PX}px`,
-                paddingTop: 6, // matches EditableText padding
-                marginTop: 0,
+                paddingTop: 6,
                 color: "#111",
                 userSelect: "none",
               }}
@@ -698,11 +696,6 @@ function SlotStack({
     </div>
   );
 }
-
-
-
-
-
 
 /* ---------------- domain helpers ---------------- */
 
@@ -757,6 +750,10 @@ function indicesOfType(items: CBItem[], type: CostBenefitType) {
   return idxs;
 }
 
+function countOfType(items: CBItem[] | undefined, type: CostBenefitType) {
+  return (items ?? []).filter((x) => x?.type === type).length;
+}
+
 function parseServiceLine(line: string): Service {
   const trimmed = line.trim();
   const m = trimmed.match(/^(.*?)(?:\s*\((.*?)\))?\s*$/);
@@ -778,7 +775,6 @@ function parseProcessLine(
   line: string,
   actorsIn: { id: string; name: string }[]
 ): { name: string; participantActorIds: string[] } {
-  // Accept: "Process name" OR "Process name (Actor 1, Actor 2)"
   const trimmed = (line ?? "").trim();
   const m = trimmed.match(/^(.*?)(?:\s*\((.*?)\))?\s*$/);
   const name = (m?.[1] ?? "").trim();
@@ -786,7 +782,7 @@ function parseProcessLine(
 
   if (!raw) return { name, participantActorIds: [] };
 
-  // Build lookup: token -> actorId (by id and by name, case-insensitive)
+  // token -> actorId (by id and by name, case-insensitive)
   const lookup = new Map<string, string>();
   for (const a of actorsIn ?? []) {
     if (!a) continue;
