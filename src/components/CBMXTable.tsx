@@ -341,7 +341,7 @@ export default function CBMXTable({
               <td style={rowLabelIndentCell}>&nbsp;&nbsp;{label}</td>
               {actors.map((a) => (
                 <React.Fragment key={a.id}>
-                  <td style={cell}>
+                  <td style={cellLeft}>
                     <SlotStack
                       slots={PER_VALUE_TYPE_SLOTS}
                       readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -350,7 +350,7 @@ export default function CBMXTable({
                       onCommit={(i, v) => setNthValueItem(a.id, "costs", key, i, v)}
                     />
                   </td>
-                  <td style={cell}>
+                  <td style={cellLeft}>
                     <SlotStack
                       slots={PER_VALUE_TYPE_SLOTS}
                       readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -367,7 +367,7 @@ export default function CBMXTable({
           <tr>
             <td style={rowLabelCell}>KPIs</td>
             {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cell}>
+              <td key={a.id} colSpan={2} style={cellLeft}>
                 <SlotStack
                   slots={KPI_SLOTS}
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -383,7 +383,7 @@ export default function CBMXTable({
           <tr>
             <td style={rowLabelCell}>Actor Services</td>
             {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cell}>
+              <td key={a.id} colSpan={2} style={cellLeft}>
                 <SlotStack
                   slots={SERVICE_SLOTS}
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -397,7 +397,7 @@ export default function CBMXTable({
 
           <tr>
             <td style={rowLabelCell}>Co-Creation Processes</td>
-            <td colSpan={colspanNetwork} style={cell}>
+            <td colSpan={colspanNetwork} style={cellLeft}>
               <SlotStack
                 slots={PROCESS_SLOTS}
                 readOnly={!onChange}
@@ -668,3 +668,7 @@ const networkCell: React.CSSProperties = {
   fontWeight: 600,
 };
 
+const cellLeft: React.CSSProperties = {
+  ...baseCell,
+  textAlign: "left",
+};
