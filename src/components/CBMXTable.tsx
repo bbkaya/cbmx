@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
 
 type CostBenefitType = "Financial" | "Environmental" | "Social" | "OtherNonFinancial";
 
