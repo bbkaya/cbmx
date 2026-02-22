@@ -2,7 +2,7 @@ import "./App.css";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 import CBMXTable, { type CBMXBlueprint, validateCBMXBlueprint } from "./components/CBMXTable";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 const sampleBlueprint: CBMXBlueprint = {
   meta: { id: "cbmx-001", name: "Sample CBMX" },
@@ -75,23 +75,98 @@ export default function App() {
   // Draft for editing (what the table edits)
   const [draft, setDraft] = useState<CBMXBlueprint>(() => deepClone(sampleBlueprint));
 
+  // file picker ref for import
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Dirtiness checks
+  const blueprintHash = useMemo(() => stableHash(blueprint), [blueprint]);
+  const draftHash = useMemo(() => stableHash(draft), [draft]);
+  const isDirty = draftHash !== blueprintHash;
+
   // Keep validation tied to the draft (what user is editing)
   const issues = useMemo(() => validateCBMXBlueprint(draft), [draft]);
-  const blockingErrors = issues.filter((x) => x.level === "error");
-  const hasBlocking = blockingErrors.length > 0;
+  const hasBlocking = issues.some((x) => x.level === "error");
+
+  function newBlueprint() {
+    const fresh = deepClone(sampleBlueprint);
+    setBlueprint(fresh);
+    setDraft(deepClone(fresh));
+  }
 
   function saveDraft() {
     if (hasBlocking) return;
     const committed = deepClone(draft);
     setBlueprint(committed);
-    setDraft(committed);
+    setDraft(deepClone(committed));
   }
 
   function discardDraft() {
     setDraft(deepClone(blueprint));
   }
 
-  const isDirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(blueprint), [draft, blueprint]);
+  // ---------------- JSON Export/Import ----------------
+
+  function downloadJson(filename: string, obj: unknown) {
+    const json = JSON.stringify(obj, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(url);
+  }
+
+  function exportJsonDraft() {
+    const name = (draft.meta?.name ?? "cbmx-blueprint").trim() || "cbmx-blueprint";
+    downloadJson(`${safeFilename(name)}-draft.json`, draft);
+  }
+
+  function exportJsonSaved() {
+    const name = (blueprint.meta?.name ?? "cbmx-blueprint").trim() || "cbmx-blueprint";
+    downloadJson(`${safeFilename(name)}.json`, blueprint);
+  }
+
+  function openImportDialog() {
+    importInputRef.current?.click();
+  }
+
+  async function handleImportFile(file: File) {
+    const text = await file.text();
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      alert("Import failed: file is not valid JSON.");
+      return;
+    }
+
+    // Minimal shape check
+    const candidate = parsed as CBMXBlueprint;
+    if (!candidate || !Array.isArray(candidate.actors)) {
+      alert("Import failed: JSON does not look like a CBMX blueprint (missing actors array).");
+      return;
+    }
+
+    // Validate; allow import even with warnings; block if errors? (I recommend allow, but Save will be disabled)
+    const importedIssues = validateCBMXBlueprint(candidate);
+    const importedErrors = importedIssues.filter((x) => x.level === "error");
+
+    setDraft(deepClone(candidate));
+
+    if (importedErrors.length > 0) {
+      alert(
+        `Imported with ${importedErrors.length} validation error(s). You can edit to fix them; Save will remain disabled until resolved.`
+      );
+    } else {
+      alert("Import successful. Review and click Save to commit.");
+    }
+  }
+
+  // ---------------- PNG/PDF Export ----------------
 
   async function exportPng() {
     const node = document.getElementById("cbmx-canvas");
@@ -150,7 +225,7 @@ export default function App() {
         <h1 style={{ margin: 0, fontSize: 20 }}>CBMX Blueprint Editor</h1>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <button type="button" onClick={() => alert("New blueprint (next step)")}>
+          <button type="button" onClick={newBlueprint}>
             New
           </button>
 
@@ -171,6 +246,17 @@ export default function App() {
             {isDirty ? "Unsaved changes" : "All changes saved"}
           </span>
 
+          {/* JSON buttons */}
+          <button type="button" onClick={exportJsonDraft}>
+            Export JSON (Draft)
+          </button>
+          <button type="button" onClick={exportJsonSaved}>
+            Export JSON (Saved)
+          </button>
+          <button type="button" onClick={openImportDialog}>
+            Import JSON
+          </button>
+
           <button type="button" onClick={exportPng}>
             Export PNG
           </button>
@@ -183,6 +269,20 @@ export default function App() {
       <p style={{ marginTop: 8, color: "#444" }}>Goal: create, edit, and export CBMX blueprints (PNG/PDF).</p>
 
       <ValidationPanel issues={issues} />
+
+      {/* Hidden file input for import */}
+      <input
+        ref={importInputRef}
+        type="file"
+        accept="application/json,.json"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          // allow importing same file twice
+          e.currentTarget.value = "";
+          if (file) void handleImportFile(file);
+        }}
+      />
 
       <div
         id="cbmx-canvas"
@@ -243,4 +343,17 @@ function ValidationPanel({
 
 function deepClone<T>(x: T): T {
   return JSON.parse(JSON.stringify(x));
-} 
+}
+
+function stableHash(obj: unknown): string {
+  return JSON.stringify(obj);
+}
+
+function safeFilename(name: string) {
+  // keep it simple and cross-platform
+  return name
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9._-]/g, "")
+    .slice(0, 80) || "cbmx-blueprint";
+}
