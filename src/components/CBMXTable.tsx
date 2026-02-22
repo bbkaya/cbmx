@@ -230,7 +230,7 @@ export default function CBMXTable({
     });
   }
 
-  function setProcessSlot(slotIndex: number, line: string) {
+function setProcessSlot(slotIndex: number, line: string) {
   updateBlueprint((next) => {
     next.coCreationProcesses = next.coCreationProcesses ?? [];
     const arr = next.coCreationProcesses.slice();
@@ -275,7 +275,7 @@ function getProcessSlotLine(slotIndex: number) {
 
   return names.length ? `${name} (${names.join(", ")})` : name;
 }
-
+  
   return (
     <div style={{ display: "inline-block", padding: 14, border: "1px solid #ddd", borderRadius: 10, background: "#fff" }}>
       <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
