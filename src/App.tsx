@@ -6,23 +6,37 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type ValidationIssue = { level: "error" | "warning"; message: string };
 
+function makeBlankActor(idNum: number) {
+  const id = `A${idNum}`;
+  return {
+    id,
+    type: "Other" as const,
+    name: "Click to edit",
+    actorValueProposition: { statement: "Click to edit" },
+    costs: [],
+    benefits: [],
+    kpis: [],
+    services: [
+      {
+        name: "Click to edit",
+        operations: [],
+      },
+    ],
+  };
+}
+
 /**
- * Blank/guided starting template (instead of a filled example).
- * Keep it minimal so users aren't "editing an example".
+ * Starter blueprint:
+ * - Not a “sample”
+ * - Contains 5 placeholder actors so validation doesn't block editing
+ * - Uses "Click to edit" instead of "Actor 1..5"
  */
 const starterBlueprint: CBMXBlueprint = {
   meta: { id: "cbmx-new", name: "New CBMX Blueprint" },
-
-  // Network VP (single statement field in your latest design)
   networkValueProposition: {
-    statement:
-      "Write ONE clear value proposition statement for the whole network (e.g., “We enable … by … for …”).",
+    statement: "Click to edit",
   },
-
-  // Start empty: users add actors themselves (preferred for a truly blank start)
-  actors: [],
-
-  // Optional: keep empty (truly blank). If you prefer 1 guided row, add one object here.
+  actors: [makeBlankActor(1), makeBlankActor(2), makeBlankActor(3), makeBlankActor(4), makeBlankActor(5)],
   coCreationProcesses: [],
 };
 
