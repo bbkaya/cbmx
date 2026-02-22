@@ -4,6 +4,7 @@ import jsPDF from "jspdf";
 import CBMXTable, { type CBMXBlueprint, validateCBMXBlueprint } from "./components/CBMXTable";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+
 const sampleBlueprint: CBMXBlueprint = {
   meta: { id: "cbmx-001", name: "Sample CBMX" },
   networkValueProposition: {
