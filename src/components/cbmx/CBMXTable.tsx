@@ -414,17 +414,19 @@ export default function CBMXTable({
             <td style={rowLabelCellTight}>
               <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
             </td>
-            {actors.map((a, i) => (
+            {actors.map((a) => (
               <td key={a.id} colSpan={2} style={cellTight}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ flex: "1 1 auto" }}>
                     <EditableText
-                  value={a.actorValueProposition?.statement ?? ""}
-                  placeholder={onChange ? "Click to edit…" : ""}
-                  multiline
-                  readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                  onCommit={(v: string) => updateBlueprint((next) => setActorVP(next, a.id, v))}
-                />
+                      value={a.actorValueProposition?.statement ?? ""}
+                      placeholder={onChange ? "Click to edit…" : ""}
+                      multiline
+                      readOnly={!onChange || a.id.startsWith("EMPTY-")}
+                      onCommit={(v: string) => updateBlueprint((next) => setActorVP(next, a.id, v))}
+                    />
+                  </div>
+                </div>
               </td>
             ))}
           </tr>
