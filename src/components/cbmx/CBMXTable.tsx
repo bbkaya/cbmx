@@ -243,20 +243,23 @@ export default function CBMXTable({
     return map;
   }, [actors, onChange]);
 
-  const kpiSlots = useMemo(() => {
-    const maxLen = Math.max(DEFAULT_KPI_SLOTS, ...actors.map((a) => (a.kpis ?? []).length));
-    return onChange ? maxLen + 1 : maxLen;
-  }, [actors, onChange]);
+const kpiSlots = useMemo(() => {
+  const maxLen = Math.max(0, ...actors.map((a) => (a.kpis ?? []).length));
+  const base = Math.max(DEFAULT_KPI_SLOTS, maxLen);
+  return onChange ? Math.max(DEFAULT_KPI_SLOTS, maxLen + 1) : base;
+}, [actors, onChange]);
 
-  const serviceSlots = useMemo(() => {
-    const maxLen = Math.max(DEFAULT_SERVICE_SLOTS, ...actors.map((a) => (a.services ?? []).length));
-    return onChange ? maxLen + 1 : maxLen;
-  }, [actors, onChange]);
+const serviceSlots = useMemo(() => {
+  const maxLen = Math.max(0, ...actors.map((a) => (a.services ?? []).length));
+  const base = Math.max(DEFAULT_SERVICE_SLOTS, maxLen);
+  return onChange ? Math.max(DEFAULT_SERVICE_SLOTS, maxLen + 1) : base;
+}, [actors, onChange]);
 
-  const processSlots = useMemo(() => {
-    const maxLen = Math.max(DEFAULT_PROCESS_SLOTS, (blueprint.coCreationProcesses ?? []).length);
-    return onChange ? maxLen + 1 : maxLen;
-  }, [blueprint.coCreationProcesses, onChange]);
+const processSlots = useMemo(() => {
+  const maxLen = Math.max(0, (blueprint.coCreationProcesses ?? []).length);
+  const base = Math.max(DEFAULT_PROCESS_SLOTS, maxLen);
+  return onChange ? Math.max(DEFAULT_PROCESS_SLOTS, maxLen + 1) : base;
+}, [blueprint.coCreationProcesses, onChange]);
 
   function updateBlueprint(mutator: (draft: CBMXBlueprint) => void) {
     if (!onChange) return;
