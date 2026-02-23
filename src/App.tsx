@@ -266,7 +266,7 @@ function confirmNew() {
             Save
           </button>
 
-          <span style={{ color: isDirty ? "#b45309" : "#15803d", fontSize: 12 }}>
+          <span style={{ color: isDirty ? "#b45309" : "#15803d", fontSize: 10 }}>
             {isDirty ? "Unsaved changes" : "All changes saved"}
           </span>
 
