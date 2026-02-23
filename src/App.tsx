@@ -226,42 +226,23 @@ export default function App() {
   }
 
   // ---------------- New button confirmation flow ----------------
-  function confirmNew() {
-    // If nothing to lose, just reset immediately
-    if (!isDirty) {
-      newBlueprint();
-      return;
-    }
+function confirmNew() {
+  const ok = window.confirm(
+    "Open a new template?\n\nThis will replace the current blueprint and any unsaved changes will be lost."
+  );
 
-    // 1) Confirm discard
-    const discard = window.confirm(
-      "Start a new model?\n\nYou have unsaved changes. This will discard them."
-    );
-
-    if (discard) {
-      newBlueprint();
-      return;
-    }
-
-    // 2) Offer export of the SAVED blueprint (per your gating rule)
-    const exportFirst = window.confirm(
-      "Do you want to export the current saved model to a JSON file first?"
-    );
-
-    if (!exportFirst) return;
-
-    exportJsonSaved();
-
-    // Optional follow-up: after export, ask again whether to start new
-    const discardAfterExport = window.confirm(
-      "Exported.\n\nStart a new model now? This will discard your unsaved changes."
-    );
-
-    if (discardAfterExport) {
-      newBlueprint();
-    }
+  if (ok) {
+    newBlueprint(); // 1.1 OK -> renew with empty template
+    return;
   }
 
+  window.alert(
+    "No changes made.\n\nYou can save and export your blueprint as JSON or PDF via the Menu (⋯)."
+  );
+}
+
+  
+  // ----------------
   return (
     <div style={{ padding: 16, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
