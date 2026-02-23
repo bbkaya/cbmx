@@ -365,25 +365,25 @@ const processSlots = useMemo(() => {
                         />
                       </div>
 
-                      {onChange ? (
-                        <button
-                          type="button"
-                          title="Remove actor"
-                          onClick={() => updateBlueprint((next) => removeActor(next, a.id))}
-                          style={{
-                            border: "1px solid #bbb",
-                            background: "white",
-                            borderRadius: 6,
-                            cursor: "pointer",
-                            padding: "1px 5px",
-                            fontSize: 12,
-                            lineHeight: "14px",
-                            flex: "0 0 auto",
-                          }}
-                        >
-                          🗑️
-                        </button>
-                      ) : null}
+{onChange && a.type !== "Customer" && a.type !== "Orchestrator" ? (
+  <button
+    type="button"
+    title="Remove actor"
+    onClick={() => updateBlueprint((next) => removeActor(next, a.id))}
+    style={{
+      border: "1px solid #bbb",
+      background: "white",
+      borderRadius: 4,
+      cursor: "pointer",
+      padding: "1px 3px",
+      fontSize: 14,
+      lineHeight: "14px",
+      flex: "0 0 auto",
+    }}
+  >
+    -
+  </button>
+) : null}
                     </div>
                   )}
                 </td>
