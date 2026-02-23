@@ -13,10 +13,6 @@ import {
 } from "./cbmxDomain";
 
 import {
-  addCostBenefitSlot,
-  addKpiSlot,
-  addProcessSlot,
-  addServiceSlot,
   getKpiSlotNameFlexible,
   setActorName,
   setActorVP,
@@ -35,7 +31,6 @@ import { cell, cellLeft, networkCell, rowLabelCell, rowLabelIndentCell, thCell }
 export type { CBMXBlueprint } from "./cbmxDomain";
 
 export type ValidationIssue = { level: "error" | "warning"; message: string };
-
 
 /** Minimal, strict-safe validator used by App.tsx */
 export function validateCBMXBlueprint(bp: CBMXBlueprint): ValidationIssue[] {
@@ -185,7 +180,7 @@ function RowLabel({
 
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 8, width: "100%" }}>
-  <span style={indent ? { paddingLeft: 15 } : undefined}>{text}</span>
+      <span style={indent ? { paddingLeft: 15 } : undefined}>{text}</span>
       {tip ? (
         <span
           role="button"
@@ -229,91 +224,106 @@ export default function CBMXTable({
 
   // Slot sizing (aligned across actors)
   const costSlotsByType = useMemo(() => {
+    const extra = onChange ? 1 : 0; // Always show one additional empty slot when editable
     const map = new Map<CostBenefitType, number>();
     for (const { key } of VALUE_TYPES) {
       const maxCount = Math.max(0, ...actors.map((a) => countOfType(a.costs, key)));
-      map.set(key, Math.max(DEFAULT_PER_VALUE_TYPE_SLOTS, maxCount));
+      map.set(key, Math.max(DEFAULT_PER_VALUE_TYPE_SLOTS, maxCount + extra));
     }
     return map;
-  }, [actors]);
+  }, [actors, onChange]);
 
   const benefitSlotsByType = useMemo(() => {
+    const extra = onChange ? 1 : 0; // Always show one additional empty slot when editable
     const map = new Map<CostBenefitType, number>();
     for (const { key } of VALUE_TYPES) {
       const maxCount = Math.max(0, ...actors.map((a) => countOfType(a.benefits, key)));
-      map.set(key, Math.max(DEFAULT_PER_VALUE_TYPE_SLOTS, maxCount));
+      map.set(key, Math.max(DEFAULT_PER_VALUE_TYPE_SLOTS, maxCount + extra));
     }
     return map;
-  }, [actors]);
+  }, [actors, onChange]);
 
-  const kpiSlots = useMemo(() => Math.max(DEFAULT_KPI_SLOTS, ...actors.map((a) => (a.kpis ?? []).length)), [actors]);
-  const serviceSlots = useMemo(
-    () => Math.max(DEFAULT_SERVICE_SLOTS, ...actors.map((a) => (a.services ?? []).length)),
-    [actors]
-  );
-  const processSlots = useMemo(
-    () => Math.max(DEFAULT_PROCESS_SLOTS, (blueprint.coCreationProcesses ?? []).length),
-    [blueprint.coCreationProcesses]
-  );
+  const kpiSlots = useMemo(() => {
+    const maxLen = Math.max(DEFAULT_KPI_SLOTS, ...actors.map((a) => (a.kpis ?? []).length));
+    return onChange ? maxLen + 1 : maxLen;
+  }, [actors, onChange]);
+
+  const serviceSlots = useMemo(() => {
+    const maxLen = Math.max(DEFAULT_SERVICE_SLOTS, ...actors.map((a) => (a.services ?? []).length));
+    return onChange ? maxLen + 1 : maxLen;
+  }, [actors, onChange]);
+
+  const processSlots = useMemo(() => {
+    const maxLen = Math.max(DEFAULT_PROCESS_SLOTS, (blueprint.coCreationProcesses ?? []).length);
+    return onChange ? maxLen + 1 : maxLen;
+  }, [blueprint.coCreationProcesses, onChange]);
 
   function updateBlueprint(mutator: (draft: CBMXBlueprint) => void) {
     if (!onChange) return;
-    const next: CBMXBlueprint = deepClone(blueprint);
+    const next = deepClone(blueprint);
     mutator(next);
-    next.actors = normalizeActors(next.actors, next.actors.length).actors;
     onChange(next);
   }
 
-  function getNthValueItemDescription(
-    a: Actor,
-    kind: "costs" | "benefits",
-    type: CostBenefitType,
-    slotIndex: number
-  ) {
+  function getNthValueItemDescription(a: Actor, kind: "costs" | "benefits", type: CostBenefitType, slotIndex: number) {
     const arr = (a[kind] ?? []) as { type: CostBenefitType; description: string }[];
     const idxs = indicesOfType(arr, type);
-    if (slotIndex >= idxs.length) return "";
-    return arr[idxs[slotIndex]]?.description ?? "";
+    const realIndex = idxs[slotIndex];
+    return realIndex == null ? "" : (arr[realIndex]?.description ?? "");
   }
 
   function getServiceSlotLine(a: Actor, slotIndex: number) {
     const s = (a.services ?? [])[slotIndex];
     if (!s) return "";
-    const ops = (s.operations ?? []).map((o) => o.name).filter(Boolean);
-    const name = (s.name ?? "").trim();
-    return ops.length ? `${name} (${ops.join(", ")})` : name;
+    const ops = (s.operations ?? []).map((o) => (o?.name ?? "").trim()).filter(Boolean);
+    return ops.length ? `${s.name} (${ops.join(", ")})` : (s.name ?? "");
   }
 
   function getProcessSlotLine(slotIndex: number) {
     const p = (blueprint.coCreationProcesses ?? [])[slotIndex];
     if (!p) return "";
-
-    const name = (p.name ?? "").trim();
-    const ids = p.participantActorIds ?? [];
-
-    const idToName = new Map((actors ?? []).map((a) => [a.id, a.name]));
-    const names = ids.map((id) => idToName.get(id) ?? id).filter(Boolean);
-
-    return names.length ? `${name} (${names.join(", ")})` : name;
+    const names =
+      (p.participantActorIds ?? [])
+        .map((id) => actors.find((a) => a.id === id)?.name ?? id)
+        .filter(Boolean)
+        .join(", ") ?? "";
+    return names ? `${p.name} (${names})` : (p.name ?? "");
   }
 
   return (
-    <div
-      style={{
-        display: "inline-block",
-        padding: 8, // was 14
-        border: "1px solid #ddd",
-        borderRadius: 10,
-        background: "#fff",
-      }}
-    >
-      <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
-        <colgroup>
-          <col style={{ width: 220 }} />
-          {Array.from({ length: colspanNetwork }).map((_, i: number) => (
-            <col key={i} style={{ width: 170 }} />
-          ))}
-        </colgroup>
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ borderCollapse: "collapse", width: "100%", tableLayout: "fixed" }}>
+        <thead>
+          <tr>
+            <th style={thCellTight}> </th>
+            {actors.map((a) => (
+              <th key={a.id} colSpan={2} style={thCellTight}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <span style={{ fontWeight: 700 }}>{a.id.startsWith("EMPTY-") ? "" : a.id}</span>
+
+                  {!a.id.startsWith("EMPTY-") && onChange ? (
+                    <button
+                      type="button"
+                      title="Remove actor"
+                      onClick={() => updateBlueprint((next) => removeActor(next, a.id))}
+                      style={{
+                        border: "1px solid #bbb",
+                        background: "white",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        padding: "2px 6px",
+                        fontSize: 12,
+                        lineHeight: "14px",
+                      }}
+                    >
+                      🗑️
+                    </button>
+                  ) : null}
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
 
         <tbody>
           <tr>
@@ -323,10 +333,9 @@ export default function CBMXTable({
             <td colSpan={colspanNetwork} style={networkCellTight}>
               <EditableText
                 value={blueprint.networkValueProposition?.statement ?? ""}
-                placeholder={onChange ? "Click to edit…" : ""}
-                multiline
                 readOnly={!onChange}
-                onCommit={(v: string) => updateBlueprint((next) => setNetworkVP(next, v))}
+                placeholder={onChange ? "Click to edit" : ""}
+                onCommit={(v) => updateBlueprint((next) => setNetworkVP(next, v))}
               />
             </td>
           </tr>
@@ -336,90 +345,72 @@ export default function CBMXTable({
               <RowLabel text="Actor Type" helpKey="actorType" />
             </td>
             {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cellTight}>
-                {a.type === "Other" ? "" : a.type}
-              </td>
+              <Fragment key={a.id}>
+                <td colSpan={2} style={cellTight}>
+                  {a.id.startsWith("EMPTY-") ? "" : a.type}
+                </td>
+              </Fragment>
             ))}
           </tr>
 
           <tr>
             <td style={rowLabelCellTight}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <RowLabel text="Actor" helpKey="actor" />
+              <RowLabel text="Actor" helpKey="actor" />
+            </td>
+            {actors.map((a) => (
+              <Fragment key={a.id}>
+                <td colSpan={2} style={cellLeftTight}>
+                  {a.id.startsWith("EMPTY-") ? null : (
+                    <EditableText
+                      value={a.name ?? ""}
+                      readOnly={!onChange}
+                      placeholder={onChange ? "Click to edit" : ""}
+                      onCommit={(v) => updateBlueprint((next) => setActorName(next, a.id, v))}
+                    />
+                  )}
+                </td>
+              </Fragment>
+            ))}
+          </tr>
+
+          <tr>
+            <td style={rowLabelCellTight}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
                 {onChange ? (
                   <button
                     type="button"
                     onClick={() => updateBlueprint((next) => addActor(next))}
-                    disabled={actors.length >= 10}
-                    title={actors.length >= 10 ? "Maximum 10 actors" : "Add actor"}
+                    title="Add actor"
                     style={{
-                      fontSize: 14,
-                      padding: "2px 5px",
                       border: "1px solid #bbb",
-                      borderRadius: 4,
-                      cursor: actors.length >= 10 ? "not-allowed" : "pointer",
                       background: "white",
-                      lineHeight: "15px",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      padding: "2px 8px",
+                      fontSize: 12,
+                      lineHeight: "14px",
                       whiteSpace: "nowrap",
-                      flex: "0 0 auto",
                     }}
                   >
-                      +
+                    + Actor
                   </button>
                 ) : null}
               </div>
             </td>
-            {actors.map((a, i) => (
-              <td key={a.id} colSpan={2} style={cellTight}>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                  <div style={{ flex: "1 1 auto" }}>
-                    <EditableText
-                  value={a.name ?? ""}
-                  placeholder={onChange ? "Click to edit…" : ""}
-                  readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                  onCommit={(v: string) => updateBlueprint((next) => setActorName(next, a.id, v))}
-                    />
-                  </div>
-                  {onChange && i >= 2 ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const ok = window.confirm(
-                          "Remove this actor? This will delete all actor-specific content and remove the actor from co-creation processes."
-                        );
-                        if (!ok) return;
-                        updateBlueprint((next) => removeActor(next, a.id));
-                      }}
-                      title="Remove actor"
-                      aria-label="Remove actor"
-                      style={{ fontSize: 10, padding: "0 2px", lineHeight: 1, border: "none", background: "transparent", cursor: "pointer" }}
-                      >
-                      🗑️
-                    </button>
-                  ) : null}
-                </div>
-              </td>
-            ))}
-          </tr>
-
-          <tr>
-            <td style={rowLabelCellTight}>
-              <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
-            </td>
             {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cellTight}>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                  <div style={{ flex: "1 1 auto" }}>
+              <Fragment key={a.id}>
+                <td colSpan={2} style={cellLeftTight}>
+                  {a.id.startsWith("EMPTY-") ? null : (
                     <EditableText
                       value={a.actorValueProposition?.statement ?? ""}
-                      placeholder={onChange ? "Click to edit…" : ""}
-                      multiline
-                      readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                      onCommit={(v: string) => updateBlueprint((next) => setActorVP(next, a.id, v))}
+                      readOnly={!onChange}
+                      placeholder={onChange ? "Click to edit" : ""}
+                      onCommit={(v) => updateBlueprint((next) => setActorVP(next, a.id, v))}
                     />
-                  </div>
-                </div>
-              </td>
+                  )}
+                </td>
+              </Fragment>
             ))}
           </tr>
 
@@ -443,10 +434,10 @@ export default function CBMXTable({
               key === "Financial"
                 ? "financial"
                 : key === "Environmental"
-                  ? "environmental"
-                  : key === "Social"
-                    ? "social"
-                    : "otherNonFinancial";
+                ? "environmental"
+                : key === "Social"
+                ? "social"
+                : "otherNonFinancial";
 
             return (
               <tr key={`row-${key}`}>
@@ -464,7 +455,6 @@ export default function CBMXTable({
                         onCommit={(i: number, v: string) =>
                           updateBlueprint((next) => setNthValueItem(next, a.id, "costs", key, i, v))
                         }
-                        onAdd={() => updateBlueprint((next) => addCostBenefitSlot(next, a.id, "costs", key))}
                       />
                     </td>
 
@@ -477,7 +467,6 @@ export default function CBMXTable({
                         onCommit={(i: number, v: string) =>
                           updateBlueprint((next) => setNthValueItem(next, a.id, "benefits", key, i, v))
                         }
-                        onAdd={() => updateBlueprint((next) => addCostBenefitSlot(next, a.id, "benefits", key))}
                       />
                     </td>
                   </Fragment>
@@ -499,7 +488,6 @@ export default function CBMXTable({
                   placeholder={onChange ? "…" : ""}
                   prefixLabel={(i: number) => `${i + 1}.`}
                   onCommit={(i: number, v: string) => updateBlueprint((next) => setKpiSlotFlexible(next, a.id, i, v))}
-                  onAdd={() => updateBlueprint((next) => addKpiSlot(next, a.id))}
                 />
               </td>
             ))}
@@ -517,7 +505,6 @@ export default function CBMXTable({
                   getValue={(i: number) => getServiceSlotLine(a, i)}
                   placeholder={onChange ? "Service (op1, op2)" : ""}
                   onCommit={(i: number, v: string) => updateBlueprint((next) => setServiceSlot(next, a.id, i, v))}
-                  onAdd={() => updateBlueprint((next) => addServiceSlot(next, a.id))}
                 />
               </td>
             ))}
@@ -534,7 +521,6 @@ export default function CBMXTable({
                 getValue={(i: number) => getProcessSlotLine(i)}
                 placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
                 onCommit={(i: number, v: string) => updateBlueprint((next) => setProcessSlot(next, i, v))}
-                onAdd={() => updateBlueprint((next) => addProcessSlot(next))}
               />
             </td>
           </tr>
