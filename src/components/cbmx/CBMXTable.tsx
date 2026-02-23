@@ -369,7 +369,14 @@ const processSlots = useMemo(() => {
   <button
     type="button"
     title="Remove actor"
-    onClick={() => updateBlueprint((next) => removeActor(next, a.id))}
+    onClick={() => {
+      const actorLabel = `${a.id} — ${a.name?.trim() || "Unnamed actor"}`;
+      const ok = window.confirm(
+        `Remove actor ${actorLabel}?\n\nThis will also remove the actor from any participant lists (e.g., co-creation processes).`
+      );
+      if (!ok) return;
+      updateBlueprint((next) => removeActor(next, a.id));
+    }}
     style={{
       border: "1px solid #bbb",
       background: "white",
@@ -381,7 +388,7 @@ const processSlots = useMemo(() => {
       flex: "0 0 auto",
     }}
   >
-    -
+    −
   </button>
 ) : null}
                     </div>
