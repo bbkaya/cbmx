@@ -402,7 +402,7 @@ export default function CBMXTable({
                         flex: "0 0 auto",
                       }}
                     >
-                      ×
+                      ×X
                     </button>
                   ) : null}
                 </div>
