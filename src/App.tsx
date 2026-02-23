@@ -237,7 +237,7 @@ function confirmNew() {
   }
 
   window.alert(
-    "No changes made.\n\nYou can save and export your blueprint as JSON or PDF via the Menu (⋯)."
+    "No changes made.\n\nYou can save and export your blueprint as JSON or PDF via the Menu (Imp/Exp)."
   );
 }
 
