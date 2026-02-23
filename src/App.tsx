@@ -289,7 +289,7 @@ function confirmNew() {
                 borderRadius: 8,
               }}
             >
-              ⋯
+              Imp/Exp
             </button>
 
             {menuOpen ? (
