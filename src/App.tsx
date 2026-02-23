@@ -249,11 +249,11 @@ function confirmNew() {
         <h1 style={{ margin: 0, fontSize: 20 }}>CBMX Blueprint Editor</h1>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <button type="button" onClick={confirmNew}>
+          <button type="button" onClick={confirmNew} style={{ fontSize: 14 }}>
             New
           </button>
 
-          <button type="button" onClick={discardDraft} disabled={!isDirty}>
+          <button type="button" onClick={discardDraft} disabled={!isDirty} style={{ fontSize: 14 }}>
             Discard changes
           </button>
 
@@ -266,7 +266,7 @@ function confirmNew() {
             Save
           </button>
 
-          <span style={{ color: isDirty ? "#b45309" : "#15803d", fontSize: 10 }}>
+          <span style={{ color: isDirty ? "#b45309" : "#15803d", fontSize: 11 }}>
             {isDirty ? "Unsaved changes" : "All changes saved"}
           </span>
 
@@ -279,7 +279,7 @@ function confirmNew() {
               aria-expanded={menuOpen}
               title={ioEnabled ? "Import/Export" : "Save or discard changes before importing/exporting."}
               style={{
-                width: 40,
+                width: 50,
                 height: 34,
                 display: "inline-flex",
                 alignItems: "center",
