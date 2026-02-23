@@ -293,37 +293,7 @@ export default function CBMXTable({
   return (
     <div style={{ overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", width: "100%", tableLayout: "fixed" }}>
-        <thead>
-          <tr>
-            <th style={thCellTight}> </th>
-            {actors.map((a) => (
-              <th key={a.id} colSpan={2} style={thCellTight}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                  <span style={{ fontWeight: 700 }}>{a.id.startsWith("EMPTY-") ? "" : a.id}</span>
-
-                  {!a.id.startsWith("EMPTY-") && onChange ? (
-                    <button
-                      type="button"
-                      title="Remove actor"
-                      onClick={() => updateBlueprint((next) => removeActor(next, a.id))}
-                      style={{
-                        border: "1px solid #bbb",
-                        background: "white",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        padding: "2px 6px",
-                        fontSize: 12,
-                        lineHeight: "14px",
-                      }}
-                    >
-                      🗑️
-                    </button>
-                  ) : null}
-                </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
+        {/* Header row removed (per request #4). First row is Network Value Proposition. */}
 
         <tbody>
           <tr>
@@ -347,27 +317,7 @@ export default function CBMXTable({
             {actors.map((a) => (
               <Fragment key={a.id}>
                 <td colSpan={2} style={cellTight}>
-                  {a.id.startsWith("EMPTY-") ? "" : a.type}
-                </td>
-              </Fragment>
-            ))}
-          </tr>
-
-          <tr>
-            <td style={rowLabelCellTight}>
-              <RowLabel text="Actor" helpKey="actor" />
-            </td>
-            {actors.map((a) => (
-              <Fragment key={a.id}>
-                <td colSpan={2} style={cellLeftTight}>
-                  {a.id.startsWith("EMPTY-") ? null : (
-                    <EditableText
-                      value={a.name ?? ""}
-                      readOnly={!onChange}
-                      placeholder={onChange ? "Click to edit" : ""}
-                      onCommit={(v) => updateBlueprint((next) => setActorName(next, a.id, v))}
-                    />
-                  )}
+                  {a.id.startsWith("EMPTY-") ? "" : a.type === "Other" ? "" : a.type}
                 </td>
               </Fragment>
             ))}
@@ -376,7 +326,7 @@ export default function CBMXTable({
           <tr>
             <td style={rowLabelCellTight}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
+                <RowLabel text="Actor" helpKey="actor" />
                 {onChange ? (
                   <button
                     type="button"
@@ -393,10 +343,54 @@ export default function CBMXTable({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    + Actor
+                    +A
                   </button>
                 ) : null}
               </div>
+            </td>
+            {actors.map((a) => (
+              <Fragment key={a.id}>
+                <td colSpan={2} style={cellLeftTight}>
+                  {a.id.startsWith("EMPTY-") ? null : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <EditableText
+                          value={a.name ?? ""}
+                          readOnly={!onChange}
+                          placeholder={onChange ? "Click to edit" : ""}
+                          onCommit={(v) => updateBlueprint((next) => setActorName(next, a.id, v))}
+                        />
+                      </div>
+
+                      {onChange ? (
+                        <button
+                          type="button"
+                          title="Remove actor"
+                          onClick={() => updateBlueprint((next) => removeActor(next, a.id))}
+                          style={{
+                            border: "1px solid #bbb",
+                            background: "white",
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            padding: "1px 5px",
+                            fontSize: 12,
+                            lineHeight: "14px",
+                            flex: "0 0 auto",
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                </td>
+              </Fragment>
+            ))}
+          </tr>
+
+          <tr>
+            <td style={rowLabelCellTight}>
+              <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
             </td>
             {actors.map((a) => (
               <Fragment key={a.id}>
