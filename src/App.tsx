@@ -249,11 +249,11 @@ function confirmNew() {
         <h1 style={{ margin: 0, fontSize: 20 }}>CBMX Blueprint Editor</h1>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <button type="button" onClick={confirmNew} style={{ fontSize: 14 }}>
+          <button type="button" onClick={confirmNew} style={{ fontSize: 14, borderRadius: 8, lineHeight: 1, height: 40, }}>
             New
           </button>
 
-          <button type="button" onClick={discardDraft} disabled={!isDirty} style={{ fontSize: 14 }}>
+          <button type="button" onClick={discardDraft} disabled={!isDirty} style={{ fontSize: 14, borderRadius: 8, lineHeight: 1, height: 40, }}>
             Discard changes
           </button>
 
@@ -262,6 +262,7 @@ function confirmNew() {
             onClick={saveDraft}
             disabled={!isDirty || hasBlocking}
             title={hasBlocking ? "Fix validation errors before saving." : undefined}
+            style={{ fontSize: 14, borderRadius: 8, lineHeight: 1, height: 40, }}
           >
             Save
           </button>
@@ -279,8 +280,8 @@ function confirmNew() {
               aria-expanded={menuOpen}
               title={ioEnabled ? "Import/Export" : "Save or discard changes before importing/exporting."}
               style={{
-                width: 50,
-                height: 34,
+                width: 56,
+                height: 40,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
