@@ -353,8 +353,8 @@ export default function CBMXTable({
                     disabled={actors.length >= 10}
                     title={actors.length >= 10 ? "Maximum 10 actors" : "Add actor"}
                     style={{
-                      fontSize: 11,
-                      padding: "1px 4px",
+                      fontSize: 13,
+                      padding: "2px 5px",
                       border: "1px solid #bbb",
                       borderRadius: 4,
                       cursor: actors.length >= 10 ? "not-allowed" : "pointer",
@@ -364,7 +364,7 @@ export default function CBMXTable({
                       flex: "0 0 auto",
                     }}
                   >
-                     + Actor
+                      +
                   </button>
                 ) : null}
               </div>
