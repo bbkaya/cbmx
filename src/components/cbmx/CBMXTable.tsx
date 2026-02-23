@@ -390,7 +390,17 @@ export default function CBMXTable({
                         if (!ok) return;
                         updateBlueprint((next) => removeActor(next, a.id));
                       }}
-                      title="Remove actor">
+                      title="Remove actor"
+                      aria-label="Remove actor"
+  style={{
+    fontSize: 12,          // makes the emoji smaller
+    padding: "0 4px",      // smaller button
+    lineHeight: 1,         // reduces vertical space
+    border: "none",
+    background: "transparent",
+    cursor: "pointer",
+  }}
+                      >
                       🗑️
                     </button>
                   ) : null}
