@@ -279,12 +279,12 @@ function confirmNew() {
               aria-expanded={menuOpen}
               title={ioEnabled ? "Import/Export" : "Save or discard changes before importing/exporting."}
               style={{
-                width: 34,
+                width: 40,
                 height: 34,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 18,
+                fontSize: 14,
                 lineHeight: 1,
                 borderRadius: 8,
               }}
