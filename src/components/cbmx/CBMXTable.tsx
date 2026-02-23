@@ -25,6 +25,8 @@ import {
   setNthValueItem,
   setProcessSlot,
   setServiceSlot,
+  addActor,
+  removeActor,
 } from "./cbmxMutators";
 
 import { cell, cellLeft, networkCell, rowLabelCell, rowLabelIndentCell, thCell } from "./styles";
@@ -217,14 +219,12 @@ function RowLabel({
 
 export default function CBMXTable({
   blueprint,
-  actorCount = 5,
   onChange,
 }: {
   blueprint: CBMXBlueprint;
-  actorCount?: number;
   onChange?: (next: CBMXBlueprint) => void;
 }) {
-  const { actors, N } = useMemo(() => normalizeActors(blueprint.actors, actorCount), [blueprint.actors, actorCount]);
+  const { actors, N } = useMemo(() => normalizeActors(blueprint.actors), [blueprint.actors]);
   const colspanNetwork = N * 2;
 
   // Slot sizing (aligned across actors)
@@ -344,16 +344,68 @@ export default function CBMXTable({
 
           <tr>
             <td style={rowLabelCellTight}>
-              <RowLabel text="Actor" helpKey="actor" />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <RowLabel text="Actor" helpKey="actor" />
+                {onChange ? (
+                  <button
+                    type="button"
+                    onClick={() => updateBlueprint((next) => addActor(next))}
+                    disabled={actors.length >= 10}
+                    title={actors.length >= 10 ? "Maximum 10 actors" : "Add actor"}
+                    style={{
+                      fontSize: 12,
+                      padding: "2px 6px",
+                      border: "1px solid #bbb",
+                      borderRadius: 6,
+                      cursor: actors.length >= 10 ? "not-allowed" : "pointer",
+                      background: "white",
+                      lineHeight: "18px",
+                      whiteSpace: "nowrap",
+                      flex: "0 0 auto",
+                    }}
+                  >
+                    + Actor
+                  </button>
+                ) : null}
+              </div>
             </td>
-            {actors.map((a) => (
+            {actors.map((a, i) => (
               <td key={a.id} colSpan={2} style={cellTight}>
-                <EditableText
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                  <div style={{ flex: "1 1 auto" }}>
+                    <EditableText
                   value={a.name ?? ""}
                   placeholder={onChange ? "Click to edit…" : ""}
                   readOnly={!onChange || a.id.startsWith("EMPTY-")}
                   onCommit={(v: string) => updateBlueprint((next) => setActorName(next, a.id, v))}
-                />
+                    />
+                  </div>
+                  {onChange && i >= 2 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ok = window.confirm(
+                          "Remove this actor? This will delete all actor-specific content and remove the actor from co-creation processes."
+                        );
+                        if (!ok) return;
+                        updateBlueprint((next) => removeActor(next, a.id));
+                      }}
+                      title="Remove actor"
+                      style={{
+                        border: "1px solid #bbb",
+                        background: "white",
+                        borderRadius: 6,
+                        width: 26,
+                        height: 22,
+                        lineHeight: "20px",
+                        cursor: "pointer",
+                        flex: "0 0 auto",
+                      }}
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </div>
               </td>
             ))}
           </tr>
@@ -362,9 +414,11 @@ export default function CBMXTable({
             <td style={rowLabelCellTight}>
               <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
             </td>
-            {actors.map((a) => (
+            {actors.map((a, i) => (
               <td key={a.id} colSpan={2} style={cellTight}>
-                <EditableText
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                  <div style={{ flex: "1 1 auto" }}>
+                    <EditableText
                   value={a.actorValueProposition?.statement ?? ""}
                   placeholder={onChange ? "Click to edit…" : ""}
                   multiline

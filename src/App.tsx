@@ -6,11 +6,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type ValidationIssue = { level: "error" | "warning"; message: string };
 
-function makeBlankActor(idNum: number) {
+function makeBlankActor(idNum: number, type: "Customer" | "Orchestrator" | "Other" = "Other") {
   const id = `A${idNum}`;
   return {
     id,
-    type: "Other" as const,
+    type,
     name: "Click to edit",
     actorValueProposition: { statement: "Click to edit" },
 
@@ -32,7 +32,13 @@ const starterBlueprint: CBMXBlueprint = {
   networkValueProposition: {
     statement: "Click to edit",
   },
-  actors: [makeBlankActor(1), makeBlankActor(2), makeBlankActor(3), makeBlankActor(4), makeBlankActor(5)],
+  actors: [
+    makeBlankActor(1, "Customer"),
+    makeBlankActor(2, "Orchestrator"),
+    makeBlankActor(3, "Other"),
+    makeBlankActor(4, "Other"),
+    makeBlankActor(5, "Other"),
+  ],
 
   coCreationProcesses: [
     {
@@ -365,7 +371,7 @@ export default function App() {
         }}
       >
         {/* Table edits the DRAFT, not the committed blueprint */}
-        <CBMXTable blueprint={draft} actorCount={5} onChange={setDraft} />
+        <CBMXTable blueprint={draft} onChange={setDraft} />
       </div>
     </div>
   );

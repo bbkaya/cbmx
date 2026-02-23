@@ -168,3 +168,71 @@ export function addProcessSlot(next: CBMXBlueprint) {
   const arr = next.coCreationProcesses;
   arr.push({ id: `P${arr.length + 1}`, name: "", participantActorIds: [] });
 }
+
+/* ---------------- actors ---------------- */
+
+function nextActorNumericId(actors: Actor[]): number {
+  let maxN = 0;
+  for (const a of actors) {
+    const m = /^A(\d+)$/.exec(a.id);
+    if (m) maxN = Math.max(maxN, Number(m[1]));
+  }
+  return maxN + 1;
+}
+
+function makeNewActor(id: string): Actor {
+  return {
+    id,
+    type: "Other",
+    name: "Click to edit",
+    actorValueProposition: { statement: "Click to edit" },
+    costs: [{ type: "Financial", description: "Click to edit" }],
+    benefits: [{ type: "Financial", description: "Click to edit" }],
+    kpis: [],
+    services: [{ name: "Click to edit", operations: [] }],
+  };
+}
+
+/** Adds a new 'Other' actor (max 10 actors). */
+export function addActor(next: CBMXBlueprint) {
+  next.actors = Array.isArray(next.actors) ? next.actors : [];
+  if (next.actors.length >= 10) return;
+
+  const n = nextActorNumericId(next.actors);
+  const id = `A${n}`;
+  next.actors.push(makeNewActor(id));
+
+  // By default, add the new actor to existing CCPs (if any) so nothing breaks visually.
+  if (Array.isArray(next.coCreationProcesses)) {
+    for (const p of next.coCreationProcesses) {
+      p.participantActorIds = Array.isArray(p.participantActorIds) ? p.participantActorIds : [];
+      if (!p.participantActorIds.includes(id)) p.participantActorIds.push(id);
+    }
+  }
+}
+
+/**
+ * Removes an actor and cascades deletes:
+ * - removes the actor object from next.actors
+ * - removes its id from any CCP participantActorIds arrays
+ * Cannot remove Customer/Orchestrator (first two actors).
+ */
+export function removeActor(next: CBMXBlueprint, actorId: string) {
+  next.actors = Array.isArray(next.actors) ? next.actors : [];
+  if (next.actors.length <= 2) return;
+
+  const idx = next.actors.findIndex((a) => a.id === actorId);
+  if (idx < 0) return;
+
+  // Guard: do not remove first two actors (Customer + Orchestrator)
+  if (idx === 0 || idx === 1) return;
+
+  next.actors = next.actors.filter((a) => a.id !== actorId);
+
+  if (Array.isArray(next.coCreationProcesses)) {
+    for (const p of next.coCreationProcesses) {
+      if (!Array.isArray(p.participantActorIds)) continue;
+      p.participantActorIds = p.participantActorIds.filter((id) => id !== actorId);
+    }
+  }
+}

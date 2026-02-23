@@ -89,9 +89,9 @@ export function validateCBMXBlueprint(
 
 /* ---------------- domain helpers ---------------- */
 
-export function normalizeActors(actorsIn: Actor[], actorCount: number) {
+export function normalizeActors(actorsIn: Actor[], actorCount?: number) {
   const safeIn: Actor[] = Array.isArray(actorsIn) ? actorsIn : [];
-  const N = actorCount ?? safeIn.length;
+  const N = Math.max(0, Math.min(actorCount ?? safeIn.length, safeIn.length));
 
   const actors: Actor[] = safeIn.slice(0, N).map((a) => ({
     ...a,
@@ -102,19 +102,6 @@ export function normalizeActors(actorsIn: Actor[], actorCount: number) {
     services: Array.isArray(a.services) ? a.services.slice() : [],
   }));
 
-  while (actors.length < N) {
-    actors.push({
-      id: `EMPTY-${actors.length + 1}`,
-      type: "Other",
-      name: `Actor ${actors.length + 1}`,
-      actorValueProposition: { statement: "" },
-      costs: [],
-      benefits: [],
-      kpis: [],
-      services: [],
-    });
-  }
-
   // Enforce fixed actor types by position
   if (actors[0]) actors[0].type = "Customer";
   if (actors[1]) actors[1].type = "Orchestrator";
@@ -122,7 +109,7 @@ export function normalizeActors(actorsIn: Actor[], actorCount: number) {
 
   for (const a of actors) ensureMinCostBenefit(a);
 
-  return { actors, N };
+  return { actors, N: actors.length };
 }
 
 export function ensureMinCostBenefit(a: Actor) {
