@@ -390,19 +390,8 @@ export default function CBMXTable({
                         if (!ok) return;
                         updateBlueprint((next) => removeActor(next, a.id));
                       }}
-                      title="Remove actor"
-                      style={{
-                        border: "1px solid #bbb",
-                        background: "white",
-                        borderRadius: 6,
-                        width: 26,
-                        height: 22,
-                        lineHeight: "20px",
-                        cursor: "pointer",
-                        flex: "0 0 auto",
-                      }}
-                    >
-                      ×X
+                      title="Remove actor">
+                      🗑️
                     </button>
                   ) : null}
                 </div>
