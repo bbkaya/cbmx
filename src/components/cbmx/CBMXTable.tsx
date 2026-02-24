@@ -402,7 +402,7 @@ const processSlots = useMemo(() => {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    +A
+                    +Actor
                   </button>
                 ) : null}
               </div>
