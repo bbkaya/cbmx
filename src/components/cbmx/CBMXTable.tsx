@@ -349,7 +349,7 @@ const processSlots = useMemo(() => {
 
         <tbody>
           <tr style={rowStyle("networkVP")}>
-            <td style={{rowLabelCellTight}, backgroundColor: "#D2EAFF" }}>
+            <td style={{ ...rowLabelCellTight, backgroundColor: "#D2EAFF" }}>
               <RowLabel text="Network Value Proposition" helpKey="networkValueProposition" />
             </td>
             <td colSpan={colspanNetwork} style={networkCellTight}>
@@ -363,7 +363,7 @@ const processSlots = useMemo(() => {
           </tr>
 
           <tr style={rowStyle("actorType")}>
-            <td style={rowLabelCellTight}>
+            <td style={{ ...rowLabelCellTight, backgroundColor: "#DFE3E7" }}>
               <RowLabel text="Actor Type" helpKey="actorType" />
             </td>
             {actors.map((a) => (
