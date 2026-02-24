@@ -180,7 +180,7 @@ type RowKind =
   | "services"
   | "processes";
 
-function rowStyle(kind: RowKind): React.CSSProperties {
+function rowStyle(kind: RowKind): CSSProperties {
   // light, print/export friendly pastels
   switch (kind) {
     case "networkVP":
@@ -464,8 +464,6 @@ const processSlots = useMemo(() => {
                 </td>
               </Fragment>
             ))}
-          </tr>
-
           </tr>
 
 <tr style={rowStyle("costsBenefitsHeader")}>
