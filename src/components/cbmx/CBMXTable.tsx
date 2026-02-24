@@ -349,7 +349,7 @@ const processSlots = useMemo(() => {
 
         <tbody>
           <tr style={rowStyle("networkVP")}>
-            <td style={rowLabelCellTight}>
+            <td style={rowLabelCellTight}, backgroundColor: "#FFE9A8" }>
               <RowLabel text="Network Value Proposition" helpKey="networkValueProposition" />
             </td>
             <td colSpan={colspanNetwork} style={networkCellTight}>
