@@ -156,15 +156,17 @@ const CBMX_HELP: Record<string, string> = {
 /** --- TIGHT SPACING OVERRIDES (local, no global CSS needed) --- */
 const PAD_TD = "2px 3px";
 const PAD_TH = "2px 3px";
-const PAD_LABEL = "2px 4px";
+const PAD_LABEL = "2px 2px";
 const LINE = 1.1;
 
-const cellTight = { ...cell, padding: PAD_TD, lineHeight: LINE } as const;
-const cellLeftTight = { ...cellLeft, padding: PAD_TD, lineHeight: LINE } as const;
-const thCellTight = { ...thCell, padding: PAD_TH, lineHeight: LINE } as const;
-const rowLabelCellTight = { ...rowLabelCell, padding: PAD_LABEL, lineHeight: LINE } as const;
-const rowLabelIndentCellTight = { ...rowLabelIndentCell, padding: PAD_LABEL, lineHeight: LINE } as const;
-const networkCellTight = { ...networkCell, padding: PAD_TD, lineHeight: LINE } as const;
+const cellTight = { ...cell, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
+const cellLeftTight = { ...cellLeft, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
+const thCellTight = { ...thCell, padding: PAD_TH, lineHeight: 1.1, backgroundColor: "transparent" } as const;
+const rowLabelCellTight = { ...rowLabelCell, padding: PAD_LABEL, lineHeight: LINE, backgroundColor: "transparent" } as const;
+const rowLabelIndentCellTight = { ...rowLabelIndentCell, padding: PAD_LABEL, lineHeight: LINE, backgroundColor: "transparent" } as const;
+const networkCellTight = { ...networkCell, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
+
+
 
 type RowKind =
   | "networkVP"
