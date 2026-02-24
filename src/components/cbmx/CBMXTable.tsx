@@ -156,7 +156,7 @@ const CBMX_HELP: Record<string, string> = {
 /** --- TIGHT SPACING OVERRIDES (local, no global CSS needed) --- */
 const PAD_TD = "2px 3px";
 const PAD_TH = "2px 3px";
-const PAD_LABEL = "2px 2px";
+const PAD_LABEL = "1px 2px";
 const LINE = 1.1;
 
 const cellTight = { ...cell, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
