@@ -186,31 +186,31 @@ function rowStyle(kind: RowKind): CSSProperties {
   // light, print/export friendly pastels
   switch (kind) {
     case "networkVP":
-      return { backgroundColor: "#f8fafc" };
+      return { backgroundColor: "#C6E4FF" };
     case "actorType":
-      return { backgroundColor: "#ffffff" };
+      return { backgroundColor: "#f1f5f9" };
     case "actor":
-      return { backgroundColor: "#f8fafc" };
+      return { backgroundColor: "#F2F9FF" };
     case "actorVP":
       return { backgroundColor: "#ffffff" };
     case "costsBenefitsHeader":
       return { backgroundColor: "#f1f5f9" };
 
     case "valueFinancial":
-      return { backgroundColor: "#ecfdf5" };
+      return { backgroundColor: "#faf5ff" };
     case "valueEnvironmental":
       return { backgroundColor: "#f0fdf4" };
     case "valueSocial":
       return { backgroundColor: "#f0f9ff" };
     case "valueOther":
-      return { backgroundColor: "#faf5ff" };
+      return { backgroundColor: "#EAF2FF" };
 
     case "kpis":
       return { backgroundColor: "#ffffff" };
     case "services":
-      return { backgroundColor: "#f8fafc" };
+      return { backgroundColor: "#F2F9FF" };
     case "processes":
-      return { backgroundColor: "#ffffff" };
+      return { backgroundColor: "#C6E4FF" };
     default:
       return {};
   }
