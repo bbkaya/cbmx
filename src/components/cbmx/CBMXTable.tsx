@@ -186,7 +186,7 @@ function rowStyle(kind: RowKind): CSSProperties {
   // light, print/export friendly pastels
   switch (kind) {
     case "networkVP":
-      return { backgroundColor: "#C6E4FF" };
+      return { backgroundColor: "#E5F4FF" };
     case "actorType":
       return { backgroundColor: "#f1f5f9" };
     case "actor":
@@ -210,7 +210,7 @@ function rowStyle(kind: RowKind): CSSProperties {
     case "services":
       return { backgroundColor: "#F2F9FF" };
     case "processes":
-      return { backgroundColor: "#C6E4FF" };
+      return { backgroundColor: "#E5F4FF" };
     default:
       return {};
   }
@@ -349,7 +349,7 @@ const processSlots = useMemo(() => {
 
         <tbody>
           <tr style={rowStyle("networkVP")}>
-            <td style={rowLabelCellTight}, backgroundColor: "#FFE9A8" }>
+            <td style={{rowLabelCellTight}, backgroundColor: "#D2EAFF" }}>
               <RowLabel text="Network Value Proposition" helpKey="networkValueProposition" />
             </td>
             <td colSpan={colspanNetwork} style={networkCellTight}>
