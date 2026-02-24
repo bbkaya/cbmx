@@ -161,7 +161,7 @@ const LINE = 1.1;
 
 const cellTight = { ...cell, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
 const cellLeftTight = { ...cellLeft, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
-const thCellTight = { ...thCell, padding: PAD_TH, lineHeight: 1.1, backgroundColor: "transparent" } as const;
+const thCellTight = { ...thCell, padding: PAD_TH, lineHeight: LINE, backgroundColor: "transparent" } as const;
 const rowLabelCellTight = { ...rowLabelCell, padding: PAD_LABEL, lineHeight: LINE, backgroundColor: "transparent" } as const;
 const rowLabelIndentCellTight = { ...rowLabelIndentCell, padding: PAD_LABEL, lineHeight: LINE, backgroundColor: "transparent" } as const;
 const networkCellTight = { ...networkCell, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
