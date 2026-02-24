@@ -369,7 +369,13 @@ const processSlots = useMemo(() => {
             {actors.map((a) => (
               <Fragment key={a.id}>
                 <td colSpan={2} style={cellTight}>
-                  {a.id.startsWith("EMPTY-") ? "" : a.type === "Other" ? "" : a.type}
+                  {a.id.startsWith("EMPTY-") ? (
+  ""
+) : a.type === "Other" ? (
+  ""
+) : (
+  <span style={{ fontStyle: "italic", fontWeight: 400 }}>{a.type}</span>
+)}
                 </td>
               </Fragment>
             ))}
