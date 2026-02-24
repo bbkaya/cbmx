@@ -155,13 +155,13 @@ const CBMX_HELP: Record<string, string> = {
 
 /** --- TIGHT SPACING OVERRIDES (local, no global CSS needed) --- */
 const PAD_TD = "2px 3px";
-const PAD_TH = "3px 3px";
+const PAD_TH = "2px 3px";
 const PAD_LABEL = "2px 4px";
 const LINE = 1.1;
 
 const cellTight = { ...cell, padding: PAD_TD, lineHeight: LINE } as const;
 const cellLeftTight = { ...cellLeft, padding: PAD_TD, lineHeight: LINE } as const;
-const thCellTight = { ...thCell, padding: PAD_TH, lineHeight: 1.1 } as const;
+const thCellTight = { ...thCell, padding: PAD_TH, lineHeight: LINE } as const;
 const rowLabelCellTight = { ...rowLabelCell, padding: PAD_LABEL, lineHeight: LINE } as const;
 const rowLabelIndentCellTight = { ...rowLabelIndentCell, padding: PAD_LABEL, lineHeight: LINE } as const;
 const networkCellTight = { ...networkCell, padding: PAD_TD, lineHeight: LINE } as const;
@@ -466,17 +466,19 @@ const processSlots = useMemo(() => {
             ))}
           </tr>
 
-          type CSSProperties
-            <td style={rowLabelCellTight}>
-              <RowLabel text="Costs & Benefits" helpKey="costsBenefits" />
-            </td>
-            {actors.map((a) => (
-              <Fragment key={a.id}>
-                <th style={thCellTight}>Costs</th>
-                <th style={thCellTight}>Benefits</th>
-              </Fragment>
-            ))}
           </tr>
+
+<tr style={rowStyle("costsBenefitsHeader")}>
+  <td style={rowLabelCellTight}>
+    <RowLabel text="Costs & Benefits" helpKey="costsBenefits" />
+  </td>
+  {actors.map((a) => (
+    <Fragment key={a.id}>
+      <th style={thCellTight}>Costs</th>
+      <th style={thCellTight}>Benefits</th>
+    </Fragment>
+  ))}
+</tr>
 
           {VALUE_TYPES.map(({ label, key }) => {
             const costSlots = costSlotsByType.get(key) ?? DEFAULT_PER_VALUE_TYPE_SLOTS;
