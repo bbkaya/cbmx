@@ -382,7 +382,8 @@ const processSlots = useMemo(() => {
           </tr>
 
           <tr style={rowStyle("actor")}>
-            <td style={rowLabelCellTight}>
+            <td style={{ ...rowLabelCellTight, backgroundColor: "#DCE2E9" }}>
+
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <RowLabel text="Actor" helpKey="actor" />
                 {onChange ? (
@@ -454,7 +455,8 @@ const processSlots = useMemo(() => {
           </tr>
 
           <tr style={rowStyle("actorVP")}>
-            <td style={rowLabelCellTight}>
+            <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
+
               <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
             </td>
             {actors.map((a) => (
@@ -474,7 +476,8 @@ const processSlots = useMemo(() => {
           </tr>
 
 <tr style={rowStyle("costsBenefitsHeader")}>
-  <td style={rowLabelCellTight}>
+  <td style={{ ...rowLabelCellTight, backgroundColor: "#D7DBDF" }}>
+
     <RowLabel text="Costs & Benefits" helpKey="costsBenefits" />
   </td>
   {actors.map((a) => (
@@ -550,7 +553,7 @@ const processSlots = useMemo(() => {
           })}
 
           <tr style={rowStyle("kpis")}>
-            <td style={rowLabelCellTight}>
+            <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
               <RowLabel text="KPIs" helpKey="kpis" />
             </td>
             {actors.map((a) => (
@@ -568,7 +571,7 @@ const processSlots = useMemo(() => {
           </tr>
 
           <tr style={rowStyle("services")}>
-            <td style={rowLabelCellTight}>
+            <td style={{ ...rowLabelCellTight, backgroundColor: "#DCE2E9" }}>
               <RowLabel text="Actor Services" helpKey="actorServices" />
             </td>
             {actors.map((a) => (
@@ -585,7 +588,7 @@ const processSlots = useMemo(() => {
           </tr>
 
           <tr style={rowStyle("processes")}>
-            <td style={rowLabelCellTight}>
+            <td style={{ ...rowLabelCellTight, backgroundColor: "#D5E3EF" }}>
               <RowLabel text="Co-Creation Processes" helpKey="coCreationProcesses" />
             </td>
             <td colSpan={colspanNetwork} style={cellLeftTight}>
