@@ -216,7 +216,6 @@ function rowStyle(kind: RowKind): CSSProperties {
   }
 }
 
-
 /** Reusable label renderer (Option B): label + ⓘ icon with native tooltip */
 function RowLabel({
   text,
