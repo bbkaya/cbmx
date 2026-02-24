@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, type CSSProperties } from "react";
 import EditableText from "./ui/EditableText";
 import SlotStack from "./ui/SlotStack";
 
@@ -113,7 +113,7 @@ export function validateCBMXBlueprint(bp: CBMXBlueprint): ValidationIssue[] {
   return issues;
 }
 
-/** Default slots per your rule-of-thumb (can be made configurable later) */
+/** Default slots (can be made configurable later) */
 const DEFAULT_PER_VALUE_TYPE_SLOTS = 2;
 const DEFAULT_KPI_SLOTS = 3;
 const DEFAULT_SERVICE_SLOTS = 3;
@@ -154,10 +154,10 @@ const CBMX_HELP: Record<string, string> = {
 };
 
 /** --- TIGHT SPACING OVERRIDES (local, no global CSS needed) --- */
-const PAD_TD = "3px 5px";
-const PAD_TH = "3px 5px";
-const PAD_LABEL = "4px 6px";
-const LINE = 1.15;
+const PAD_TD = "2px 3px";
+const PAD_TH = "3px 3px";
+const PAD_LABEL = "2px 4px";
+const LINE = 1.1;
 
 const cellTight = { ...cell, padding: PAD_TD, lineHeight: LINE } as const;
 const cellLeftTight = { ...cellLeft, padding: PAD_TD, lineHeight: LINE } as const;
@@ -165,6 +165,55 @@ const thCellTight = { ...thCell, padding: PAD_TH, lineHeight: 1.1 } as const;
 const rowLabelCellTight = { ...rowLabelCell, padding: PAD_LABEL, lineHeight: LINE } as const;
 const rowLabelIndentCellTight = { ...rowLabelIndentCell, padding: PAD_LABEL, lineHeight: LINE } as const;
 const networkCellTight = { ...networkCell, padding: PAD_TD, lineHeight: LINE } as const;
+
+type RowKind =
+  | "networkVP"
+  | "actorType"
+  | "actor"
+  | "actorVP"
+  | "costsBenefitsHeader"
+  | "valueFinancial"
+  | "valueEnvironmental"
+  | "valueSocial"
+  | "valueOther"
+  | "kpis"
+  | "services"
+  | "processes";
+
+function rowStyle(kind: RowKind): React.CSSProperties {
+  // light, print/export friendly pastels
+  switch (kind) {
+    case "networkVP":
+      return { backgroundColor: "#f8fafc" };
+    case "actorType":
+      return { backgroundColor: "#ffffff" };
+    case "actor":
+      return { backgroundColor: "#f8fafc" };
+    case "actorVP":
+      return { backgroundColor: "#ffffff" };
+    case "costsBenefitsHeader":
+      return { backgroundColor: "#f1f5f9" };
+
+    case "valueFinancial":
+      return { backgroundColor: "#ecfdf5" };
+    case "valueEnvironmental":
+      return { backgroundColor: "#f0fdf4" };
+    case "valueSocial":
+      return { backgroundColor: "#f0f9ff" };
+    case "valueOther":
+      return { backgroundColor: "#faf5ff" };
+
+    case "kpis":
+      return { backgroundColor: "#ffffff" };
+    case "services":
+      return { backgroundColor: "#f8fafc" };
+    case "processes":
+      return { backgroundColor: "#ffffff" };
+    default:
+      return {};
+  }
+}
+
 
 /** Reusable label renderer (Option B): label + ⓘ icon with native tooltip */
 function RowLabel({
@@ -296,10 +345,9 @@ const processSlots = useMemo(() => {
   return (
     <div style={{ overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", width: "100%", tableLayout: "fixed" }}>
-        {/* Header row removed (per request #4). First row is Network Value Proposition. */}
 
         <tbody>
-          <tr>
+          <tr style={rowStyle("networkVP")}>
             <td style={rowLabelCellTight}>
               <RowLabel text="Network Value Proposition" helpKey="networkValueProposition" />
             </td>
@@ -313,7 +361,7 @@ const processSlots = useMemo(() => {
             </td>
           </tr>
 
-          <tr>
+          <tr style={rowStyle("actorType")}>
             <td style={rowLabelCellTight}>
               <RowLabel text="Actor Type" helpKey="actorType" />
             </td>
@@ -326,7 +374,7 @@ const processSlots = useMemo(() => {
             ))}
           </tr>
 
-          <tr>
+          <tr style={rowStyle("actor")}>
             <td style={rowLabelCellTight}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <RowLabel text="Actor" helpKey="actor" />
@@ -398,7 +446,7 @@ const processSlots = useMemo(() => {
             ))}
           </tr>
 
-          <tr>
+          <tr style={rowStyle("actorVP")}>
             <td style={rowLabelCellTight}>
               <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
             </td>
@@ -418,7 +466,7 @@ const processSlots = useMemo(() => {
             ))}
           </tr>
 
-          <tr>
+          type CSSProperties
             <td style={rowLabelCellTight}>
               <RowLabel text="Costs & Benefits" helpKey="costsBenefits" />
             </td>
@@ -444,7 +492,18 @@ const processSlots = useMemo(() => {
                 : "otherNonFinancial";
 
             return (
-              <tr key={`row-${key}`}>
+              <tr
+  key={`row-${key}`}
+  style={rowStyle(
+    key === "Financial"
+      ? "valueFinancial"
+      : key === "Environmental"
+      ? "valueEnvironmental"
+      : key === "Social"
+      ? "valueSocial"
+      : "valueOther"
+  )}
+>
                 <td style={rowLabelIndentCellTight}>
                   <RowLabel text={label} helpKey={helpKey} indent />
                 </td>
@@ -479,7 +538,7 @@ const processSlots = useMemo(() => {
             );
           })}
 
-          <tr>
+          <tr style={rowStyle("kpis")}>
             <td style={rowLabelCellTight}>
               <RowLabel text="KPIs" helpKey="kpis" />
             </td>
@@ -497,7 +556,7 @@ const processSlots = useMemo(() => {
             ))}
           </tr>
 
-          <tr>
+          <tr style={rowStyle("services")}>
             <td style={rowLabelCellTight}>
               <RowLabel text="Actor Services" helpKey="actorServices" />
             </td>
@@ -514,7 +573,7 @@ const processSlots = useMemo(() => {
             ))}
           </tr>
 
-          <tr>
+          <tr style={rowStyle("processes")}>
             <td style={rowLabelCellTight}>
               <RowLabel text="Co-Creation Processes" helpKey="coCreationProcesses" />
             </td>
