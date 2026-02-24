@@ -474,8 +474,8 @@ const processSlots = useMemo(() => {
   </td>
   {actors.map((a) => (
     <Fragment key={a.id}>
-      <th style={thCellTight}>Costs</th>
-      <th style={thCellTight}>Benefits</th>
+      <th style={thCellTight}><i>Costs</i>i></th>
+      <th style={thCellTight}><i>Benefits</i></th>
     </Fragment>
   ))}
 </tr>
