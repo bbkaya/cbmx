@@ -3,9 +3,9 @@ import type { CSSProperties } from "react";
 export const baseCell: CSSProperties = {
   border: "1px solid #222",
   verticalAlign: "top",
-  padding: 6,
+  padding: 4,
   fontSize: 12,
-  lineHeight: 1.25,
+  lineHeight: 1.1,
   wordBreak: "break-word",
   background: "white",
 };
