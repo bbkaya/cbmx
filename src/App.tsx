@@ -240,7 +240,19 @@ function confirmNew() {
     "No changes made.\n\nYou can save and export your blueprint as JSON or PDF via the Menu (Imp/Exp)."
   );
 }
+  // Warn on refresh / close tab / leaving the site when there are unsaved changes.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
 
+      e.preventDefault();
+      // Required for Chrome/Safari/Firefox to show a confirmation dialog
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isDirty]);
   
   // ----------------
   return (
