@@ -1,6 +1,6 @@
 // src/App.tsx
 import "./App.css";
-import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth";
 import { RedirectIfAuthed, RequireAuth } from "./routesGuards";
 
@@ -15,47 +15,45 @@ import AccountPage from "./pages/AccountPage";
 
 export default function App() {
   return (
-    <HashRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Navigate to="/app" replace />} />
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<Navigate to="/app" replace />} />
 
-          {/* Public */}
-          <Route element={<PublicLayout />}>
-            <Route
-              path="/login"
-              element={
-                <RedirectIfAuthed>
-                  <LoginPage />
-                </RedirectIfAuthed>
-              }
-            />
-            <Route
-              path="/signup"
-              element={
-                <RedirectIfAuthed>
-                  <SignupPage />
-                </RedirectIfAuthed>
-              }
-            />
-          </Route>
-
-          {/* Protected */}
+        {/* Public */}
+        <Route element={<PublicLayout />}>
           <Route
+            path="/login"
             element={
-              <RequireAuth>
-                <AppLayout />
-              </RequireAuth>
+              <RedirectIfAuthed>
+                <LoginPage />
+              </RedirectIfAuthed>
             }
-          >
-            <Route path="/app" element={<DashboardPage />} />
-            <Route path="/app/b/:blueprintId" element={<EditorPage />} />
-            <Route path="/account" element={<AccountPage />} />
-          </Route>
+          />
+          <Route
+            path="/signup"
+            element={
+              <RedirectIfAuthed>
+                <SignupPage />
+              </RedirectIfAuthed>
+            }
+          />
+        </Route>
 
-          <Route path="*" element={<Navigate to="/app" replace />} />
-        </Routes>
-      </AuthProvider>
-    </HashRouter>
+        {/* Protected */}
+        <Route
+          element={
+            <RequireAuth>
+              <AppLayout />
+            </RequireAuth>
+          }
+        >
+          <Route path="/app" element={<DashboardPage />} />
+          <Route path="/app/b/:blueprintId" element={<EditorPage />} />
+          <Route path="/account" element={<AccountPage />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/app" replace />} />
+      </Routes>
+    </AuthProvider>
   );
 }
