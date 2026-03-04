@@ -1,6 +1,6 @@
 // src/App.tsx
 import "./App.css";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth";
 import { RedirectIfAuthed, RequireAuth } from "./routesGuards";
 
@@ -15,7 +15,7 @@ import AccountPage from "./pages/AccountPage";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AuthProvider>
         <Routes>
           <Route path="/" element={<Navigate to="/app" replace />} />
@@ -56,6 +56,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/app" replace />} />
         </Routes>
       </AuthProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
