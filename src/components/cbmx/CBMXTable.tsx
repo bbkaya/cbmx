@@ -409,17 +409,17 @@ const processSlots = useMemo(() => {
             </td>
             {actors.map((a) => (
               <Fragment key={a.id}>
-                <td colSpan={2} style={cellLeftTight}>
+                <td colSpan={2} style={{ ...cellLeftTight, textAlign: "center" }}>
                   {a.id.startsWith("EMPTY-") ? null : (
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <EditableText
-                          value={a.name ?? ""}
-                          readOnly={!onChange}
-                          placeholder={onChange ? "Click to edit" : ""}
-                          onCommit={(v) => updateBlueprint((next) => setActorName(next, a.id, v))}
-                        />
-                      </div>
+<div style={{ flex: 1, minWidth: 0, fontWeight: 800 }}>
+  <EditableText
+    value={a.name ?? ""}
+    readOnly={!onChange}
+    placeholder={onChange ? "Click to edit" : ""}
+    onCommit={(v) => updateBlueprint((next) => setActorName(next, a.id, v))}
+  />
+</div>
 
 {onChange && a.type !== "Customer" && a.type !== "Orchestrator" ? (
   <button
