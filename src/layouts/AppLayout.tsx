@@ -49,9 +49,9 @@ export default function AppLayout() {
           flexWrap: "wrap",
         }}
       >
-<p>
-        <div style={{ fontWeight: 800, fontSize: 18 }}>Collaborative Business Model Matrix</div>
-</p>
+
+        <div style={{ fontWeight: 800, fontSize: 18 }}><p>Collaborative Business Model Matrix</p></div>
+
         <div style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
           <Link to="/app" style={{ textDecoration: "none", color: "inherit" }}>
             <div style={{ fontWeight: 800, fontSize: 18 }}>CBMX</div>
