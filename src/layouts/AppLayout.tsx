@@ -53,7 +53,7 @@ export default function AppLayout() {
           <Link to="/app" style={{ textDecoration: "none", color: "inherit" }}>
             <div style={{ fontWeight: 800, fontSize: 18 }}>CBMX</div>
           </Link>
-          <div style={{ fontSize: 12, color: "#6b7280" }}>Blueprint Editor</div>
+          <div style={{ fontSize: 18, color: "#6b7280" }}>Blueprint Editor</div>
         </div>
 
         <div ref={menuRef} style={{ position: "relative" }}>
