@@ -7,6 +7,7 @@ import { RedirectIfAuthed, RequireAuth } from "./routesGuards";
 import PublicLayout from "./layouts/PublicLayout";
 import AppLayout from "./layouts/AppLayout";
 
+import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -17,10 +18,10 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/" element={<Navigate to="/app" replace />} />
-
         {/* Public */}
         <Route element={<PublicLayout />}>
+          <Route path="/" element={<LandingPage />} />
+
           <Route
             path="/login"
             element={
@@ -52,7 +53,7 @@ export default function App() {
           <Route path="/account" element={<AccountPage />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/app" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>
   );

@@ -117,11 +117,14 @@ export default function DashboardPage() {
   async function refresh() {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from("blueprints")
-      .select("id,name,updated_at")
-      .order("updated_at", { ascending: false })
-      .limit(200);
+// inside refresh() in src/pages/DashboardPage.tsx
+
+const { data, error } = await supabase
+  .from("blueprints")
+  .select("id,name,updated_at")
+  .eq("owner_user_id", user.id)
+  .order("updated_at", { ascending: false })
+  .limit(200);
 
     if (error) {
       console.error("List blueprints error:", error);
