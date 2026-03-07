@@ -67,6 +67,18 @@ export default function LandingPage() {
   const [recentId, setRecentId] = React.useState<string | null>(null);
   const [recentName, setRecentName] = React.useState<string | null>(null);
 
+const [exampleOpen, setExampleOpen] = React.useState(false);
+
+React.useEffect(() => {
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape") setExampleOpen(false);
+  }
+  window.addEventListener("keydown", onKeyDown);
+  return () => window.removeEventListener("keydown", onKeyDown);
+}, []);
+
+
+
   React.useEffect(() => {
     let alive = true;
     async function loadRecent() {
@@ -149,13 +161,10 @@ export default function LandingPage() {
         <div style={{ display: "grid", gap: 14 }}>
           <div style={{ display: "grid", gap: 6 }}>
             <div style={{ fontWeight: 1000, fontSize: 28, lineHeight: 1.15 }}>
-              Design collaborative business models for sustainable digital solutions
+              Design Collaborative Business Models for Sustainable Solutions
             </div>
             <div style={{ color: "#374151", lineHeight: 1.55, maxWidth: 980, textAlign: "left" }}>
-              CBMX (Collaborative Business Model Matrix) helps you structure complex multi-actor initiatives by mapping the
-              shared value proposition, actor roles, costs, benefits, KPIs, services, and co-creation processes in one clear
-              blueprint. It is built for network-centric business model design, where value is co-created and captured across
-              multiple stakeholders rather than within a single firm.
+              We developed the <b>CBMX - Collaborative Business Model Matrix - </b> to help structure complex multi-actor initiatives by mapping the shared value proposition, actor roles, costs, benefits, KPIs, services, and co-creation processes in one clear blueprint. It is built for network-centric business model design, where value is co-created and captured across multiple stakeholders rather than within a single firm.
             </div>
           </div>
 
@@ -284,7 +293,7 @@ export default function LandingPage() {
       </Section>
 
       {/* Section 3 */}
-      <Section id="inside" title="Which elements a CBMX blueprint includes">
+      <Section id="inside" title="What are the elements of a CBMX Blueprint?">
         <div style={cardPanel}>
           <div style={{ marginBottom: 10 }}>
             A CBMX blueprint gives you one integrated view of a collaborative business model, including:
@@ -370,7 +379,7 @@ export default function LandingPage() {
               "Shared micromobility services",
               "Digital mobility platforms (e.g., Mobility-as-a-Service)",
               "Circular business models in manufacturing ecosystems",
-              "Energy community platforms", "Drone-enabled service ecosystems", "Mixed-Crop Farming Solutions", "Last-mile Logistics Solutions", "..."
+              "Energy community platforms", "Drone-enabled services", "Mixed-Crop Farming Solutions", "Last-mile Logistics Solutions", "..."
             ].map((x) => (
               <div key={x} style={miniCard}>
                 <div style={{ fontWeight: 900 }}>{x}</div>
@@ -388,36 +397,157 @@ export default function LandingPage() {
       {/* Section 6 */}
       <Section id="example" title="See CBMX in action">
         <div style={cardPanel}>
-          <div style={{ fontWeight: 900, marginBottom: 6 }}>Shared Micromobility Service</div>
-          <div style={{ marginBottom: 12 }}>
-            Explore how a collaborative network can deliver flexible shared transport through e-bikes and e-scooters by aligning
-            municipalities, service operators, maintenance providers, vehicle producers, and travelers around a shared value
-            proposition.
-          </div>
+  
+<div style={cardPanel}>
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1.2fr 1fr",
+      gap: 16,
+      alignItems: "start",
+    }}
+  >
+    {/* LEFT: text */}
+    <div style={{ textAlign: "left" }}>
+      <div style={{ fontWeight: 900, marginBottom: 6 }}>Shared Micromobility Service</div>
+      <div style={{ marginBottom: 12 }}>
+        Explore how a collaborative network can deliver flexible shared transport through e-bikes and e-scooters by aligning
+        municipalities, service operators, maintenance providers, vehicle producers, and travelers around a shared value
+        proposition.
+      </div>
 
-          {/* Put CBMX-Example.png in /public or update to correct path when ready */}
-          <div style={{ border: "1px dashed #d1d5db", borderRadius: 14, padding: 12, background: "#fafafa" }}>
-            <img
-              src="/CBMX-Example.png"
-              alt="CBMX Example"
-              style={{ width: "100%", borderRadius: 10, display: "block" }}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
-            />
-            <div style={{ color: "#6b7280", fontSize: 13 }}>
-              Figure placeholder: add <b>CBMX-Example.png</b> to <b>/public</b> (or update the path as you prefer).
-            </div>
-          </div>
+      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <Link to={startNewHref} style={primaryCta}>
+          Start a New Blueprint
+        </Link>
+        <button type="button" onClick={() => scrollToId("inside")} style={secondaryCta}>
+          What’s inside a blueprint?
+        </button>
+      </div>
+    </div>
 
-          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Link to={startNewHref} style={primaryCta}>
-              Start a New Blueprint
-            </Link>
-            <button type="button" onClick={() => scrollToId("inside")} style={secondaryCta}>
-              What’s inside a blueprint?
-            </button>
-          </div>
+    {/* RIGHT: thumbnail */}
+    <div style={{ textAlign: "left" }}>
+      <div
+        style={{
+          border: "1px dashed #d1d5db",
+          borderRadius: 14,
+          padding: 12,
+          background: "#fafafa",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setExampleOpen(true)}
+          style={{
+            padding: 0,
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            width: "100%",
+            textAlign: "left",
+          }}
+          aria-label="Open example blueprint image"
+        >
+          <img
+            src={`${import.meta.env.BASE_URL}images/CBMX-Example.png`}
+            alt="CBMX Example"
+            style={{
+              width: "100%",
+              display: "block",
+              borderRadius: 10,
+              maxHeight: 240,
+              objectFit: "contain",
+              background: "white",
+            }}
+          />
+          <div style={{ color: "#6b7280", fontSize: 13, marginTop: 8 }}>Click to enlarge.</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {/* Responsive: stack on small screens */}
+  <style>{`
+    @media (max-width: 820px) {
+      .cbmx-example-grid { grid-template-columns: 1fr !important; }
+    }
+  `}</style>
+
+  {/* Modal / lightbox */}
+  {exampleOpen ? (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={() => setExampleOpen(false)}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.7)",
+        zIndex: 1000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 18,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "min(1100px, 96vw)",
+          height: "min(90vh, 900px)",
+          background: "white",
+          borderRadius: 16,
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setExampleOpen(false)}
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            height: 34,
+            borderRadius: 10,
+            border: "1px solid #d1d5db",
+            background: "white",
+            padding: "0 10px",
+            cursor: "pointer",
+            zIndex: 2,
+          }}
+        >
+          Close
+        </button>
+
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#111827",
+          }}
+        >
+          <img
+            src={`${import.meta.env.BASE_URL}images/CBMX-Example.png`}
+            alt="CBMX Example full view"
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  ) : null}
+</div>
+
+
+
         </div>
       </Section>
 
