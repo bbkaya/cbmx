@@ -129,13 +129,13 @@ const VALUE_TYPES: { label: string; key: CostBenefitType }[] = [
 /** Tooltip texts for the ⓘ bubbles next to first-column labels */
 const CBMX_HELP: Record<string, string> = {
   networkValueProposition:
-    "The value the collaborative network collectively offers to a specific customer. It is achieved through joint value creation by the participating actors.",
+    "The value the collaborative network collectively offers to a specific customer. It is achieved through joint value creation by the participating actors. (E.g., Provide affordable, flexible, low-emission urban mobility through an e-bike network.)",
   actorType:
     "The role category of an actor in the network: Customer (problem owner and target), Orchestrator (facilitates interactions and alignment; leadership role), or Other network member.",
   actor:
-    "A role (and optionally the concrete organization(s)) participating in the collaborative business model.",
+    "A role (and optionally the concrete organization(s)) participating in the collaborative business model. (E.g., Traveler, Service Operator, Municipality, Service Provider.)",
   actorValueProposition:
-    "The distinct value an actor contributes as part of delivering the network value proposition.",
+    "The distinct value an actor contributes as part of delivering the network value proposition. E.g., Safe public-space integration and policy alignment",
   costsBenefits:
     "Actors participate because expected benefits outweigh the costs of joining and contributing to the network.",
   financial: "Direct economic gains or losses.",
@@ -146,11 +146,11 @@ const CBMX_HELP: Record<string, string> = {
   otherNonFinancial:
     "Other non-financial effects (e.g., reputation and trust, stakeholder relations, brand awareness/recognition).",
   kpis:
-    "Key Performance Indicators for an actor, used for viability evaluation and performance monitoring.",
+    "Key Performance Indicators for an actor, used for viability evaluation and performance monitoring. (E.g., User adoption rate, average daily emission)",
   actorServices:
-    "An actor’s capabilities that collectively realize its value proposition and define how it participates in value co-creation. Services may be detailed into operations (optional), which can map to process tasks/activities.",
+    "An actor’s capabilities that collectively realize its value proposition and define how it participates in value co-creation. Services may be detailed into operations (optional), which can map to process tasks/activities. (E.g., Fleet maintenance.)",
   coCreationProcesses:
-    "Processes that operationalize the network value proposition. Multiple actors (potentially including the customer) participate and exchange services with the customer and each other.",
+    "Processes that operationalize the network value proposition. Multiple actors (potentially including the customer) participate and exchange services with the customer and each other. (E.g., Incident handling (across operator and city authorities).)",
 };
 
 /** --- TIGHT SPACING OVERRIDES (local, no global CSS needed) --- */
