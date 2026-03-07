@@ -406,7 +406,7 @@ const processSlots = useMemo(() => {
 
             <tr style={rowStyle("actor")} {...rowHelpProps("actor", setActiveHelpKey)}>
               <td style={{ ...rowLabelCellTight, backgroundColor: "#DCE2E9" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
                   <RowLabel text="Actor" helpKey="actor" />
                   {onChange ? (
                     <button
@@ -697,7 +697,7 @@ const processSlots = useMemo(() => {
               letterSpacing: 0.5,
             }}
           >
-            Help‹‹
+            ›› Help ‹‹
           </button>
         )}
       </div>
