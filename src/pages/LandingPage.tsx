@@ -239,8 +239,7 @@ React.useEffect(() => {
           <div style={callout}>
             <div style={{ fontWeight: 900, marginBottom: 4 }}>From isolated business models to shared business logic</div>
             <div style={{ color: "#374151" }}>
-              CBMX makes it easier to articulate who participates, what each actor contributes, what each actor gains, and how
-              the collaboration works in practice.
+              CBMX makes it easier to articulate who participates, what each actor contributes, what each actor gains, and how the collaboration works in practice.
             </div>
           </div>
         </div>
@@ -295,37 +294,44 @@ React.useEffect(() => {
       {/* Section 3 */}
       <Section id="inside" title="What are the elements of a CBMX Blueprint?">
         <div style={cardPanel}>
-          <div style={{ marginBottom: 10 }}>
-            A CBMX blueprint gives you one integrated view of a collaborative business model, including:
+
+
+          <div style={calloutElement} >
+            <div style={{ marginBottom: 1 }}><b>Network value proposition</b> - the shared value the network offers to the customer</div>
           </div>
-          <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
-            <li>
-              <b>Network value proposition</b> — the shared value the network offers to the customer
-            </li>
-            <li>
-              <b>Actors</b> — the organizations, public actors, customers, and partners involved
-            </li>
-            <li>
-              <b>Actor value propositions</b> — what each actor contributes to the network
-            </li>
-            <li>
-              <b>Costs and benefits</b> — financial, environmental, social, and other value impacts
-            </li>
-            <li>
-              <b>KPIs</b> — measures to assess performance and progress
-            </li>
-            <li>
-              <b>Actor services</b> — capabilities or services each actor deploys
-            </li>
-            <li>
-              <b>Co-creation processes</b> — how actors work together to realize the value proposition
-            </li>
-          </ul>
-          <div style={{ marginTop: 10 }}>
-            These elements reflect the core structure needed to represent collaborative business models for sustainable digital
-            solutions.
+<div style={{ marginBottom: 5 }}></div>
+
+
+          <div style={calloutElement} >
+            <div style={{ marginBottom: 1 }}><b>Actors</b> — the actors in the collaborative network: the customer, orchestrator, and other public/private actors</div>
           </div>
-        </div>
+<div style={{ marginBottom: 5 }}></div>
+
+          <div style={calloutElement} >
+            <div style={{ marginBottom: 1 }}><b>Actor value propositions</b> — what each actor contributes to the network</div>
+          </div>
+<div style={{ marginBottom: 5 }}></div>
+
+          <div style={calloutElement} >
+            <div style={{ marginBottom: 1 }}><b>Costs and benefits</b> — financial, environmental, social, and other non-financial cost and benefit items</div>
+          </div>
+<div style={{ marginBottom: 5 }}></div>
+
+          <div style={calloutElement} >
+            <div style={{ marginBottom: 1 }}><b>KPIs</b> — indicators to evaluate viability and monitor performance</div>
+          </div>
+<div style={{ marginBottom: 5 }}></div>
+
+          <div style={calloutElement} >
+            <div style={{ marginBottom: 1 }}><b>Actor services</b> — capabilities each actor need to deploy</div>
+          </div>
+<div style={{ marginBottom: 5 }}></div>
+
+          <div style={calloutElement} >
+            <div style={{ marginBottom: 1 }}><b>Co-creation processes</b> — how actors work together to realize the value proposition</div>
+          </div>
+
+      </div>
       </Section>
 
       {/* Section 4 */}
@@ -333,8 +339,8 @@ React.useEffect(() => {
         <div style={cardPanel}>
           <div style={{ display: "grid", gap: 10 }}>
             <Step
-              title="1. Define the shared value proposition"
-              text="Start with the network value proposition: what the actor network jointly delivers to the target customer or user."
+              title="1. Define the network value proposition"
+              text="Start with the value proposition that the collaborative network jointly delivers to the target customer."
             />
             <Step
               title="2. Map actors and contributions"
@@ -342,10 +348,14 @@ React.useEffect(() => {
             />
             <Step
               title="3. Clarify value capture and performance"
-              text="Specify costs, benefits, KPIs, services, and co-creation processes so the business model can be discussed, evaluated, and improved."
+              text="Specify costs, benefits, and KPIs so the business model can be evaluated and monitored."
             />
             <Step
-              title="4. Refine and evolve"
+              title="4. Define pointers for operationalization"
+              text="Define the capabilities that each actor needs to possess, and the co-creation processes where these capabilities are applied."
+            />
+            <Step
+              title="5. Refine and evolve"
               text="Use the blueprint as a basis for stakeholder dialogue, implementation planning, and ongoing adaptation as the initiative develops."
             />
 
@@ -353,9 +363,7 @@ React.useEffect(() => {
               <Link to={startNewHref} style={primaryCta}>
                 Start Building a Blueprint
               </Link>{" "}
-              <span style={{ color: "#6b7280", fontSize: 13, marginLeft: 8 }}>
-                (links to My Blueprints)
-              </span>
+
             </div>
           </div>
         </div>
@@ -683,6 +691,16 @@ const callout: React.CSSProperties = {
   background: "#f0fdf4",
   padding: 14,
 };
+
+const calloutElement: React.CSSProperties = {
+  textAlign: "left",
+  border: "1px solid #e5e7eb",
+  borderRadius: 10,
+  background: "#f0fdf4",
+  padding: 8,
+  width: 800,
+};
+
 
 const miniCard: React.CSSProperties = {
   textAlign: "left",
