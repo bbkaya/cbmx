@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { supabase } from "../supabaseClient";
 import DashboardPage from "./DashboardPage";
-import { useLandingScrollHandler } from "../layouts/PublicLayout";
+import { useLandingScrollHandler } from "../layouts/SiteShell";
 
 type FlipCardData = { title: string; text: string };
 
@@ -50,7 +50,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-  <section id={id} style={{ scrollMarginTop: 90, textAlign: "left" }}>
+    <section id={id} style={{ scrollMarginTop: 90, textAlign: "left" }}>
       <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 10 }}>{title}</div>
       <div style={{ color: "#374151", lineHeight: 1.55 }}>{children}</div>
     </section>
@@ -66,27 +66,26 @@ export default function LandingPage() {
   const [activeCard, setActiveCard] = React.useState<number | null>(null);
   const [recentId, setRecentId] = React.useState<string | null>(null);
   const [recentName, setRecentName] = React.useState<string | null>(null);
+  const [exampleOpen, setExampleOpen] = React.useState(false);
 
-const [exampleOpen, setExampleOpen] = React.useState(false);
-
-React.useEffect(() => {
-  function onKeyDown(e: KeyboardEvent) {
-    if (e.key === "Escape") setExampleOpen(false);
-  }
-  window.addEventListener("keydown", onKeyDown);
-  return () => window.removeEventListener("keydown", onKeyDown);
-}, []);
-
-
+  React.useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setExampleOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   React.useEffect(() => {
     let alive = true;
+
     async function loadRecent() {
       if (!user) {
         setRecentId(null);
         setRecentName(null);
         return;
       }
+
       const { data, error } = await supabase
         .from("blueprints")
         .select("id,name,updated_at")
@@ -95,16 +94,20 @@ React.useEffect(() => {
         .limit(1);
 
       if (!alive) return;
+
       if (error) {
         setRecentId(null);
         setRecentName(null);
         return;
       }
+
       const row = (data ?? [])[0] as any;
       setRecentId(row?.id ?? null);
       setRecentName(row?.name ?? null);
     }
+
     void loadRecent();
+
     return () => {
       alive = false;
     };
@@ -114,7 +117,6 @@ React.useEffect(() => {
 
   return (
     <div style={{ display: "grid", gap: 26 }}>
-      {/* Local styles for flip cards */}
       <style>{`
         .cbmx-card {
           perspective: 1000px;
@@ -147,9 +149,12 @@ React.useEffect(() => {
           box-shadow: 0 1px 0 rgba(0,0,0,0.02);
         }
         .cbmx-card-back { transform: rotateY(180deg); }
+
+        @media (max-width: 820px) {
+          .cbmx-example-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
-      {/* HERO */}
       <section
         style={{
           border: "1px solid #e5e7eb",
@@ -176,10 +181,8 @@ React.useEffect(() => {
             <button type="button" onClick={() => scrollToId("example")} style={secondaryCta}>
               Explore an Example
             </button>
-
           </div>
 
-          {/* Hero visual support block (text-first; images can be added later) */}
           <div
             style={{
               marginTop: 8,
@@ -189,16 +192,13 @@ React.useEffect(() => {
               gap: 8,
             }}
           >
-
-
-          <div style={callout}>
-            <div style={{ fontWeight: 900, marginBottom: 4 }}>One blueprint. Multiple actors. Shared value.</div>
-            <div style={{ color: "#374151" }}>
-            CBMX is developed to support the design and evolution of collaborative business models for digitally enabled, sustainable
-            solutions.
+            <div style={callout}>
+              <div style={{ fontWeight: 900, marginBottom: 4 }}>One blueprint. Multiple actors. Shared value.</div>
+              <div style={{ color: "#374151" }}>
+                CBMX is developed to support the design and evolution of collaborative business models for digitally enabled, sustainable
+                solutions.
+              </div>
             </div>
-          </div>
-
 
             <div style={{ color: "#374151", textAlign: "left" }}>
               Use a single visual structure to align stakeholders around:
@@ -210,6 +210,7 @@ React.useEffect(() => {
                 <li>actor services and co-creation processes</li>
               </ul>
             </div>
+
             <div style={{ color: "#374151", textAlign: "left" }}>
               CBMX is especially useful for initiatives where success depends on coordination and collaboration among
               organizations, public actors, platform providers, customers, and other ecosystem actors.
@@ -226,7 +227,6 @@ React.useEffect(() => {
         </div>
       </section>
 
-      {/* Section 1 */}
       <Section id="what-is" title="What is CBMX?">
         <div style={cardPanel}>
           <p style={{ marginTop: 0 }}>
@@ -245,10 +245,8 @@ React.useEffect(() => {
         </div>
       </Section>
 
-      {/* Section 2 */}
       <Section id="why-teams" title="Why teams use CBMX">
         <div style={{ display: "grid", gap: 12 }}>
-
           <div
             style={{
               display: "grid",
@@ -275,7 +273,7 @@ React.useEffect(() => {
                     <div className="cbmx-card-face">
                       <div style={{ fontWeight: 900 }}>{c.title}</div>
                       <div style={{ color: "#6b7280", fontSize: 13 }}>
-                        {`Tap/hover to read`}
+                        Tap/hover to read
                       </div>
                     </div>
 
@@ -291,50 +289,44 @@ React.useEffect(() => {
         </div>
       </Section>
 
-      {/* Section 3 */}
       <Section id="inside" title="What are the elements of a CBMX Blueprint?">
         <div style={cardPanel}>
-
-
-          <div style={calloutElement} >
+          <div style={calloutElement}>
             <div style={{ marginBottom: 1 }}><b>Network value proposition</b> - the shared value the network offers to the customer</div>
           </div>
-<div style={{ marginBottom: 5 }}></div>
+          <div style={{ marginBottom: 5 }} />
 
-
-          <div style={calloutElement} >
+          <div style={calloutElement}>
             <div style={{ marginBottom: 1 }}><b>Actors</b> — the actors in the collaborative network: the customer, orchestrator, and other public/private actors</div>
           </div>
-<div style={{ marginBottom: 5 }}></div>
+          <div style={{ marginBottom: 5 }} />
 
-          <div style={calloutElement} >
+          <div style={calloutElement}>
             <div style={{ marginBottom: 1 }}><b>Actor value propositions</b> — what each actor contributes to the network</div>
           </div>
-<div style={{ marginBottom: 5 }}></div>
+          <div style={{ marginBottom: 5 }} />
 
-          <div style={calloutElement} >
+          <div style={calloutElement}>
             <div style={{ marginBottom: 1 }}><b>Costs and benefits</b> — financial, environmental, social, and other non-financial cost and benefit items</div>
           </div>
-<div style={{ marginBottom: 5 }}></div>
+          <div style={{ marginBottom: 5 }} />
 
-          <div style={calloutElement} >
+          <div style={calloutElement}>
             <div style={{ marginBottom: 1 }}><b>KPIs</b> — indicators to evaluate viability and monitor performance</div>
           </div>
-<div style={{ marginBottom: 5 }}></div>
+          <div style={{ marginBottom: 5 }} />
 
-          <div style={calloutElement} >
+          <div style={calloutElement}>
             <div style={{ marginBottom: 1 }}><b>Actor services</b> — capabilities each actor need to deploy</div>
           </div>
-<div style={{ marginBottom: 5 }}></div>
+          <div style={{ marginBottom: 5 }} />
 
-          <div style={calloutElement} >
+          <div style={calloutElement}>
             <div style={{ marginBottom: 1 }}><b>Co-creation processes</b> — how actors work together to realize the value proposition</div>
           </div>
-
-      </div>
+        </div>
       </Section>
 
-      {/* Section 4 */}
       <Section id="how-it-works" title="How CBMX works">
         <div style={cardPanel}>
           <div style={{ display: "grid", gap: 10 }}>
@@ -362,20 +354,19 @@ React.useEffect(() => {
             <div style={{ marginTop: 6 }}>
               <Link to={startNewHref} style={primaryCta}>
                 Start Building a Blueprint
-              </Link>{" "}
-
+              </Link>
             </div>
           </div>
         </div>
       </Section>
 
-      {/* Section 5 */}
       <Section id="use-cases" title="Where CBMX is useful">
         <div style={cardPanel}>
           <div style={{ marginBottom: 10 }}>
             CBMX is suited to initiatives where multiple actors must collaborate to deliver a digitally enabled and sustainable
             solution.
           </div>
+
           <div
             style={{
               display: "grid",
@@ -387,7 +378,11 @@ React.useEffect(() => {
               "Shared micromobility services",
               "Digital mobility platforms (e.g., Mobility-as-a-Service)",
               "Circular business models in manufacturing ecosystems",
-              "Energy community platforms", "Drone-enabled services", "Mixed-Crop Farming Solutions", "Last-mile Logistics Solutions", "..."
+              "Energy community platforms",
+              "Drone-enabled services",
+              "Mixed-Crop Farming Solutions",
+              "Last-mile Logistics Solutions",
+              "...",
             ].map((x) => (
               <div key={x} style={miniCard}>
                 <div style={{ fontWeight: 900 }}>{x}</div>
@@ -402,164 +397,79 @@ React.useEffect(() => {
         </div>
       </Section>
 
-      {/* Section 6 */}
       <Section id="example" title="See CBMX in action">
         <div style={cardPanel}>
-  
-<div style={cardPanel}>
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1.2fr 1fr",
-      gap: 16,
-      alignItems: "start",
-    }}
-  >
-    {/* LEFT: text */}
-    <div style={{ textAlign: "left" }}>
-      <div style={{ fontWeight: 900, marginBottom: 6 }}>Shared Micromobility Service</div>
-      <div style={{ marginBottom: 12 }}>
-        Explore how a collaborative network can deliver flexible shared transport through e-bikes and e-scooters by aligning
-        municipalities, service operators, maintenance providers, vehicle producers, and travelers around a shared value
-        proposition.
-      </div>
-
-      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Link to={startNewHref} style={primaryCta}>
-          Start a New Blueprint
-        </Link>
-        <button type="button" onClick={() => scrollToId("inside")} style={secondaryCta}>
-          What’s inside a blueprint?
-        </button>
-      </div>
-    </div>
-
-    {/* RIGHT: thumbnail */}
-    <div style={{ textAlign: "left" }}>
-      <div
-        style={{
-          border: "1px dashed #d1d5db",
-          borderRadius: 14,
-          padding: 12,
-          background: "#fafafa",
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setExampleOpen(true)}
-          style={{
-            padding: 0,
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-            width: "100%",
-            textAlign: "left",
-          }}
-          aria-label="Open example blueprint image"
-        >
-          <img
-            src={`${import.meta.env.BASE_URL}images/CBMX-Example.png`}
-            alt="CBMX Example"
+          <div
+            className="cbmx-example-grid"
             style={{
-              width: "100%",
-              display: "block",
-              borderRadius: 10,
-              maxHeight: 240,
-              objectFit: "contain",
-              background: "white",
+              display: "grid",
+              gridTemplateColumns: "1.2fr 1fr",
+              gap: 16,
+              alignItems: "start",
             }}
-          />
-          <div style={{ color: "#6b7280", fontSize: 13, marginTop: 8 }}>Click to enlarge.</div>
-        </button>
-      </div>
-    </div>
-  </div>
+          >
+            <div style={{ textAlign: "left" }}>
+              <div style={{ fontWeight: 900, marginBottom: 6 }}>Shared Micromobility Service</div>
+              <div style={{ marginBottom: 12 }}>
+                Explore how a collaborative network can deliver flexible shared transport through e-bikes and e-scooters by aligning
+                municipalities, service operators, maintenance providers, vehicle producers, and travelers around a shared value
+                proposition.
+              </div>
 
-  {/* Responsive: stack on small screens */}
-  <style>{`
-    @media (max-width: 820px) {
-      .cbmx-example-grid { grid-template-columns: 1fr !important; }
-    }
-  `}</style>
+              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Link to={startNewHref} style={primaryCta}>
+                  Start a New Blueprint
+                </Link>
+                <button type="button" onClick={() => scrollToId("inside")} style={secondaryCta}>
+                  What’s inside a blueprint?
+                </button>
+              </div>
+            </div>
 
-  {/* Modal / lightbox */}
-  {exampleOpen ? (
-    <div
-      role="dialog"
-      aria-modal="true"
-      onClick={() => setExampleOpen(false)}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.7)",
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 18,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "min(1100px, 96vw)",
-          height: "min(90vh, 900px)",
-          background: "white",
-          borderRadius: 16,
-          overflow: "hidden",
-          position: "relative",
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setExampleOpen(false)}
-          style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            height: 34,
-            borderRadius: 10,
-            border: "1px solid #d1d5db",
-            background: "white",
-            padding: "0 10px",
-            cursor: "pointer",
-            zIndex: 2,
-          }}
-        >
-          Close
-        </button>
+            <div style={{ textAlign: "left" }}>
+              <div
+                style={{
+                  border: "1px dashed #d1d5db",
+                  borderRadius: 14,
+                  padding: 12,
+                  background: "#fafafa",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setExampleOpen(true)}
+                  style={{
+                    padding: 0,
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    width: "100%",
+                    textAlign: "left",
+                  }}
+                  aria-label="Open example blueprint image"
+                >
+                  <img
+                    src={`${import.meta.env.BASE_URL}images/CBMX-Example.png`}
+                    alt="CBMX Example"
+                    style={{
+                      width: "100%",
+                      display: "block",
+                      borderRadius: 10,
+                      maxHeight: 260,
+                      objectFit: "contain",
+                    }}
+                  />
+                </button>
 
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#111827",
-          }}
-        >
-          <img
-            src={`${import.meta.env.BASE_URL}images/CBMX-Example.png`}
-            alt="CBMX Example full view"
-            style={{
-              maxWidth: "100%",
-              maxHeight: "100%",
-              objectFit: "contain",
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  ) : null}
-</div>
-
-
-
+                <div style={{ marginTop: 10, color: "#6b7280", fontSize: 13 }}>
+                  Click the image to view it larger.
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </Section>
 
-      {/* Section 7 */}
       <Section id="for-whom" title="Built for practitioners working across organizational boundaries">
         <div style={cardPanel}>
           <div style={{ marginBottom: 10 }}>CBMX is designed for:</div>
@@ -579,7 +489,6 @@ React.useEffect(() => {
         </div>
       </Section>
 
-      {/* Section 8 */}
       <Section id="credibility" title="A structured approach for real-world collaborative design">
         <div style={cardPanel}>
           <div style={{ marginBottom: 10 }}>
@@ -595,7 +504,6 @@ React.useEffect(() => {
         </div>
       </Section>
 
-      {/* Logged-in section on lower half */}
       {user ? (
         <section style={{ border: "1px solid #e5e7eb", borderRadius: 20, background: "white", padding: 18 }}>
           <div style={{ fontWeight: 1000, fontSize: 18, marginBottom: 6 }}>Welcome back</div>
@@ -636,33 +544,71 @@ React.useEffect(() => {
 
           <div style={{ height: 14 }} />
 
-          {/* Optional: show blueprints on landing page */}
           <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 14 }}>
             <DashboardPage />
           </div>
         </section>
       ) : null}
 
-      {/* Footer */}
-      <footer style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16, color: "#6b7280", fontSize: 13, textAlign: "left" }}>
-        <div style={{ marginBottom: 8 }}>
-          CBMX is an approach developed by the researchers at the Eindhoven University of Technology (TU/e) Information Systems Group. 
-        </div>
-
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-
-          <button
-            type="button"
-            onClick={() => {
-              // placeholder
-              alert("Contact o.turetken@tue.nl for any inquiries");
+      {exampleOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setExampleOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(17,24,39,0.72)",
+            display: "grid",
+            placeItems: "center",
+            padding: 24,
+            zIndex: 100,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "white",
+              borderRadius: 16,
+              padding: 14,
+              maxWidth: "96vw",
+              maxHeight: "92vh",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
             }}
-            style={footerLinkBtn}
           >
-            Contact
-          </button>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontWeight: 900 }}>CBMX Example Blueprint</div>
+              <button
+                type="button"
+                onClick={() => setExampleOpen(false)}
+                style={{
+                  border: "1px solid #d1d5db",
+                  background: "white",
+                  borderRadius: 10,
+                  height: 36,
+                  padding: "0 12px",
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            <img
+              src={`${import.meta.env.BASE_URL}images/CBMX-Example.png`}
+              alt="CBMX Example large view"
+              style={{
+                display: "block",
+                maxWidth: "92vw",
+                maxHeight: "78vh",
+                width: "auto",
+                height: "auto",
+                borderRadius: 10,
+              }}
+            />
+          </div>
         </div>
-      </footer>
+      ) : null}
     </div>
   );
 }
@@ -701,7 +647,6 @@ const calloutElement: React.CSSProperties = {
   width: 800,
 };
 
-
 const miniCard: React.CSSProperties = {
   textAlign: "left",
   border: "1px solid #e5e7eb",
@@ -732,6 +677,7 @@ const secondaryCta: React.CSSProperties = {
   background: "white",
   fontWeight: 800,
   fontSize: 13,
+  cursor: "pointer",
 };
 
 const secondaryCtaLink: React.CSSProperties = {
@@ -740,14 +686,4 @@ const secondaryCtaLink: React.CSSProperties = {
   alignItems: "center",
   textDecoration: "none",
   color: "inherit",
-};
-
-
-const footerLinkBtn: React.CSSProperties = {
-  background: "transparent",
-  border: "none",
-  padding: 0,
-  color: "#6b7280",
-  cursor: "pointer",
-  textDecoration: "underline",
 };
