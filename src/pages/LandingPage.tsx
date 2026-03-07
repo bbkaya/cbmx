@@ -60,7 +60,7 @@ function Section({
 export default function LandingPage() {
   useLandingScrollHandler();
 
-  const { loading, user } = useAuth();
+  const { user } = useAuth();
   const nav = useNavigate();
 
   const [activeCard, setActiveCard] = React.useState<number | null>(null);
