@@ -594,20 +594,6 @@ const secondaryCtaLink: React.CSSProperties = {
   color: "inherit",
 };
 
-const tertiaryLink: React.CSSProperties = {
-  background: "transparent",
-  border: "none",
-  padding: "8px 6px",
-  color: "#111827",
-  fontSize: 13,
-  cursor: "pointer",
-  textDecoration: "underline",
-};
-
-const footerLink: React.CSSProperties = {
-  textDecoration: "none",
-  color: "#6b7280",
-};
 
 const footerLinkBtn: React.CSSProperties = {
   background: "transparent",
