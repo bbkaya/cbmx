@@ -166,10 +166,10 @@ export default function LandingPage() {
         <div style={{ display: "grid", gap: 14 }}>
           <div style={{ display: "grid", gap: 6 }}>
             <div style={{ fontWeight: 1000, fontSize: 28, lineHeight: 1.15 }}>
-              Design Collaborative Business Models for Sustainable Solutions
+              Design Collaborative Business Models for Digital and Sustainable Solutions
             </div>
             <div style={{ color: "#374151", lineHeight: 1.55, maxWidth: 980, textAlign: "left" }}>
-              We developed the <b>CBMX - Collaborative Business Model Matrix - </b> to help structure complex multi-actor initiatives by mapping the shared value proposition, actor roles, costs, benefits, KPIs, services, and co-creation processes in one clear blueprint. It is built for network-centric business model design, where value is co-created and captured across multiple stakeholders rather than within a single firm.
+              We developed the <b>Collaborative Business Model Matrix (CBMX)</b> to help structure complex multi-actor initiatives by mapping the shared value proposition, actor roles, costs, benefits, KPIs, services, and co-creation processes in one clear blueprint. It is built for network-centric business model design, where value is co-created and captured across multiple stakeholders rather than within a single firm.
             </div>
           </div>
 
@@ -217,13 +217,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {loading ? (
-            <div style={{ color: "#6b7280", fontSize: 13 }}>Checking session…</div>
-          ) : user ? (
-            <div style={{ color: "#065f46", fontSize: 13 }}>
-              Signed in as <b>{user.email ?? "User"}</b>.
-            </div>
-          ) : null}
         </div>
       </section>
 
@@ -417,9 +410,7 @@ export default function LandingPage() {
               </div>
 
               <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <Link to={startNewHref} style={primaryCta}>
-                  Start a New Blueprint
-                </Link>
+
                 <button type="button" onClick={() => scrollToId("inside")} style={secondaryCta}>
                   What’s inside a blueprint?
                 </button>
@@ -461,8 +452,8 @@ export default function LandingPage() {
                   />
                 </button>
 
-                <div style={{ marginTop: 10, color: "#6b7280", fontSize: 13 }}>
-                  Click the image to view it larger.
+                <div style={{ marginTop: 10, color: "#6b7280", fontSize: 13}}>
+                  Click to enlarge
                 </div>
               </div>
             </div>
@@ -642,7 +633,7 @@ const calloutElement: React.CSSProperties = {
   textAlign: "left",
   border: "1px solid #e5e7eb",
   borderRadius: 10,
-  background: "#f0fdf4",
+  background: "#f0f9ff",
   padding: 8,
   width: 800,
 };

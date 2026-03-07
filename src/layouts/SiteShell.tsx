@@ -221,7 +221,7 @@ export default function SiteShell({ children }: SiteShellProps) {
       >
         <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16 }}>
           <div style={{ marginBottom: 8 }}>
-            CBMX is an approach developed by the researchers at the Eindhoven University of Technology (TU/e) Information Systems Group.
+            CBMX is an approach developed by the Information Systems Group at Eindhoven University of Technology (TU/e).
           </div>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
