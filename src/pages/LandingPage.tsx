@@ -550,7 +550,7 @@ const callout: React.CSSProperties = {
   textAlign: "left",
   border: "1px solid #e5e7eb",
   borderRadius: 16,
-  background: "#f9fafb",
+  background: "#f0fdf4",
   padding: 14,
 };
 
