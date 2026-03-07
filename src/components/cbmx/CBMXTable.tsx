@@ -1,4 +1,4 @@
-import { Fragment, useMemo, type CSSProperties } from "react";
+import { Fragment, useMemo, useState, type CSSProperties } from "react";
 import EditableText from "./ui/EditableText";
 import SlotStack from "./ui/SlotStack";
 
@@ -127,7 +127,7 @@ const VALUE_TYPES: { label: string; key: CostBenefitType }[] = [
 ];
 
 /** Tooltip texts for the ⓘ bubbles next to first-column labels */
-const CBMX_HELP: Record<string, string> = {
+const CBMX_HELP = {
   networkValueProposition:
     "The value the collaborative network collectively offers to a specific customer. It is achieved through joint value creation by the participating actors. (E.g., Provide affordable, flexible, low-emission urban mobility through an e-bike network.)",
   actorType:
@@ -151,12 +151,29 @@ const CBMX_HELP: Record<string, string> = {
     "An actor’s capabilities that collectively realize its value proposition and define how it participates in value co-creation. Services may be detailed into operations (optional), which can map to process tasks/activities. (E.g., Fleet maintenance.)",
   coCreationProcesses:
     "Processes that operationalize the network value proposition. Multiple actors (potentially including the customer) participate and exchange services with the customer and each other. (E.g., Incident handling (across operator and city authorities).)",
+} as const;
+
+type HelpKey = keyof typeof CBMX_HELP;
+
+const HELP_LABELS: Record<HelpKey, string> = {
+  networkValueProposition: "Network Value Proposition",
+  actorType: "Actor Type",
+  actor: "Actor",
+  actorValueProposition: "Actor Value Proposition",
+  costsBenefits: "Costs & Benefits",
+  financial: "Financial",
+  environmental: "Environmental",
+  social: "Social",
+  otherNonFinancial: "Other Non-Financial",
+  kpis: "KPIs",
+  actorServices: "Actor Services",
+  coCreationProcesses: "Co-Creation Processes",
 };
 
 /** --- TIGHT SPACING OVERRIDES (local, no global CSS needed) --- */
-const PAD_TD = "2px 3px";
-const PAD_TH = "2px 3px";
-const PAD_LABEL = "1px 2px";
+const PAD_TD = "1px 1px";
+const PAD_TH = "1px 1px";
+const PAD_LABEL = "1px 1px";
 const LINE = 1.1;
 
 const cellTight = { ...cell, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
@@ -223,7 +240,7 @@ function RowLabel({
   indent = false,
 }: {
   text: string;
-  helpKey?: keyof typeof CBMX_HELP;
+  helpKey?: HelpKey;
   indent?: boolean;
 }) {
   const tip = helpKey ? CBMX_HELP[helpKey] : undefined;
@@ -262,6 +279,14 @@ function RowLabel({
   );
 }
 
+function rowHelpProps(helpKey: HelpKey, setActiveHelpKey: (key: HelpKey) => void) {
+  return {
+    onMouseEnter: () => setActiveHelpKey(helpKey),
+    onFocusCapture: () => setActiveHelpKey(helpKey),
+    onClickCapture: () => setActiveHelpKey(helpKey),
+  } as const;
+}
+
 export default function CBMXTable({
   blueprint,
   onChange,
@@ -271,6 +296,8 @@ export default function CBMXTable({
 }) {
   const { actors, N } = useMemo(() => normalizeActors(blueprint.actors), [blueprint.actors]);
   const colspanNetwork = N * 2;
+  const [activeHelpKey, setActiveHelpKey] = useState<HelpKey>("networkValueProposition");
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Slot sizing (aligned across actors)
   const costSlotsByType = useMemo(() => {
@@ -344,265 +371,336 @@ const processSlots = useMemo(() => {
   }
 
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ borderCollapse: "collapse", width: "100%", tableLayout: "fixed" }}>
-
-        <tbody>
-          <tr style={rowStyle("networkVP")}>
-            <td style={{ ...rowLabelCellTight, backgroundColor: "#D2EAFF" }}>
-              <RowLabel text="Network Value Proposition" helpKey="networkValueProposition" />
-            </td>
-            <td colSpan={colspanNetwork} style={networkCellTight}>
-              <EditableText
-                value={blueprint.networkValueProposition?.statement ?? ""}
-                readOnly={!onChange}
-                placeholder={onChange ? "Click to edit" : ""}
-                onCommit={(v) => updateBlueprint((next) => setNetworkVP(next, v))}
-              />
-            </td>
-          </tr>
-
-          <tr style={rowStyle("actorType")}>
-            <td style={{ ...rowLabelCellTight, backgroundColor: "#DFE3E7" }}>
-              <RowLabel text="Actor Type" helpKey="actorType" />
-            </td>
-            {actors.map((a) => (
-              <Fragment key={a.id}>
-                <td colSpan={2} style={cellTight}>
-                  {a.id.startsWith("EMPTY-") ? (
-  ""
-) : a.type === "Other" ? (
-  ""
-) : (
-  <span style={{ fontStyle: "italic", fontWeight: 400 }}>{a.type}</span>
-)}
-                </td>
-              </Fragment>
-            ))}
-          </tr>
-
-          <tr style={rowStyle("actor")}>
-            <td style={{ ...rowLabelCellTight, backgroundColor: "#DCE2E9" }}>
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                <RowLabel text="Actor" helpKey="actor" />
-                {onChange ? (
-                  <button
-                    type="button"
-                    onClick={() => updateBlueprint((next) => addActor(next))}
-                    title="Add actor"
-                    style={{
-                      border: "1px solid #bbb",
-                      background: "white",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      padding: "2px 8px",
-                      fontSize: 12,
-                      lineHeight: "14px",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    +Actor
-                  </button>
-                ) : null}
-              </div>
-            </td>
-            {actors.map((a) => (
-              <Fragment key={a.id}>
-                <td colSpan={2} style={{ ...cellLeftTight, textAlign: "center" }}>
-                  {a.id.startsWith("EMPTY-") ? null : (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-<div style={{ flex: 1, minWidth: 0, fontWeight: 800 }}>
-  <EditableText
-    value={a.name ?? ""}
-    readOnly={!onChange}
-    placeholder={onChange ? "Click to edit" : ""}
-    onCommit={(v) => updateBlueprint((next) => setActorName(next, a.id, v))}
-  />
-</div>
-
-{onChange && a.type !== "Customer" && a.type !== "Orchestrator" ? (
-  <button
-    type="button"
-    title="Remove actor"
-    onClick={() => {
-      const actorLabel = `${a.id} — ${a.name?.trim() || "Unnamed actor"}`;
-      const ok = window.confirm(
-        `Remove actor ${actorLabel}?\n\nThis will also remove the actor from any participant lists (e.g., co-creation processes).`
-      );
-      if (!ok) return;
-      updateBlueprint((next) => removeActor(next, a.id));
-    }}
-    style={{
-      border: "1px solid #bbb",
-      background: "white",
-      borderRadius: 4,
-      cursor: "pointer",
-      padding: "1px 3px",
-      fontSize: 14,
-      lineHeight: "14px",
-      flex: "0 0 auto",
-    }}
-  >
-    −
-  </button>
-) : null}
-                    </div>
-                  )}
-                </td>
-              </Fragment>
-            ))}
-          </tr>
-
-          <tr style={rowStyle("actorVP")}>
-            <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
-
-              <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
-            </td>
-            {actors.map((a) => (
-              <Fragment key={a.id}>
-                <td colSpan={2} style={cellLeftTight}>
-                  {a.id.startsWith("EMPTY-") ? null : (
-                    <EditableText
-                      value={a.actorValueProposition?.statement ?? ""}
-                      readOnly={!onChange}
-                      placeholder={onChange ? "Click to edit" : ""}
-                      onCommit={(v) => updateBlueprint((next) => setActorVP(next, a.id, v))}
-                    />
-                  )}
-                </td>
-              </Fragment>
-            ))}
-          </tr>
-
-<tr style={rowStyle("costsBenefitsHeader")}>
-  <td style={{ ...rowLabelCellTight, backgroundColor: "#D7DBDF" }}>
-
-    <RowLabel text="Costs & Benefits" helpKey="costsBenefits" />
-  </td>
-  {actors.map((a) => (
-    <Fragment key={a.id}>
-<th style={thCellTight}>
-  <span style={{ fontStyle: "italic", fontWeight: 400 }}>Costs</span>
-</th>
-<th style={thCellTight}>
-  <span style={{ fontStyle: "italic", fontWeight: 400 }}>Benefits</span>
-</th>
-    </Fragment>
-  ))}
-</tr>
-
-          {VALUE_TYPES.map(({ label, key }) => {
-            const costSlots = costSlotsByType.get(key) ?? DEFAULT_PER_VALUE_TYPE_SLOTS;
-            const benefitSlots = benefitSlotsByType.get(key) ?? DEFAULT_PER_VALUE_TYPE_SLOTS;
-
-            const helpKey =
-              key === "Financial"
-                ? "financial"
-                : key === "Environmental"
-                ? "environmental"
-                : key === "Social"
-                ? "social"
-                : "otherNonFinancial";
-
-            return (
-              <tr
-  key={`row-${key}`}
-  style={rowStyle(
-    key === "Financial"
-      ? "valueFinancial"
-      : key === "Environmental"
-      ? "valueEnvironmental"
-      : key === "Social"
-      ? "valueSocial"
-      : "valueOther"
-  )}
->
-                <td style={rowLabelIndentCellTight}>
-                  <RowLabel text={label} helpKey={helpKey} indent />
-                </td>
-                {actors.map((a) => (
-                  <Fragment key={a.id}>
-                    <td style={cellLeftTight}>
-                      <SlotStack
-                        slots={costSlots}
-                        readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                        getValue={(i: number) => getNthValueItemDescription(a, "costs", key, i)}
-                        placeholder={onChange ? "…" : ""}
-                        onCommit={(i: number, v: string) =>
-                          updateBlueprint((next) => setNthValueItem(next, a.id, "costs", key, i, v))
-                        }
-                      />
-                    </td>
-
-                    <td style={cellLeftTight}>
-                      <SlotStack
-                        slots={benefitSlots}
-                        readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                        getValue={(i: number) => getNthValueItemDescription(a, "benefits", key, i)}
-                        placeholder={onChange ? "…" : ""}
-                        onCommit={(i: number, v: string) =>
-                          updateBlueprint((next) => setNthValueItem(next, a.id, "benefits", key, i, v))
-                        }
-                      />
-                    </td>
-                  </Fragment>
-                ))}
-              </tr>
-            );
-          })}
-
-          <tr style={rowStyle("kpis")}>
-            <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
-              <RowLabel text="KPIs" helpKey="kpis" />
-            </td>
-            {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cellLeftTight}>
-                <SlotStack
-                  slots={kpiSlots}
-                  readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                  getValue={(i: number) => getKpiSlotNameFlexible(a, i)}
-                  placeholder={onChange ? "…" : ""}
-                  prefixLabel={(i: number) => `${i + 1}.`}
-                  onCommit={(i: number, v: string) => updateBlueprint((next) => setKpiSlotFlexible(next, a.id, i, v))}
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+      <div style={{ flex: "1 1 auto", minWidth: 0, overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", tableLayout: "fixed" }}>
+          <tbody>
+            <tr style={rowStyle("networkVP")} {...rowHelpProps("networkValueProposition", setActiveHelpKey)}>
+              <td style={{ ...rowLabelCellTight, backgroundColor: "#D2EAFF" }}>
+                <RowLabel text="Network Value Proposition" helpKey="networkValueProposition" />
+              </td>
+              <td colSpan={colspanNetwork} style={networkCellTight}>
+                <EditableText
+                  value={blueprint.networkValueProposition?.statement ?? ""}
+                  readOnly={!onChange}
+                  placeholder={onChange ? "Click to edit" : ""}
+                  onCommit={(v) => updateBlueprint((next) => setNetworkVP(next, v))}
                 />
               </td>
-            ))}
-          </tr>
+            </tr>
 
-          <tr style={rowStyle("services")}>
-            <td style={{ ...rowLabelCellTight, backgroundColor: "#DCE2E9" }}>
-              <RowLabel text="Actor Services" helpKey="actorServices" />
-            </td>
-            {actors.map((a) => (
-              <td key={a.id} colSpan={2} style={cellLeftTight}>
+            <tr style={rowStyle("actorType")} {...rowHelpProps("actorType", setActiveHelpKey)}>
+              <td style={{ ...rowLabelCellTight, backgroundColor: "#DFE3E7" }}>
+                <RowLabel text="Actor Type" helpKey="actorType" />
+              </td>
+              {actors.map((a) => (
+                <Fragment key={a.id}>
+                  <td colSpan={2} style={cellTight}>
+                    {a.id.startsWith("EMPTY-") ? "" : a.type === "Other" ? "" : (
+                      <span style={{ fontStyle: "italic", fontWeight: 400 }}>{a.type}</span>
+                    )}
+                  </td>
+                </Fragment>
+              ))}
+            </tr>
+
+            <tr style={rowStyle("actor")} {...rowHelpProps("actor", setActiveHelpKey)}>
+              <td style={{ ...rowLabelCellTight, backgroundColor: "#DCE2E9" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <RowLabel text="Actor" helpKey="actor" />
+                  {onChange ? (
+                    <button
+                      type="button"
+                      onClick={() => updateBlueprint((next) => addActor(next))}
+                      title="Add actor"
+                      style={{
+                        border: "1px solid #bbb",
+                        background: "white",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        padding: "2px 8px",
+                        fontSize: 12,
+                        lineHeight: "14px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      +Actor
+                    </button>
+                  ) : null}
+                </div>
+              </td>
+              {actors.map((a) => (
+                <Fragment key={a.id}>
+                  <td colSpan={2} style={{ ...cellLeftTight, textAlign: "center" }}>
+                    {a.id.startsWith("EMPTY-") ? null : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0, fontWeight: 800 }}>
+                          <EditableText
+                            value={a.name ?? ""}
+                            readOnly={!onChange}
+                            placeholder={onChange ? "Click to edit" : ""}
+                            onCommit={(v) => updateBlueprint((next) => setActorName(next, a.id, v))}
+                          />
+                        </div>
+
+                        {onChange && a.type !== "Customer" && a.type !== "Orchestrator" ? (
+                          <button
+                            type="button"
+                            title="Remove actor"
+                            onClick={() => {
+                              const actorLabel = `${a.id} — ${a.name?.trim() || "Unnamed actor"}`;
+                              const ok = window.confirm(
+                                `Remove actor ${actorLabel}?\n\nThis will also remove the actor from any participant lists (e.g., co-creation processes).`
+                              );
+                              if (!ok) return;
+                              updateBlueprint((next) => removeActor(next, a.id));
+                            }}
+                            style={{
+                              border: "1px solid #bbb",
+                              background: "white",
+                              borderRadius: 4,
+                              cursor: "pointer",
+                              padding: "1px 3px",
+                              fontSize: 14,
+                              lineHeight: "14px",
+                              flex: "0 0 auto",
+                            }}
+                          >
+                            −
+                          </button>
+                        ) : null}
+                      </div>
+                    )}
+                  </td>
+                </Fragment>
+              ))}
+            </tr>
+
+            <tr style={rowStyle("actorVP")} {...rowHelpProps("actorValueProposition", setActiveHelpKey)}>
+              <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
+                <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
+              </td>
+              {actors.map((a) => (
+                <Fragment key={a.id}>
+                  <td colSpan={2} style={cellLeftTight}>
+                    {a.id.startsWith("EMPTY-") ? null : (
+                      <EditableText
+                        value={a.actorValueProposition?.statement ?? ""}
+                        readOnly={!onChange}
+                        placeholder={onChange ? "Click to edit" : ""}
+                        onCommit={(v) => updateBlueprint((next) => setActorVP(next, a.id, v))}
+                      />
+                    )}
+                  </td>
+                </Fragment>
+              ))}
+            </tr>
+
+            <tr style={rowStyle("costsBenefitsHeader")} {...rowHelpProps("costsBenefits", setActiveHelpKey)}>
+              <td style={{ ...rowLabelCellTight, backgroundColor: "#D7DBDF" }}>
+                <RowLabel text="Costs & Benefits" helpKey="costsBenefits" />
+              </td>
+              {actors.map((a) => (
+                <Fragment key={a.id}>
+                  <th style={thCellTight}>
+                    <span style={{ fontStyle: "italic", fontWeight: 400 }}>Costs</span>
+                  </th>
+                  <th style={thCellTight}>
+                    <span style={{ fontStyle: "italic", fontWeight: 400 }}>Benefits</span>
+                  </th>
+                </Fragment>
+              ))}
+            </tr>
+
+            {VALUE_TYPES.map(({ label, key }) => {
+              const costSlots = costSlotsByType.get(key) ?? DEFAULT_PER_VALUE_TYPE_SLOTS;
+              const benefitSlots = benefitSlotsByType.get(key) ?? DEFAULT_PER_VALUE_TYPE_SLOTS;
+
+              const helpKey: HelpKey =
+                key === "Financial"
+                  ? "financial"
+                  : key === "Environmental"
+                  ? "environmental"
+                  : key === "Social"
+                  ? "social"
+                  : "otherNonFinancial";
+
+              return (
+                <tr
+                  key={`row-${key}`}
+                  style={rowStyle(
+                    key === "Financial"
+                      ? "valueFinancial"
+                      : key === "Environmental"
+                      ? "valueEnvironmental"
+                      : key === "Social"
+                      ? "valueSocial"
+                      : "valueOther"
+                  )}
+                  {...rowHelpProps(helpKey, setActiveHelpKey)}
+                >
+                  <td style={rowLabelIndentCellTight}>
+                    <RowLabel text={label} helpKey={helpKey} indent />
+                  </td>
+                  {actors.map((a) => (
+                    <Fragment key={a.id}>
+                      <td style={cellLeftTight}>
+                        <SlotStack
+                          slots={costSlots}
+                          readOnly={!onChange || a.id.startsWith("EMPTY-")}
+                          getValue={(i: number) => getNthValueItemDescription(a, "costs", key, i)}
+                          placeholder={onChange ? "…" : ""}
+                          onCommit={(i: number, v: string) =>
+                            updateBlueprint((next) => setNthValueItem(next, a.id, "costs", key, i, v))
+                          }
+                        />
+                      </td>
+
+                      <td style={cellLeftTight}>
+                        <SlotStack
+                          slots={benefitSlots}
+                          readOnly={!onChange || a.id.startsWith("EMPTY-")}
+                          getValue={(i: number) => getNthValueItemDescription(a, "benefits", key, i)}
+                          placeholder={onChange ? "…" : ""}
+                          onCommit={(i: number, v: string) =>
+                            updateBlueprint((next) => setNthValueItem(next, a.id, "benefits", key, i, v))
+                          }
+                        />
+                      </td>
+                    </Fragment>
+                  ))}
+                </tr>
+              );
+            })}
+
+            <tr style={rowStyle("kpis")} {...rowHelpProps("kpis", setActiveHelpKey)}>
+              <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
+                <RowLabel text="KPIs" helpKey="kpis" />
+              </td>
+              {actors.map((a) => (
+                <td key={a.id} colSpan={2} style={cellLeftTight}>
+                  <SlotStack
+                    slots={kpiSlots}
+                    readOnly={!onChange || a.id.startsWith("EMPTY-")}
+                    getValue={(i: number) => getKpiSlotNameFlexible(a, i)}
+                    placeholder={onChange ? "…" : ""}
+                    prefixLabel={(i: number) => `${i + 1}`}
+                    onCommit={(i: number, v: string) => updateBlueprint((next) => setKpiSlotFlexible(next, a.id, i, v))}
+                  />
+                </td>
+              ))}
+            </tr>
+
+            <tr style={rowStyle("services")} {...rowHelpProps("actorServices", setActiveHelpKey)}>
+              <td style={{ ...rowLabelCellTight, backgroundColor: "#DCE2E9" }}>
+                <RowLabel text="Actor Services" helpKey="actorServices" />
+              </td>
+              {actors.map((a) => (
+                <td key={a.id} colSpan={2} style={cellLeftTight}>
+                  <SlotStack
+                    slots={serviceSlots}
+                    readOnly={!onChange || a.id.startsWith("EMPTY-")}
+                    getValue={(i: number) => getServiceSlotLine(a, i)}
+                    placeholder={onChange ? "Service (op1, op2)" : ""}
+                    onCommit={(i: number, v: string) => updateBlueprint((next) => setServiceSlot(next, a.id, i, v))}
+                  />
+                </td>
+              ))}
+            </tr>
+
+            <tr style={rowStyle("processes")} {...rowHelpProps("coCreationProcesses", setActiveHelpKey)}>
+              <td style={{ ...rowLabelCellTight, backgroundColor: "#D5E3EF" }}>
+                <RowLabel text="Co-Creation Processes" helpKey="coCreationProcesses" />
+              </td>
+              <td colSpan={colspanNetwork} style={cellLeftTight}>
                 <SlotStack
-                  slots={serviceSlots}
-                  readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                  getValue={(i: number) => getServiceSlotLine(a, i)}
-                  placeholder={onChange ? "Service (op1, op2)" : ""}
-                  onCommit={(i: number, v: string) => updateBlueprint((next) => setServiceSlot(next, a.id, i, v))}
+                  slots={processSlots}
+                  readOnly={!onChange}
+                  getValue={(i: number) => getProcessSlotLine(i)}
+                  placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
+                  onCommit={(i: number, v: string) => updateBlueprint((next) => setProcessSlot(next, i, v))}
                 />
               </td>
-            ))}
-          </tr>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-          <tr style={rowStyle("processes")}>
-            <td style={{ ...rowLabelCellTight, backgroundColor: "#D5E3EF" }}>
-              <RowLabel text="Co-Creation Processes" helpKey="coCreationProcesses" />
-            </td>
-            <td colSpan={colspanNetwork} style={cellLeftTight}>
-              <SlotStack
-                slots={processSlots}
-                readOnly={!onChange}
-                getValue={(i: number) => getProcessSlotLine(i)}
-                placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
-                onCommit={(i: number, v: string) => updateBlueprint((next) => setProcessSlot(next, i, v))}
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div
+        style={{
+          flex: helpOpen ? "0 0 220px" : "0 0 34px",
+          width: helpOpen ? 220 : 34,
+          maxWidth: helpOpen ? 220 : 34,
+          display: "flex",
+          alignSelf: "stretch",
+          transition: "width 180ms ease, max-width 180ms ease, flex-basis 180ms ease",
+        }}
+      >
+        {helpOpen ? (
+          <aside
+            aria-live="polite"
+            style={{
+              width: "100%",
+              border: "1px solid #d7dde5",
+              borderRadius: 8,
+              background: "#f8fafc",
+              color: "#475569",
+              fontSize: 12,
+              lineHeight: 1.45,
+              textAlign: "left",
+              display: "flex",
+              minHeight: "100%",
+              overflow: "hidden",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setHelpOpen(false)}
+              aria-label="Collapse tips panel"
+              title="Collapse tips"
+              style={{
+                border: "none",
+                borderRight: "1px solid #d7dde5",
+                background: "#FFFBEF",
+                cursor: "pointer",
+                padding: "3px 4px",
+                fontSize: 14,
+                color: "#475569",
+                flex: "0 0 28px",
+              }}
+            >
+              ››
+            </button>
+            <div style={{ padding: "8px 8px", minWidth: 0 }}>
+              <div style={{ fontWeight: 700, color: "#1f2937", marginBottom: 3 }}>{HELP_LABELS[activeHelpKey]}</div>
+              <div>{CBMX_HELP[activeHelpKey]}</div>
+            </div>
+          </aside>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            aria-label="Open help panel"
+            title="Open help"
+            style={{
+              width: "100%",
+              border: "1px solid #d7dde5",
+              borderRadius: 4,
+              background: "#FFFBEF",
+              color: "#475569",
+              cursor: "pointer",
+              padding: "4px 4px",
+              fontSize: 12,
+              lineHeight: 1,
+              writingMode: "vertical-rl",
+              textOrientation: "mixed",
+              letterSpacing: 0.5,
+            }}
+          >
+            Help‹‹
+          </button>
+        )}
+      </div>
     </div>
   );
 }

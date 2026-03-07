@@ -47,18 +47,18 @@ export default function SlotStack({
         </button>
       ) : null}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingRight: onAdd && !readOnly ? 26 : 0 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, paddingRight: onAdd && !readOnly ? 26 : 0 }}>
         {Array.from({ length: slots }).map((_, i) => (
-          <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <div key={i} style={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
             <div
               style={{
                 width: 18,
-                flex: "0 0 18px",
+                flex: "0 0 3px",
                 textAlign: "center",
                 fontSize: FONT_SIZE,
                 lineHeight: `${LINE_PX}px`,
                 height: `${LINE_PX}px`,
-                paddingTop: 6,
+                paddingTop: 3,
                 color: "#111",
                 userSelect: "none",
               }}
