@@ -1,6 +1,6 @@
 // src/pages/DashboardPage.tsx
 import { useEffect, useState, type CSSProperties } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../auth";
 import type { CBMXBlueprint } from "../components/cbmx/CBMXTable";
@@ -110,21 +110,23 @@ function makeStarterBlueprint(name: string): CBMXBlueprint {
 export default function DashboardPage() {
   const { user } = useAuth();
   const nav = useNavigate();
+  const loc = useLocation();
 
   const [rows, setRows] = useState<BlueprintRowList[]>([]);
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
-    if (!user) return;
+    if (!user) {
+      setRows([]);
+      return;
+    }
 
-// inside refresh() in src/pages/DashboardPage.tsx
-
-const { data, error } = await supabase
-  .from("blueprints")
-  .select("id,name,updated_at")
-  .eq("owner_user_id", user.id)
-  .order("updated_at", { ascending: false })
-  .limit(200);
+    const { data, error } = await supabase
+      .from("blueprints")
+      .select("id,name,updated_at")
+      .eq("owner_user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(200);
 
     if (error) {
       console.error("List blueprints error:", error);
@@ -136,9 +138,23 @@ const { data, error } = await supabase
   }
 
   useEffect(() => {
+    if (!user) return;
+
+    const params = new URLSearchParams(loc.search);
+
+    // Landing CTA: /app?new=1
+    if (params.get("new") === "1") {
+      // Prevent re-trigger loops by removing the flag ASAP.
+      params.delete("new");
+      nav(`/app${params.toString() ? `?${params.toString()}` : ""}`, { replace: true });
+
+      void createNew();
+      return;
+    }
+
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, loc.search]);
 
   async function createNew() {
     if (!user) return;

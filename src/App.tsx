@@ -18,7 +18,7 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        {/* Public */}
+        {/* Public (Landing + Auth pages share PublicLayout) */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
 
