@@ -50,7 +50,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} style={{ scrollMarginTop: 90 }}>
+  <section id={id} style={{ scrollMarginTop: 90, textAlign: "left" }}>
       <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 10 }}>{title}</div>
       <div style={{ color: "#374151", lineHeight: 1.55 }}>{children}</div>
     </section>
@@ -151,7 +151,7 @@ export default function LandingPage() {
             <div style={{ fontWeight: 1000, fontSize: 28, lineHeight: 1.15 }}>
               Design collaborative business models for sustainable digital solutions
             </div>
-            <div style={{ color: "#374151", lineHeight: 1.55, maxWidth: 980 }}>
+            <div style={{ color: "#374151", lineHeight: 1.55, maxWidth: 980, textAlign: "left" }}>
               CBMX (Collaborative Business Model Matrix) helps you structure complex multi-actor initiatives by mapping the
               shared value proposition, actor roles, costs, benefits, KPIs, services, and co-creation processes in one clear
               blueprint. It is built for network-centric business model design, where value is co-created and captured across
@@ -159,7 +159,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "left" }}>
             <Link to={startNewHref} style={primaryCta}>
               Start a New Blueprint
             </Link>
@@ -168,14 +168,6 @@ export default function LandingPage() {
               Explore an Example
             </button>
 
-            <button type="button" onClick={() => scrollToId("why-teams")} style={tertiaryLink}>
-              See how CBMX supports collaborative design
-            </button>
-          </div>
-
-          <div style={{ color: "#6b7280", fontSize: 13 }}>
-            Developed to support the design and evolution of collaborative business models for digitally enabled, sustainable
-            solutions.
           </div>
 
           {/* Hero visual support block (text-first; images can be added later) */}
@@ -188,10 +180,18 @@ export default function LandingPage() {
               gap: 8,
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.2, color: "#6b7280" }}>
-              One blueprint. Multiple actors. Shared value.
-            </div>
+
+
+          <div style={callout}>
+            <div style={{ fontWeight: 900, marginBottom: 4 }}>One blueprint. Multiple actors. Shared value.</div>
             <div style={{ color: "#374151" }}>
+            CBMX is developed to support the design and evolution of collaborative business models for digitally enabled, sustainable
+            solutions.
+            </div>
+          </div>
+
+
+            <div style={{ color: "#374151", textAlign: "left" }}>
               Use a single visual structure to align stakeholders around:
               <ul style={{ margin: "8px 0 0 0", paddingLeft: 18, lineHeight: 1.55 }}>
                 <li>a network value proposition</li>
@@ -201,7 +201,7 @@ export default function LandingPage() {
                 <li>actor services and co-creation processes</li>
               </ul>
             </div>
-            <div style={{ color: "#374151" }}>
+            <div style={{ color: "#374151", textAlign: "left" }}>
               CBMX is especially useful for initiatives where success depends on coordination and collaboration among
               organizations, public actors, platform providers, customers, and other ecosystem actors.
             </div>
@@ -240,9 +240,6 @@ export default function LandingPage() {
       {/* Section 2 */}
       <Section id="why-teams" title="Why teams use CBMX">
         <div style={{ display: "grid", gap: 12 }}>
-          <div style={{ color: "#6b7280", fontSize: 13 }}>
-            Tip: desktop flips on hover; mobile/tablet flips on tap.
-          </div>
 
           <div
             style={{
@@ -287,7 +284,7 @@ export default function LandingPage() {
       </Section>
 
       {/* Section 3 */}
-      <Section id="inside" title="What a CBMX blueprint includes">
+      <Section id="inside" title="Which elements a CBMX blueprint includes">
         <div style={cardPanel}>
           <div style={{ marginBottom: 10 }}>
             A CBMX blueprint gives you one integrated view of a collaborative business model, including:
@@ -373,8 +370,7 @@ export default function LandingPage() {
               "Shared micromobility services",
               "Digital mobility platforms (e.g., Mobility-as-a-Service)",
               "Circular business models in manufacturing ecosystems",
-              "Energy community platforms",
-              "Drone-enabled service ecosystems",
+              "Energy community platforms", "Drone-enabled service ecosystems", "Mixed-Crop Farming Solutions", "Last-mile Logistics Solutions", "..."
             ].map((x) => (
               <div key={x} style={miniCard}>
                 <div style={{ fontWeight: 900 }}>{x}</div>
@@ -510,48 +506,22 @@ export default function LandingPage() {
       ) : null}
 
       {/* Footer */}
-      <footer style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16, color: "#6b7280", fontSize: 13 }}>
+      <footer style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16, color: "#6b7280", fontSize: 13, textAlign: "left" }}>
         <div style={{ marginBottom: 8 }}>
-          CBMX supports the design of collaborative business models for sustainable digital solutions.
+          CBMX is an approach developed by the researchers at the Eindhoven University of Technology (TU/e) Information Systems Group. 
         </div>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <button type="button" onClick={() => scrollToId("what-is")} style={footerLinkBtn}>
-            What is CBMX
-          </button>
-          <button type="button" onClick={() => scrollToId("example")} style={footerLinkBtn}>
-            Example blueprint
-          </button>
-
-          {user ? (
-            <>
-              <Link to="/app" style={footerLink}>
-                My Blueprints
-              </Link>
-              <Link to="/account" style={footerLink}>
-                Account
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link to="/login" style={footerLink}>
-                My Blueprints
-              </Link>
-              <Link to="/login" style={footerLink}>
-                Account
-              </Link>
-            </>
-          )}
 
           <button
             type="button"
             onClick={() => {
               // placeholder
-              alert("Contact / About: add your preferred content + routing here.");
+              alert("Contact o.turetken@tue.nl for any inquiries");
             }}
             style={footerLinkBtn}
           >
-            Contact / About
+            Contact
           </button>
         </div>
       </footer>
@@ -569,6 +539,7 @@ function Step({ title, text }: { title: string; text: string }) {
 }
 
 const cardPanel: React.CSSProperties = {
+  textAlign: "left",
   border: "1px solid #e5e7eb",
   borderRadius: 20,
   background: "white",
@@ -576,6 +547,7 @@ const cardPanel: React.CSSProperties = {
 };
 
 const callout: React.CSSProperties = {
+  textAlign: "left",
   border: "1px solid #e5e7eb",
   borderRadius: 16,
   background: "#f9fafb",
@@ -583,6 +555,7 @@ const callout: React.CSSProperties = {
 };
 
 const miniCard: React.CSSProperties = {
+  textAlign: "left",
   border: "1px solid #e5e7eb",
   borderRadius: 16,
   background: "white",
