@@ -108,12 +108,11 @@ export default function SiteShell({ children }: SiteShellProps) {
             <img
               src={`${import.meta.env.BASE_URL}images/CBMX-logo.png`}
               alt="CBMX logo"
-              style={{ width: 28, height: 28, borderRadius: 6, objectFit: "contain" }}
+              style={{ width: 80, height: 28, borderRadius: 6, objectFit: "contain" }}
               onError={(e) => {
                 (e.currentTarget as HTMLImageElement).style.display = "none";
               }}
             />
-            <div style={{ fontWeight: 900, fontSize: 18 }}>CBMX</div>
           </Link>
 
           <nav style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
