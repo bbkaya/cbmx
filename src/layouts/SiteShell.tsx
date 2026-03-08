@@ -108,7 +108,7 @@ export default function SiteShell({ children }: SiteShellProps) {
             <img
               src={`${import.meta.env.BASE_URL}images/CBMX-logo.png`}
               alt="CBMX logo"
-              style={{ width: 80, height: 28, borderRadius: 6, objectFit: "contain" }}
+              style={{ width: 75, height: 28, borderRadius: 6, objectFit: "contain" }}
               onError={(e) => {
                 (e.currentTarget as HTMLImageElement).style.display = "none";
               }}
@@ -220,10 +220,31 @@ export default function SiteShell({ children }: SiteShellProps) {
       >
         <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16 }}>
           <div style={{ marginBottom: 8 }}>
-            CBMX is an approach developed by the Information Systems Group at Eindhoven University of Technology (TU/e).
+
+
+          <Link
+            to="/"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              textDecoration: "none",
+              color: "inherit",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <img
+              src={`${import.meta.env.BASE_URL}images/CBMX-logo.png`}
+              alt="CBMX logo"
+              style={{ width: 70, height: 20, borderRadius: 5, objectFit: "contain" }}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </Link>    is developed by the Information Systems Group at Eindhoven University of Technology (TU/e).
           </div>
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={() => {
