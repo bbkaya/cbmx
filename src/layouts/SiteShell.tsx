@@ -241,7 +241,7 @@ export default function SiteShell({ children }: SiteShellProps) {
                 (e.currentTarget as HTMLImageElement).style.display = "none";
               }}
             />
-          </Link>    is developed by the Information Systems Group at Eindhoven University of Technology (TU/e).
+          </Link>    is developed by the Information Systems Group at Eindhoven University of Technology (TU/e), The Netherlands.
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
