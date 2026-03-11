@@ -487,7 +487,7 @@ export default function EditorPage() {
               title="Import/Export (auto-saves first when needed)"
               style={{ width: 80, height: 40, borderRadius: 10, fontSize: 14 }}
             >
-              Imp/Exp
+              Export/Import
             </button>
 
             {menuOpen ? (
