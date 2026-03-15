@@ -1,4 +1,4 @@
-// src/App.tsx
+// Patch your existing src/App.tsx by adding the PCB editor route.
 import "./App.css";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth";
@@ -12,16 +12,15 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import DashboardPage from "./pages/DashboardPage";
 import EditorPage from "./pages/EditorPage";
+import PCBEditorPage from "./pages/PCBEditorPage";
 import AccountPage from "./pages/AccountPage";
 
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        {/* Public (Landing + Auth pages share PublicLayout) */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
-
           <Route
             path="/login"
             element={
@@ -40,7 +39,6 @@ export default function App() {
           />
         </Route>
 
-        {/* Protected */}
         <Route
           element={
             <RequireAuth>
@@ -50,6 +48,8 @@ export default function App() {
         >
           <Route path="/app" element={<DashboardPage />} />
           <Route path="/app/b/:blueprintId" element={<EditorPage />} />
+          <Route path="/app/pcb/new" element={<PCBEditorPage />} />
+          <Route path="/app/pcb/:pcbId" element={<PCBEditorPage />} />
           <Route path="/account" element={<AccountPage />} />
         </Route>
 

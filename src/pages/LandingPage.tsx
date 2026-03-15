@@ -4,7 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { supabase } from "../supabaseClient";
 import DashboardPage from "./DashboardPage";
-import { useLandingScrollHandler } from "../layouts/SiteShell";
+import SiteShell, { useLandingSectionRouting } from "../layouts/SiteShell";
+
 
 type FlipCardData = { title: string; text: string };
 
@@ -58,7 +59,7 @@ function Section({
 }
 
 export default function LandingPage() {
-  useLandingScrollHandler();
+  useLandingSectionRouting();
 
   const { user } = useAuth();
   const nav = useNavigate();

@@ -1,4 +1,3 @@
-// src/components/layout/SiteShell.tsx
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
@@ -33,14 +32,34 @@ export function useLandingScrollHandler() {
   }, []);
 }
 
+export function useLandingSectionRouting() {
+  return useLandingScrollHandler();
+}
+
 type SiteShellProps = {
   children: React.ReactNode;
 };
+
+function isPCBRoute(pathname: string) {
+  return pathname === "/app/pcb/new" || pathname.startsWith("/app/pcb/");
+}
+
+function isCBMXEditorRoute(pathname: string) {
+  return pathname.startsWith("/app/b/");
+}
 
 export default function SiteShell({ children }: SiteShellProps) {
   const { loading, user } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
+
+  const onLanding = loc.pathname === "/";
+  const onPCB = isPCBRoute(loc.pathname);
+  const onCBMXEditor = isCBMXEditorRoute(loc.pathname);
+  const shellMaxWidth = onPCB ? 1200 : 1200;
+
+  const contextBadge = onPCB ? "PCB Editor" : onCBMXEditor ? "CBMX Editor" : null;
+  const showLandingNav = onLanding;
 
   async function logout() {
     const { error } = await supabase.auth.signOut();
@@ -84,7 +103,7 @@ export default function SiteShell({ children }: SiteShellProps) {
       >
         <div
           style={{
-            maxWidth: 1120,
+            maxWidth: shellMaxWidth,
             margin: "0 auto",
             padding: "12px 16px",
             display: "flex",
@@ -94,49 +113,88 @@ export default function SiteShell({ children }: SiteShellProps) {
             flexWrap: "wrap",
           }}
         >
-          <Link
-            to="/"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
-              textDecoration: "none",
-              color: "inherit",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <img
-              src={`${import.meta.env.BASE_URL}images/CBMX-logo.png`}
-              alt="CBMX logo"
-              style={{ width: 75, height: 28, borderRadius: 6, objectFit: "contain" }}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <Link
+              to="/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                textDecoration: "none",
+                color: "inherit",
+                whiteSpace: "nowrap",
               }}
-            />
-          </Link>
+            >
+              <img
+                src={`${import.meta.env.BASE_URL}images/CBMX-logo.png`}
+                alt="CBMX logo"
+                style={{ width: 75, height: 28, borderRadius: 6, objectFit: "contain" }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            </Link>
 
-          <nav style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            {NAV.map((it) => (
-              <button
-                key={it.targetId}
-                type="button"
-                onClick={() => goSection(it.targetId)}
-                style={navLinkBtn}
+            {contextBadge ? (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: onPCB ? "#0f4c81" : "#475569",
+                  background: onPCB ? "#e0f2fe" : "#e2e8f0",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 999,
+                  padding: "4px 8px",
+                  lineHeight: 1,
+                  whiteSpace: "nowrap",
+                }}
               >
-                {it.label}
-              </button>
-            ))}
+                {contextBadge}
+              </span>
+            ) : null}
+          </div>
 
-            {user ? (
-              <Link to="/app" style={navLink}>
-                My Blueprints
+          {showLandingNav ? (
+            <nav style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              {NAV.map((it) => (
+                <button
+                  key={it.targetId}
+                  type="button"
+                  onClick={() => goSection(it.targetId)}
+                  style={navLinkBtn}
+                >
+                  {it.label}
+                </button>
+              ))}
+
+              {user ? (
+                <Link to="/app" style={navLink}>
+                  My Blueprints
+                </Link>
+              ) : (
+                <button type="button" onClick={() => nav("/login")} style={navLinkBtn}>
+                  My Blueprints
+                </button>
+              )}
+            </nav>
+          ) : (
+            <nav style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <Link to="/" style={navLink}>
+                Home
               </Link>
-            ) : (
-              <button type="button" onClick={() => nav("/login")} style={navLinkBtn}>
-                My Blueprints
-              </button>
-            )}
-          </nav>
+              {user ? (
+                <Link to="/app" style={navLink}>
+                  My Blueprints
+                </Link>
+              ) : (
+                <button type="button" onClick={() => nav("/login")} style={navLinkBtn}>
+                  My Blueprints
+                </button>
+              )}
+            </nav>
+          )}
 
           <div
             style={{
@@ -169,9 +227,11 @@ export default function SiteShell({ children }: SiteShellProps) {
                   {user.email ?? "User"}
                 </div>
 
-                <Link to="/app" style={btnLink}>
-                  My Blueprints
-                </Link>
+                {!showLandingNav ? null : (
+                  <Link to="/app" style={btnLink}>
+                    My Blueprints
+                  </Link>
+                )}
 
                 <Link to="/account" style={btnLink}>
                   Account
@@ -197,7 +257,7 @@ export default function SiteShell({ children }: SiteShellProps) {
 
       <main
         style={{
-          maxWidth: 1120,
+          maxWidth: shellMaxWidth,
           width: "100%",
           margin: "0 auto",
           padding: "20px 16px 48px 16px",
@@ -209,7 +269,7 @@ export default function SiteShell({ children }: SiteShellProps) {
 
       <footer
         style={{
-          maxWidth: 1120,
+          maxWidth: shellMaxWidth,
           width: "100%",
           margin: "0 auto",
           padding: "0 16px 24px 16px",
@@ -220,28 +280,27 @@ export default function SiteShell({ children }: SiteShellProps) {
       >
         <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16 }}>
           <div style={{ marginBottom: 8 }}>
-
-
-          <Link
-            to="/"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
-              textDecoration: "none",
-              color: "inherit",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <img
-              src={`${import.meta.env.BASE_URL}images/CBMX-logo.png`}
-              alt="CBMX logo"
-              style={{ width: 70, height: 20, borderRadius: 5, objectFit: "contain" }}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
+            <Link
+              to="/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                textDecoration: "none",
+                color: "inherit",
+                whiteSpace: "nowrap",
               }}
-            />
-          </Link>    is developed by the Information Systems Group at Eindhoven University of Technology (TU/e), The Netherlands.
+            >
+              <img
+                src={`${import.meta.env.BASE_URL}images/CBMX-logo.png`}
+                alt="CBMX logo"
+                style={{ width: 70, height: 20, borderRadius: 5, objectFit: "contain" }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            </Link>{" "}
+            is developed by the Information Systems Group at Eindhoven University of Technology (TU/e), The Netherlands.
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -261,57 +320,66 @@ export default function SiteShell({ children }: SiteShellProps) {
   );
 }
 
-const btnBase: React.CSSProperties = {
-  height: 34,
-  borderRadius: 10,
-  border: "1px solid #d1d5db",
-  background: "white",
-  padding: "0 10px",
-  fontSize: 13,
-  cursor: "pointer",
+const navLink: React.CSSProperties = {
+  color: "#334155",
+  textDecoration: "none",
+  fontWeight: 600,
+  fontSize: 14,
 };
 
-const btn: React.CSSProperties = { ...btnBase };
+const navLinkBtn: React.CSSProperties = {
+  appearance: "none",
+  background: "transparent",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+  color: "#334155",
+  fontWeight: 600,
+  fontSize: 14,
+};
 
 const btnLink: React.CSSProperties = {
-  ...btnBase,
   display: "inline-flex",
   alignItems: "center",
+  justifyContent: "center",
+  minHeight: 36,
+  padding: "0 12px",
+  borderRadius: 10,
+  border: "1px solid #cbd5e1",
+  background: "white",
+  color: "#0f172a",
   textDecoration: "none",
-  color: "inherit",
+  fontSize: 14,
+  fontWeight: 600,
 };
 
 const btnPrimaryLink: React.CSSProperties = {
   ...btnLink,
-  border: "1px solid #111827",
-  background: "#111827",
+  background: "#0f172a",
   color: "white",
+  border: "1px solid #0f172a",
 };
 
-const navLink: React.CSSProperties = {
-  fontSize: 13,
-  textDecoration: "none",
-  color: "#111827",
-  padding: "6px 8px",
+const btn: React.CSSProperties = {
+  appearance: "none",
+  minHeight: 36,
+  padding: "0 12px",
   borderRadius: 10,
-  border: "1px solid transparent",
-};
-
-const navLinkBtn: React.CSSProperties = {
-  fontSize: 13,
-  background: "transparent",
-  border: "1px solid transparent",
-  color: "#111827",
+  border: "1px solid #cbd5e1",
+  background: "white",
+  color: "#0f172a",
   cursor: "pointer",
-  padding: "6px 8px",
-  borderRadius: 10,
+  fontSize: 14,
+  fontWeight: 600,
 };
 
 const footerLinkBtn: React.CSSProperties = {
+  appearance: "none",
   background: "transparent",
   border: "none",
   padding: 0,
-  color: "#6b7280",
   cursor: "pointer",
+  color: "#475569",
   textDecoration: "underline",
+  fontSize: 13,
 };

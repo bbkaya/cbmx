@@ -2,10 +2,12 @@ import {
   type Actor,
   type CBItem,
   type CBMXBlueprint,
+  type CoCreationProcess,
   type CostBenefitType,
   type Service,
   ensureMinCostBenefit,
   indicesOfType,
+  makeNewProcessId,
   parseProcessLine,
   parseServiceLine,
 } from "./cbmxDomain";
@@ -156,17 +158,29 @@ export function setProcessSlot(next: CBMXBlueprint, slotIndex: number, line: str
   if (slotIndex < arr.length) {
     arr[slotIndex] = { ...arr[slotIndex], name: parsed.name, participantActorIds: parsed.participantActorIds };
   } else {
-    arr.push({ id: `P${arr.length + 1}`, name: parsed.name, participantActorIds: parsed.participantActorIds });
+    const newProcess: CoCreationProcess = {
+      id: makeNewProcessId(arr),
+      name: parsed.name,
+      participantActorIds: parsed.participantActorIds,
+    };
+    arr.push(newProcess);
   }
 
   next.coCreationProcesses = arr;
 }
 
-
 export function addProcessSlot(next: CBMXBlueprint) {
   next.coCreationProcesses = Array.isArray(next.coCreationProcesses) ? next.coCreationProcesses : [];
   const arr = next.coCreationProcesses;
-  arr.push({ id: `P${arr.length + 1}`, name: "", participantActorIds: [] });
+  arr.push({ id: makeNewProcessId(arr), name: "", participantActorIds: [] });
+}
+
+export function getProcessById(next: CBMXBlueprint, processId: string) {
+  return (next.coCreationProcesses ?? []).find((p) => p.id === processId);
+}
+
+export function removeProcessById(next: CBMXBlueprint, processId: string) {
+  next.coCreationProcesses = (next.coCreationProcesses ?? []).filter((p) => p.id !== processId);
 }
 
 /* ---------------- actors ---------------- */
@@ -193,7 +207,6 @@ function makeNewActor(id: string): Actor {
   };
 }
 
-/** Adds a new 'Other' actor (max 10 actors). */
 export function addActor(next: CBMXBlueprint) {
   next.actors = Array.isArray(next.actors) ? next.actors : [];
   if (next.actors.length >= 10) return;
@@ -202,7 +215,6 @@ export function addActor(next: CBMXBlueprint) {
   const id = `A${n}`;
   next.actors.push(makeNewActor(id));
 
-  // By default, add the new actor to existing CCPs (if any) so nothing breaks visually.
   if (Array.isArray(next.coCreationProcesses)) {
     for (const p of next.coCreationProcesses) {
       p.participantActorIds = Array.isArray(p.participantActorIds) ? p.participantActorIds : [];
@@ -211,12 +223,6 @@ export function addActor(next: CBMXBlueprint) {
   }
 }
 
-/**
- * Removes an actor and cascades deletes:
- * - removes the actor object from next.actors
- * - removes its id from any CCP participantActorIds arrays
- * Cannot remove Customer/Orchestrator (first two actors).
- */
 export function removeActor(next: CBMXBlueprint, actorId: string) {
   next.actors = Array.isArray(next.actors) ? next.actors : [];
   if (next.actors.length <= 2) return;
@@ -224,7 +230,6 @@ export function removeActor(next: CBMXBlueprint, actorId: string) {
   const idx = next.actors.findIndex((a) => a.id === actorId);
   if (idx < 0) return;
 
-  // Guard: do not remove first two actors (Customer + Orchestrator)
   if (idx === 0 || idx === 1) return;
 
   next.actors = next.actors.filter((a) => a.id !== actorId);

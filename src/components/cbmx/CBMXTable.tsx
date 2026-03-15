@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import EditableText from "./ui/EditableText";
 import SlotStack from "./ui/SlotStack";
 
@@ -6,6 +6,7 @@ import {
   type Actor,
   type CBMXBlueprint,
   type CostBenefitType,
+  type ProcessCanvasLinkSummary,
   countOfType,
   deepClone,
   indicesOfType,
@@ -28,7 +29,7 @@ import {
 import { cell, cellLeft, networkCell, rowLabelCell, rowLabelIndentCell, thCell } from "./styles";
 
 /** Re-export the blueprint type so App.tsx can import it from this module */
-export type { CBMXBlueprint } from "./cbmxDomain";
+export type { CBMXBlueprint, ProcessCanvasLinkSummary } from "./cbmxDomain";
 
 export type ValidationIssue = { level: "error" | "warning"; message: string };
 
@@ -94,10 +95,19 @@ export function validateCBMXBlueprint(bp: CBMXBlueprint): ValidationIssue[] {
     issues.push({ level: "warning", message: "No co-creation processes defined." });
   }
 
-  // Co-creation processes: participant ids should exist
+  // Co-creation processes: ids should be unique and participant ids should exist
   const actorIds = new Set(bp.actors.map((a) => a.id));
+  const processIds = new Set<string>();
   for (const p of processes) {
+    const pidValue = (p?.id ?? "").trim();
     const pname = (p?.name ?? "").trim();
+    if (!pidValue) {
+      issues.push({ level: "warning", message: "A co-creation process is missing an id." });
+    } else if (processIds.has(pidValue)) {
+      issues.push({ level: "error", message: `Duplicate co-creation process id: ${pidValue}` });
+    } else {
+      processIds.add(pidValue);
+    }
     if (!pname) issues.push({ level: "warning", message: "A co-creation process has an empty name." });
 
     for (const pid of p?.participantActorIds ?? []) {
@@ -290,14 +300,39 @@ function rowHelpProps(helpKey: HelpKey, setActiveHelpKey: (key: HelpKey) => void
 export default function CBMXTable({
   blueprint,
   onChange,
+  processLinks,
+  onCreatePCBForProcess,
+  onLinkExistingPCBToProcess,
+  onOpenLinkedPCB,
+  onUnlinkPCBFromProcess,
 }: {
   blueprint: CBMXBlueprint;
   onChange?: (next: CBMXBlueprint) => void;
+  processLinks?: ProcessCanvasLinkSummary[];
+  onCreatePCBForProcess?: (processId: string) => void;
+  onLinkExistingPCBToProcess?: (processId: string) => void;
+  onOpenLinkedPCB?: (processCanvasBlueprintId: string) => void;
+  onUnlinkPCBFromProcess?: (processId: string) => void;
 }) {
   const { actors, N } = useMemo(() => normalizeActors(blueprint.actors), [blueprint.actors]);
   const colspanNetwork = N * 2;
   const [activeHelpKey, setActiveHelpKey] = useState<HelpKey>("networkValueProposition");
   const [helpOpen, setHelpOpen] = useState(false);
+  const [openPCBMenuProcessId, setOpenPCBMenuProcessId] = useState<string | null>(null);
+  const pcbMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!pcbMenuRef.current) return;
+      const target = event.target;
+      if (target instanceof Node && !pcbMenuRef.current.contains(target)) {
+        setOpenPCBMenuProcessId(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
 
   // Slot sizing (aligned across actors)
   const costSlotsByType = useMemo(() => {
@@ -359,8 +394,10 @@ const processSlots = useMemo(() => {
     return ops.length ? `${s.name} (${ops.join(", ")})` : (s.name ?? "");
   }
 
+  const processes = blueprint.coCreationProcesses ?? [];
+
   function getProcessSlotLine(slotIndex: number) {
-    const p = (blueprint.coCreationProcesses ?? [])[slotIndex];
+    const p = processes[slotIndex];
     if (!p) return "";
     const names =
       (p.participantActorIds ?? [])
@@ -368,6 +405,19 @@ const processSlots = useMemo(() => {
         .filter(Boolean)
         .join(", ") ?? "";
     return names ? `${p.name} (${names})` : (p.name ?? "");
+  }
+
+  function getProcessLink(processId: string) {
+    return (processLinks ?? []).find((x) => x.cbmx_process_id === processId) ?? null;
+  }
+
+  function closePCBMenu() {
+    setOpenPCBMenuProcessId(null);
+  }
+
+  function runPCBAction(action: () => void) {
+    action();
+    closePCBMenu();
   }
 
   return (
@@ -613,13 +663,203 @@ const processSlots = useMemo(() => {
                 <RowLabel text="Co-Creation Processes" helpKey="coCreationProcesses" />
               </td>
               <td colSpan={colspanNetwork} style={cellLeftTight}>
-                <SlotStack
-                  slots={processSlots}
-                  readOnly={!onChange}
-                  getValue={(i: number) => getProcessSlotLine(i)}
-                  placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
-                  onCommit={(i: number, v: string) => updateBlueprint((next) => setProcessSlot(next, i, v))}
-                />
+                <div style={{ display: "grid", gap: 6 }}>
+                  {Array.from({ length: processSlots }).map((_, i) => {
+                    const p = processes[i];
+                    if (!p) {
+                      return (
+                        <div
+                          key={`process-edit-${i}`}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            minHeight: 32,
+                          }}
+                        >
+                          <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                            <EditableText
+                              value=""
+                              readOnly={!onChange}
+                              placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
+                              onCommit={(v) => updateBlueprint((next) => setProcessSlot(next, i, v))}
+                            />
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const link = getProcessLink(p.id);
+                    return (
+                      <div
+                        key={p.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          minHeight: 20,
+                        }}
+                      >
+                        <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                          <EditableText
+                            value={getProcessSlotLine(i)}
+                            readOnly={!onChange}
+                            placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
+                            onCommit={(v) => updateBlueprint((next) => setProcessSlot(next, i, v))}
+                          />
+                        </div>
+
+                        <div
+                          style={{
+                            flex: "0 0 auto",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            whiteSpace: "nowrap",
+                            fontSize: 12,
+                          }}
+                        >
+                          <span style={{ color: "#64748b" }}>
+                            {link ? `PCB: ${link.process_canvas_blueprint_name}` : "No Canvas linked"}
+                          </span>
+
+                          {onChange ? (
+                            <div ref={openPCBMenuProcessId === p.id ? pcbMenuRef : null} style={{ position: "relative" }}>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setOpenPCBMenuProcessId((current) => (current === p.id ? null : p.id))
+                                }
+                                aria-haspopup="menu"
+                                aria-expanded={openPCBMenuProcessId === p.id}
+                                style={{
+                                  border: "1px solid #bbb",
+                                  background: "white",
+                                  borderRadius: 6,
+                                  cursor: "pointer",
+                                  padding: "2px 8px",
+                                  fontSize: 12,
+                                  lineHeight: "14px",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                Process Canvas ▾
+                              </button>
+
+                              {openPCBMenuProcessId === p.id ? (
+                                <div
+                                  role="menu"
+                                  style={{
+                                    position: "absolute",
+                                    top: "calc(100% + 4px)",
+                                    right: 0,
+                                    minWidth: 170,
+                                    border: "1px solid #d7dde5",
+                                    borderRadius: 8,
+                                    background: "#ffffff",
+                                    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.12)",
+                                    padding: 4,
+                                    zIndex: 20,
+                                  }}
+                                >
+                                  {link ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        onClick={() =>
+                                          runPCBAction(() =>
+                                            onOpenLinkedPCB?.(link.process_canvas_blueprint_id)
+                                          )
+                                        }
+                                        style={{
+                                          display: "block",
+                                          width: "100%",
+                                          textAlign: "left",
+                                          border: "none",
+                                          background: "transparent",
+                                          borderRadius: 6,
+                                          cursor: "pointer",
+                                          padding: "4px 8px",
+                                          fontSize: 12,
+                                        }}
+                                      >
+                                        Open linked Canvas
+                                      </button>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        onClick={() =>
+                                          runPCBAction(() => onUnlinkPCBFromProcess?.(p.id))
+                                        }
+                                        style={{
+                                          display: "block",
+                                          width: "100%",
+                                          textAlign: "left",
+                                          border: "none",
+                                          background: "transparent",
+                                          borderRadius: 6,
+                                          cursor: "pointer",
+                                          padding: "4px 8px",
+                                          fontSize: 12,
+                                        }}
+                                      >
+                                        Remove link
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        onClick={() =>
+                                          runPCBAction(() => onCreatePCBForProcess?.(p.id))
+                                        }
+                                        style={{
+                                          display: "block",
+                                          width: "100%",
+                                          textAlign: "left",
+                                          border: "none",
+                                          background: "transparent",
+                                          borderRadius: 6,
+                                          cursor: "pointer",
+                                          padding: "4px 8px",
+                                          fontSize: 12,
+                                        }}
+                                      >
+                                        Create Process Canvas
+                                      </button>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        onClick={() =>
+                                          runPCBAction(() => onLinkExistingPCBToProcess?.(p.id))
+                                        }
+                                        style={{
+                                          display: "block",
+                                          width: "100%",
+                                          textAlign: "left",
+                                          border: "none",
+                                          background: "transparent",
+                                          borderRadius: 6,
+                                          cursor: "pointer",
+                                          padding: "4px 8px",
+                                          fontSize: 12,
+                                        }}
+                                      >
+                                        Link existing Canvas
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </td>
             </tr>
           </tbody>

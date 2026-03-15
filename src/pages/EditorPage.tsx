@@ -2,18 +2,22 @@
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import CBMXTable, { type CBMXBlueprint, validateCBMXBlueprint } from "../components/cbmx/CBMXTable";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import CBMXTable, { type CBMXBlueprint, type ProcessCanvasLinkSummary, validateCBMXBlueprint } from "../components/cbmx/CBMXTable";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../auth";
+import { makeBlankProcessCanvasBlueprint } from "../pcb/processCanvasDomain";
 
 type ValidationIssue = { level: "error" | "warning"; message: string };
 
 // include owner_user_id so we can enforce per-user uniqueness
 type BlueprintRowFull = { id: string; name: string; owner_user_id: string; blueprint_json: CBMXBlueprint };
+type ProcessCanvasBlueprintRow = { id: string; name: string };
+type CBMXProcessLinkRow = { cbmx_process_id: string; process_canvas_blueprint_id: string };
 
 export default function EditorPage() {
   const { blueprintId } = useParams<{ blueprintId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   const [dbBusy, setDbBusy] = useState(false);
@@ -23,6 +27,11 @@ export default function EditorPage() {
 
   // Tracks last DB-synced state to compute dirtiness (instead of "Save local")
   const [lastSavedHash, setLastSavedHash] = useState<string>("");
+  const [processLinks, setProcessLinks] = useState<ProcessCanvasLinkSummary[]>([]);
+
+  // Autosave
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const autoSaveTimerRef = useRef<number | null>(null);
 
   // JSON import
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -30,6 +39,39 @@ export default function EditorPage() {
   // Actions menu
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  async function loadProcessLinks(currentBlueprintId: string): Promise<ProcessCanvasLinkSummary[]> {
+    const { data: linkRows, error: linksError } = await supabase
+      .from("cbmx_process_links")
+      .select("cbmx_process_id,process_canvas_blueprint_id")
+      .eq("cbmx_blueprint_id", currentBlueprintId);
+
+    if (linksError) throw linksError;
+
+    const links = (linkRows ?? []) as CBMXProcessLinkRow[];
+    if (links.length === 0) return [];
+
+    const pcbIds = Array.from(new Set(links.map((x) => x.process_canvas_blueprint_id).filter(Boolean)));
+    if (pcbIds.length === 0) return [];
+
+    const { data: pcbRows, error: pcbError } = await supabase
+      .from("process_canvas_blueprints")
+      .select("id,name")
+      .in("id", pcbIds);
+
+    if (pcbError) throw pcbError;
+
+    const pcbNameById = new Map<string, string>();
+    for (const row of (pcbRows ?? []) as ProcessCanvasBlueprintRow[]) {
+      pcbNameById.set(row.id, (row.name ?? "").trim() || row.id);
+    }
+
+    return links.map((link) => ({
+      cbmx_process_id: link.cbmx_process_id,
+      process_canvas_blueprint_id: link.process_canvas_blueprint_id,
+      process_canvas_blueprint_name: pcbNameById.get(link.process_canvas_blueprint_id) ?? link.process_canvas_blueprint_id,
+    }));
+  }
 
   // Load blueprint from DB
   useEffect(() => {
@@ -55,12 +97,17 @@ export default function EditorPage() {
 
       const row = data as unknown as BlueprintRowFull;
       const loaded = deepClone(row.blueprint_json);
+      const loadedLinks = await loadProcessLinks(blueprintId).catch((err: { message?: string }) => {
+        alert("Failed to load Process Canvas links: " + (err?.message ?? "Unknown error"));
+        return [] as ProcessCanvasLinkSummary[];
+      });
 
       // Canonical name is DB name; keep JSON meta in sync for exports/imports.
       const canonicalName = (row.name ?? loaded.meta?.name ?? "").trim() || "Untitled";
       loaded.meta = { ...(loaded.meta ?? {}), name: canonicalName };
 
       setDraft(loaded);
+      setProcessLinks(loadedLinks);
       setLastSavedHash(stableHash(loaded));
     }
 
@@ -119,11 +166,13 @@ export default function EditorPage() {
     if (error) return alert("Reload failed: " + error.message);
 
     const loaded = deepClone((data as any).blueprint_json as CBMXBlueprint);
+    const loadedLinks = await loadProcessLinks(blueprintId).catch(() => [] as ProcessCanvasLinkSummary[]);
 
     const canonicalName = ((data as any).name ?? loaded.meta?.name ?? "").trim() || "Untitled";
     loaded.meta = { ...(loaded.meta ?? {}), name: canonicalName };
 
     setDraft(loaded);
+    setProcessLinks(loadedLinks);
     setLastSavedHash(stableHash(loaded));
   }
 
@@ -251,6 +300,148 @@ export default function EditorPage() {
     return true;
   }
 
+  function findProcessById(processId: string) {
+    return (draft?.coCreationProcesses ?? []).find((p) => p.id === processId) ?? null;
+  }
+
+  async function refreshProcessLinks() {
+    if (!blueprintId) return;
+    const links = await loadProcessLinks(blueprintId).catch((err: { message?: string }) => {
+      alert("Failed to refresh Process Canvas links: " + (err?.message ?? "Unknown error"));
+      return [] as ProcessCanvasLinkSummary[];
+    });
+    setProcessLinks(links);
+  }
+
+  async function createPCBForProcess(processId: string) {
+    if (!blueprintId || !user?.id) return;
+    const process = findProcessById(processId);
+    if (!process) return alert("Process not found.");
+
+    const suggestedName = `${normalizeName(draft?.meta?.name)} - ${process.name.trim() || process.id}`;
+    const nameInput = window.prompt("Name for the new Process Canvas blueprint:", suggestedName);
+    if (nameInput == null) return;
+
+    const desiredName = normalizeName(nameInput);
+    const blankPCB = makeBlankProcessCanvasBlueprint();
+    blankPCB.meta.name = desiredName;
+
+    setDbBusy(true);
+    const { data: pcbRow, error: pcbError } = await supabase
+      .from("process_canvas_blueprints")
+      .insert({
+        owner_user_id: user.id,
+        name: desiredName,
+        blueprint_json: blankPCB,
+      })
+      .select("id,name")
+      .single();
+
+    if (pcbError) {
+      setDbBusy(false);
+      alert("Create PCB failed: " + pcbError.message);
+      return;
+    }
+
+    const { error: linkError } = await supabase
+      .from("cbmx_process_links")
+      .upsert(
+        {
+          cbmx_blueprint_id: blueprintId,
+          cbmx_process_id: processId,
+          process_canvas_blueprint_id: (pcbRow as ProcessCanvasBlueprintRow).id,
+        },
+        { onConflict: "cbmx_blueprint_id,cbmx_process_id" }
+      );
+    setDbBusy(false);
+
+    if (linkError) {
+      alert("PCB was created, but linking failed: " + linkError.message);
+      return;
+    }
+
+    await refreshProcessLinks();
+    navigate(`/app/pcb/${(pcbRow as ProcessCanvasBlueprintRow).id}`);
+  }
+
+  async function linkExistingPCBToProcess(processId: string) {
+    if (!blueprintId || !user?.id) return;
+    const process = findProcessById(processId);
+    if (!process) return alert("Process not found.");
+
+    setDbBusy(true);
+    const { data, error } = await supabase
+      .from("process_canvas_blueprints")
+      .select("id,name")
+      .eq("owner_user_id", user.id)
+      .order("name", { ascending: true });
+    setDbBusy(false);
+
+    if (error) return alert("Load existing PCBs failed: " + error.message);
+
+    const rows = (data ?? []) as ProcessCanvasBlueprintRow[];
+    if (rows.length === 0) {
+      alert("No Process Canvas blueprints found yet. Create one first.");
+      return;
+    }
+
+    const options = rows.map((row) => row.name).join("\n");
+    const chosenName = window.prompt(
+      `Type the exact PCB name to link to process “${process.name || process.id}”.
+
+Available PCBs:
+${options}`,
+      rows[0]?.name ?? ""
+    );
+    if (chosenName == null) return;
+
+    const chosen = rows.find((row) => row.name.trim().toLowerCase() == chosenName.trim().toLowerCase());
+    if (!chosen) {
+      alert("No PCB matched that name exactly.");
+      return;
+    }
+
+    setDbBusy(true);
+    const { error: linkError } = await supabase
+      .from("cbmx_process_links")
+      .upsert(
+        {
+          cbmx_blueprint_id: blueprintId,
+          cbmx_process_id: processId,
+          process_canvas_blueprint_id: chosen.id,
+        },
+        { onConflict: "cbmx_blueprint_id,cbmx_process_id" }
+      );
+    setDbBusy(false);
+
+    if (linkError) return alert("Link existing PCB failed: " + linkError.message);
+
+    await refreshProcessLinks();
+  }
+
+  async function unlinkPCBFromProcess(processId: string) {
+    if (!blueprintId) return;
+    const process = findProcessById(processId);
+    const ok = window.confirm(`Unlink the Process Canvas from process “${process?.name || processId}”?`);
+    if (!ok) return;
+
+    setDbBusy(true);
+    const { error } = await supabase
+      .from("cbmx_process_links")
+      .delete()
+      .eq("cbmx_blueprint_id", blueprintId)
+      .eq("cbmx_process_id", processId);
+    setDbBusy(false);
+
+    if (error) return alert("Unlink failed: " + error.message);
+
+    await refreshProcessLinks();
+  }
+
+  function openLinkedPCB(processCanvasBlueprintId: string) {
+    navigate(`/app/pcb/${processCanvasBlueprintId}`);
+  }
+
   async function saveDraftToDb(): Promise<boolean> {
     if (!blueprintId) return false;
     if (!draft) return false;
@@ -262,6 +453,18 @@ export default function EditorPage() {
 
     const ok = await saveBlueprintToDbDirect(draft);
     if (!ok) alert("Save Now to the repository failed.");
+    return ok;
+  }
+
+  async function autoSaveDraftToDb(): Promise<boolean> {
+    if (!blueprintId || !draft) return false;
+    if (dbBusy) return false;
+    if (hasBlocking) return false;
+    if (!isDirty) return true;
+
+    setIsAutoSaving(true);
+    const ok = await saveBlueprintToDbDirect(draft);
+    setIsAutoSaving(false);
     return ok;
   }
 
@@ -285,6 +488,28 @@ export default function EditorPage() {
 
     return true;
   }
+
+  useEffect(() => {
+    if (!draft) return;
+    if (!isDirty) return;
+    if (hasBlocking) return;
+    if (!blueprintId) return;
+
+    if (autoSaveTimerRef.current != null) {
+      window.clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = window.setTimeout(() => {
+      void autoSaveDraftToDb();
+    }, 1200);
+
+    return () => {
+      if (autoSaveTimerRef.current != null) {
+        window.clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+    };
+  }, [draftHash, isDirty, hasBlocking, blueprintId]);
 
   // ---------------- JSON Export/Import ----------------
   function downloadJson(filename: string, obj: unknown) {
@@ -451,41 +676,19 @@ export default function EditorPage() {
         </div>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={discardDraft}
-            disabled={!isDirty || dbBusy}
-            style={{ fontSize: 14, borderRadius: 10, height: 40 }}
-          >
-            Discard changes
-          </button>
 
-          <button
-            type="button"
-            onClick={() => void saveDraftToDb()}
-            disabled={dbBusy || !blueprintId || !isDirty || hasBlocking}
-            title={
-              hasBlocking
-                ? "Fix validation errors before saving."
-                : !isDirty
-                  ? "No changes to save."
-                  : "Save current changes to database"
-            }
-            style={{ fontSize: 14, borderRadius: 10, height: 40 }}
-          >
-            Save Now
-          </button>
 
-          <span style={{ color: isDirty ? "#b45309" : "#15803d", fontSize: 11 }}>
-            {isDirty ? "Unsaved changes" : "All changes saved"}
+          <span style={{ color: isAutoSaving ? "#1d4ed8" : isDirty ? "#b45309" : "#15803d", fontSize: 11 }}>
+            {isAutoSaving ? "Saving automatically..." : isDirty ? "Unsaved changes" : "All changes saved"}
           </span>
 
           <div ref={menuRef} style={{ position: "relative" }}>
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
+              disabled={isAutoSaving}
               title="Import/Export (auto-saves first when needed)"
-              style={{ width: 80, height: 40, borderRadius: 10, fontSize: 14 }}
+              style={{ width: 120, height: 40, borderRadius: 10, fontSize: 14 }}
             >
               Export/Import
             </button>
@@ -506,13 +709,13 @@ export default function EditorPage() {
                   zIndex: 50,
                 }}
               >
-                <MenuItem label="Export JSON" onClick={() => runMenuAction(exportJson)} />
-                <MenuItem label="Export PNG" onClick={() => runMenuAction(exportPng)} />
-                <MenuItem label="Export PDF" onClick={() => runMenuAction(exportPdf)} />
+                <MenuItem label="Export JSON" onClick={() => runMenuAction(exportJson)} disabled={isAutoSaving} />
+                <MenuItem label="Export PNG" onClick={() => runMenuAction(exportPng)} disabled={isAutoSaving} />
+                <MenuItem label="Export PDF" onClick={() => runMenuAction(exportPdf)} disabled={isAutoSaving} />
 
                 <div style={{ height: 1, background: "#eee", margin: "6px 0" }} />
 
-                <MenuItem label="Import JSON" onClick={() => runMenuAction(openImportDialog)} />
+                <MenuItem label="Import JSON" onClick={() => runMenuAction(openImportDialog)} disabled={isAutoSaving} />
 
                 {hasBlocking ? (
                   <div style={{ padding: "6px 10px", fontSize: 12, color: "#b91c1c" }}>
@@ -540,7 +743,15 @@ export default function EditorPage() {
       />
 
       <div id="cbmx-canvas" style={{ marginTop: 16, display: "inline-block", background: "white" }}>
-        <CBMXTable blueprint={draft} onChange={setDraft} />
+        <CBMXTable
+          blueprint={draft}
+          onChange={setDraft}
+          processLinks={processLinks}
+          onCreatePCBForProcess={(processId) => void createPCBForProcess(processId)}
+          onLinkExistingPCBToProcess={(processId) => void linkExistingPCBToProcess(processId)}
+          onOpenLinkedPCB={openLinkedPCB}
+          onUnlinkPCBFromProcess={(processId) => void unlinkPCBFromProcess(processId)}
+        />
       </div>
     </div>
   );

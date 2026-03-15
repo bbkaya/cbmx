@@ -1,6 +1,5 @@
 export type CostBenefitType = "Financial" | "Environmental" | "Social" | "OtherNonFinancial";
 
-
 export type CBItem = { type: CostBenefitType; description: string };
 export type KPI = { name: string; rank: number };
 export type Operation = { name: string };
@@ -17,11 +16,46 @@ export type Actor = {
   services: Service[];
 };
 
+export type CoCreationProcess = {
+  id: string;
+  name: string;
+  participantActorIds?: string[];
+};
+
 export type CBMXBlueprint = {
   meta?: { id?: string; name?: string };
   networkValueProposition?: { statement?: string };
   actors: Actor[];
-  coCreationProcesses?: { id: string; name: string; participantActorIds?: string[] }[];
+  coCreationProcesses?: CoCreationProcess[];
+};
+
+export type CBMXProcessLink = {
+  id: string;
+  cbmx_blueprint_id: string;
+  cbmx_process_id: string;
+  process_canvas_blueprint_id: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProcessCanvasBlueprint = {
+  meta?: { id?: string; name?: string };
+  [key: string]: unknown;
+};
+
+export type ProcessCanvasBlueprintRow = {
+  id: string;
+  owner_user_id: string;
+  name: string;
+  blueprint_json: ProcessCanvasBlueprint;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProcessCanvasLinkSummary = {
+  cbmx_process_id: string;
+  process_canvas_blueprint_id: string;
+  process_canvas_blueprint_name: string;
 };
 
 /** Exported validation (used in App.tsx). No throwing. */
@@ -46,7 +80,6 @@ export function validateCBMXBlueprint(
   if (customers !== 1) issues.push({ level: "error", message: "Constraint: exactly 1 Customer actor is required." });
   if (orch !== 1) issues.push({ level: "error", message: "Constraint: exactly 1 Orchestrator actor is required." });
 
-  // Position-based rule (UI design): 1st=Customer, 2nd=Orchestrator
   if (bp.actors[0]?.type !== "Customer") {
     issues.push({ level: "warning", message: "By convention, actor #1 should be the Customer." });
   }
@@ -61,20 +94,24 @@ export function validateCBMXBlueprint(
       issues.push({ level: "error", message: `Actor "${name}" must have at least 1 Cost item.` });
     } else {
       const nonEmpty = a.costs.some((c) => (c.description ?? "").trim().length > 0);
-      if (!nonEmpty) issues.push({
-        level: "warning",
-        message: `Actor "${name}" has costs but all descriptions are empty.`,
-      });
+      if (!nonEmpty) {
+        issues.push({
+          level: "warning",
+          message: `Actor "${name}" has costs but all descriptions are empty.`,
+        });
+      }
     }
 
     if (!Array.isArray(a.benefits) || a.benefits.length < 1) {
       issues.push({ level: "error", message: `Actor "${name}" must have at least 1 Benefit item.` });
     } else {
       const nonEmpty = a.benefits.some((b) => (b.description ?? "").trim().length > 0);
-      if (!nonEmpty) issues.push({
-        level: "warning",
-        message: `Actor "${name}" has benefits but all descriptions are empty.`,
-      });
+      if (!nonEmpty) {
+        issues.push({
+          level: "warning",
+          message: `Actor "${name}" has benefits but all descriptions are empty.`,
+        });
+      }
     }
 
     const vp = (a.actorValueProposition?.statement ?? "").trim();
@@ -83,6 +120,20 @@ export function validateCBMXBlueprint(
 
   const nvp = (bp.networkValueProposition?.statement ?? "").trim();
   if (!nvp) issues.push({ level: "warning", message: "Network value proposition statement is empty." });
+
+  const processIds = new Set<string>();
+  for (const p of bp.coCreationProcesses ?? []) {
+    const pid = (p?.id ?? "").trim();
+    const pname = (p?.name ?? "").trim();
+    if (!pid) {
+      issues.push({ level: "warning", message: "A co-creation process is missing an id." });
+    } else if (processIds.has(pid)) {
+      issues.push({ level: "error", message: `Duplicate co-creation process id: ${pid}` });
+    } else {
+      processIds.add(pid);
+    }
+    if (!pname) issues.push({ level: "warning", message: `Co-creation process "${pid || "(missing id)"}" has an empty name.` });
+  }
 
   return issues;
 }
@@ -102,7 +153,6 @@ export function normalizeActors(actorsIn: Actor[], actorCount?: number) {
     services: Array.isArray(a.services) ? a.services.slice() : [],
   }));
 
-  // Enforce fixed actor types by position
   if (actors[0]) actors[0].type = "Customer";
   if (actors[1]) actors[1].type = "Orchestrator";
   for (let i = 2; i < actors.length; i++) actors[i].type = "Other";
@@ -130,6 +180,19 @@ export function indicesOfType(items: CBItem[], type: CostBenefitType) {
 
 export function countOfType(items: CBItem[] | undefined, type: CostBenefitType) {
   return (items ?? []).filter((x) => x?.type === type).length;
+}
+
+export function nextProcessNumericId(processes: CoCreationProcess[] | undefined): number {
+  let maxN = 0;
+  for (const p of processes ?? []) {
+    const m = /^P(\d+)$/.exec((p?.id ?? "").trim());
+    if (m) maxN = Math.max(maxN, Number(m[1]));
+  }
+  return maxN + 1;
+}
+
+export function makeNewProcessId(processes: CoCreationProcess[] | undefined): string {
+  return `P${nextProcessNumericId(processes)}`;
 }
 
 export function parseServiceLine(line: string): Service {
