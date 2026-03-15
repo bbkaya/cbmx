@@ -172,13 +172,6 @@ export default function PCBEditorPage() {
     return true;
   }
 
-  function newBlueprint() {
-    if (isDirty) {
-      const ok = window.confirm("Create a new blank Process Canvas Blueprint? Unsaved changes will be lost.");
-      if (!ok) return;
-    }
-    navigate("/app/pcb/new");
-  }
 
   async function exportJson() {
     const ok = await ensureSavedBeforeIO();
@@ -316,9 +309,7 @@ export default function PCBEditorPage() {
         <div style={{ fontSize: 22, fontWeight: 800 }}>Process Canvas Designer</div>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <button type="button" onClick={newBlueprint} style={toolbarButton()}>
-            New
-          </button>
+
 
           <span style={{ color: isAutoSaving || isSaving ? "#1d4ed8" : isDirty ? "#b45309" : "#15803d", fontSize: 12, fontWeight: 700 }}>
             {isAutoSaving || isSaving ? "Saving automatically..." : isDirty ? "Unsaved changes" : "All changes saved"}
