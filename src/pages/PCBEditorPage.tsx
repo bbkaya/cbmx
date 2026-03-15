@@ -336,7 +336,7 @@ export default function PCBEditorPage() {
                   position: "absolute",
                   top: "calc(100% + 6px)",
                   right: 0,
-                  minWidth: 190,
+                  minWidth: 200,
                   background: "#fff",
                   border: "1px solid #cbd5e1",
                   borderRadius: 10,
@@ -499,6 +499,7 @@ function toolbarButton(primary = false): CSSProperties {
     borderRadius: 10,
     padding: "9px 12px",
     cursor: "pointer",
+    fontSize: 14,
     fontWeight: 700,
   };
 }
@@ -513,8 +514,9 @@ function menuItemButton(): CSSProperties {
     color: "#334155",
     borderRadius: 8,
     padding: "9px 10px",
+    fontSize: 14,
     cursor: "pointer",
-    fontWeight: 700,
+    fontWeight: 500,
   };
 }
 

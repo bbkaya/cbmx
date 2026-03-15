@@ -660,9 +660,9 @@ ${options}`,
               onClick={() => setMenuOpen((v) => !v)}
               disabled={isAutoSaving}
               title="Import/Export (auto-saves first when needed)"
-              style={{ width: 120, height: 40, borderRadius: 10, fontSize: 14 }}
+              style={{ width: 140, height: 40, borderRadius: 5, fontSize: 14 }}
             >
-              Export/Import
+              Export/Import ▾
             </button>
 
             {menuOpen ? (
@@ -681,13 +681,13 @@ ${options}`,
                   zIndex: 50,
                 }}
               >
-                <MenuItem label="Export JSON" onClick={() => runMenuAction(exportJson)} disabled={isAutoSaving} />
-                <MenuItem label="Export PNG" onClick={() => runMenuAction(exportPng)} disabled={isAutoSaving} />
-                <MenuItem label="Export PDF" onClick={() => runMenuAction(exportPdf)} disabled={isAutoSaving} />
+                <MenuItem label="Export CBMX to JSON" onClick={() => runMenuAction(exportJson)} disabled={isAutoSaving} />
+                <MenuItem label="Export CBMX to PNG" onClick={() => runMenuAction(exportPng)} disabled={isAutoSaving} />
+                <MenuItem label="Export CBMX to PDF" onClick={() => runMenuAction(exportPdf)} disabled={isAutoSaving} />
 
                 <div style={{ height: 1, background: "#eee", margin: "6px 0" }} />
 
-                <MenuItem label="Import JSON" onClick={() => runMenuAction(openImportDialog)} disabled={isAutoSaving} />
+                <MenuItem label="Import CBMX from JSON" onClick={() => runMenuAction(openImportDialog)} disabled={isAutoSaving} />
 
                 {hasBlocking ? (
                   <div style={{ padding: "6px 10px", fontSize: 12, color: "#b91c1c" }}>
