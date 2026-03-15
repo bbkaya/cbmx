@@ -369,7 +369,7 @@ export default function PCBDashboardPage() {
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={3} style={{ padding: 12, color: "#6b7280" }}>
-                  No Process Canvases yet. Click “New blueprint”.
+                  No Process Canvases yet. Click “New Process Canvas”.
                 </td>
               </tr>
             ) : (
