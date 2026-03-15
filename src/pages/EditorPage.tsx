@@ -152,29 +152,7 @@ export default function EditorPage() {
     };
   }, [menuOpen]);
 
-  async function reloadFromDb() {
-    if (!blueprintId) return;
 
-    setDbBusy(true);
-    const { data, error } = await supabase
-      .from("blueprints")
-      .select("name,blueprint_json")
-      .eq("id", blueprintId)
-      .single();
-    setDbBusy(false);
-
-    if (error) return alert("Reload failed: " + error.message);
-
-    const loaded = deepClone((data as any).blueprint_json as CBMXBlueprint);
-    const loadedLinks = await loadProcessLinks(blueprintId).catch(() => [] as ProcessCanvasLinkSummary[]);
-
-    const canonicalName = ((data as any).name ?? loaded.meta?.name ?? "").trim() || "Untitled";
-    loaded.meta = { ...(loaded.meta ?? {}), name: canonicalName };
-
-    setDraft(loaded);
-    setProcessLinks(loadedLinks);
-    setLastSavedHash(stableHash(loaded));
-  }
 
   function normalizeName(raw: string | undefined | null): string {
     const n = (raw ?? "").trim();
