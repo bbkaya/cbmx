@@ -94,19 +94,36 @@ export async function loadPCBLinkContext(pcbId: string): Promise<PCBLinkContext 
 
   if (!data) return null;
 
-  const blueprintRow = Array.isArray((data as { blueprints?: unknown }).blueprints)
-    ? (data as { blueprints: Array<{ id: string; name: string; blueprint_json?: { coCreationProcesses?: Array<{ id: string; name?: string }> } }> }).blueprints[0]
-    : (data as { blueprints?: { id: string; name: string; blueprint_json?: { coCreationProcesses?: Array<{ id: string; name?: string }> } } }).blueprints;
+  type LinkedBlueprint = {
+    id: string;
+    name: string;
+    blueprint_json?: {
+      coCreationProcesses?: Array<{ id: string; name?: string }>;
+    };
+  };
+
+  type LinkRow = {
+    id: string;
+    cbmx_blueprint_id: string;
+    cbmx_process_id: string;
+    blueprints?: LinkedBlueprint | LinkedBlueprint[] | null;
+  };
+
+  const row = data as unknown as LinkRow;
+
+  const blueprintRow = Array.isArray(row.blueprints)
+    ? row.blueprints[0]
+    : row.blueprints ?? undefined;
 
   const processName =
     blueprintRow?.blueprint_json?.coCreationProcesses?.find(
-      (p) => p.id === (data as { cbmx_process_id: string }).cbmx_process_id,
-    )?.name || (data as { cbmx_process_id: string }).cbmx_process_id;
+      (p) => p.id === row.cbmx_process_id,
+    )?.name || row.cbmx_process_id;
 
   return {
-    link_id: (data as { id: string }).id,
-    cbmx_blueprint_id: (data as { cbmx_blueprint_id: string }).cbmx_blueprint_id,
-    cbmx_process_id: (data as { cbmx_process_id: string }).cbmx_process_id,
+    link_id: row.id,
+    cbmx_blueprint_id: row.cbmx_blueprint_id,
+    cbmx_process_id: row.cbmx_process_id,
     cbmx_blueprint_name: blueprintRow?.name || "CBMX Blueprint",
     cbmx_process_name: processName,
   };
