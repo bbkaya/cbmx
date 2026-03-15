@@ -43,10 +43,6 @@ function isPCBRoute(pathname: string) {
   return pathname === "/app/pcbs" || pathname === "/app/pcb/new" || pathname.startsWith("/app/pcb/");
 }
 
-function isCBMXEditorRoute(pathname: string) {
-  return pathname.startsWith("/app/b/");
-}
-
 export default function SiteShell({ children }: SiteShellProps) {
   const { loading, user } = useAuth();
   const nav = useNavigate();
@@ -56,7 +52,6 @@ export default function SiteShell({ children }: SiteShellProps) {
   const blueprintsMenuRef = React.useRef<HTMLDivElement | null>(null);
 
   const onPCB = isPCBRoute(loc.pathname);
-  const onCBMXEditor = isCBMXEditorRoute(loc.pathname);
   const shellMaxWidth = onPCB ? 1200 : 1200;
 
   React.useEffect(() => {
