@@ -35,7 +35,7 @@ export default function PCBEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [setSaveMessage] = useState<string | null>(null);
   const [linkContext, setLinkContext] = useState<PCBLinkContext | null>(null);
   const [lastSavedHash, setLastSavedHash] = useState<string>("");
 

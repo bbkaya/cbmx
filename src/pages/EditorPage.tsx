@@ -176,12 +176,6 @@ export default function EditorPage() {
     setLastSavedHash(stableHash(loaded));
   }
 
-  function discardDraft() {
-    const ok = window.confirm("Discard your unsaved changes and reload the last saved version from the database?");
-    if (!ok) return;
-    void reloadFromDb();
-  }
-
   function normalizeName(raw: string | undefined | null): string {
     const n = (raw ?? "").trim();
     return n || "Untitled";

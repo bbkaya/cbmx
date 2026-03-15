@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { supabase } from "../supabaseClient";
 import DashboardPage from "./DashboardPage";
-import SiteShell, { useLandingSectionRouting } from "../layouts/SiteShell";
+import { useLandingSectionRouting } from "../layouts/SiteShell";
 
 
 type FlipCardData = { title: string; text: string };
