@@ -302,7 +302,7 @@ export default function PCBEditorPage() {
   }
 
   return (
-    <div style={{ display: "grid", gap: 12, width: "100%", minWidth: 0 }}>
+    <div style={{ display: "grid", gap: 12, width: "100%", minWidth: 1200 }}>
       <header
         style={{
           display: "flex",
@@ -388,10 +388,9 @@ export default function PCBEditorPage() {
           >
             <span
               style={{
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 800,
                 color: "#0d4678",
-                textTransform: "uppercase",
                 letterSpacing: 0.4,
               }}
             >
@@ -406,7 +405,7 @@ export default function PCBEditorPage() {
                 padding: 0,
                 margin: 0,
                 color: "#0d4678",
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: 800,
                 cursor: "pointer",
                 textDecoration: "underline",
@@ -421,7 +420,7 @@ export default function PCBEditorPage() {
         </section>
       ) : (
         <section style={linkedCardStyle()}>
-          <div style={{ color: "#64748b", fontSize: 13 }}>This PCB is not currently linked to a CBMX co-creation process.</div>
+          <div style={{ color: "#64748b", fontSize: 14 }}>This PCB is not currently linked to a CBMX co-creation process.</div>
         </section>
       )}
 
@@ -437,16 +436,14 @@ export default function PCBEditorPage() {
         }}
       />
 
-      <section style={{ border: "1px solid #d7dde5", borderRadius: 10, background: "#f8fafc", overflow: "hidden" }}>
-        {validationOpen ? (
-          <div>
-            <button type="button" onClick={() => setValidationOpen(false)} style={validationToggleStyle(true)}>
-              Validation ▲ {issues.length > 0 ? `(${issues.length})` : ""}
-            </button>
-            <div style={{ padding: "10px 12px" }}>
-              {issues.length === 0 ? (
-                <div style={{ color: "#065f46", fontSize: 14 }}>No issues detected.</div>
-              ) : (
+      {issues.length > 0 ? (
+        <section style={{ border: "1px solid #d7dde5", borderRadius: 10, background: "#f8fafc", overflow: "hidden" }}>
+          {validationOpen ? (
+            <div>
+              <button type="button" onClick={() => setValidationOpen(false)} style={validationToggleStyle(true)}>
+                Validation ▲ ({issues.length})
+              </button>
+              <div style={{ padding: "10px 12px" }}>
                 <ul style={{ paddingLeft: 18, margin: 0, color: "#334155", fontSize: 13, lineHeight: 1.4 }}>
                   {issues.map((issue, i) => (
                     <li key={i} style={{ marginBottom: 5 }}>
@@ -454,15 +451,15 @@ export default function PCBEditorPage() {
                     </li>
                   ))}
                 </ul>
-              )}
+              </div>
             </div>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setValidationOpen(true)} style={validationToggleStyle(false)}>
-            Validation ▼ {issues.length > 0 ? `(${issues.length})` : ""}
-          </button>
-        )}
-      </section>
+          ) : (
+            <button type="button" onClick={() => setValidationOpen(true)} style={validationToggleStyle(false)}>
+              Validation ▼ ({issues.length})
+            </button>
+          )}
+        </section>
+      ) : null}
 
       <div ref={exportRef} style={{ display: "grid", gap: 12 }}>
         <div style={{ background: "#ffffff", border: "1px solid #d7dde5", borderRadius: 12, padding: "6px 10px" }}>

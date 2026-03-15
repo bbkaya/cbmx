@@ -1,13 +1,17 @@
-// src/pages/DashboardPage.tsx
+// src/pages/PCBDashboardPage.tsx
 import { useEffect, useState, type CSSProperties } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../auth";
-import type { CBMXBlueprint } from "../components/cbmx/CBMXTable";
+import {
+  deepClonePCB,
+  makeBlankProcessCanvasBlueprint,
+  type ProcessCanvasBlueprint,
+} from "../pcb/processCanvasDomain";
 
-type BlueprintRowList = { id: string; name: string; updated_at: string };
+type PCBRowList = { id: string; name: string; updated_at: string };
 
-function makeDefaultBlueprintName() {
+function makeDefaultPCBName() {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   const yyyy = d.getFullYear();
@@ -45,17 +49,16 @@ function nextSuffixName(base: string, existingNames: string[]): string {
 }
 
 async function resolveUniqueNameForUser(ownerUserId: string, desiredRaw: string, excludeId?: string): Promise<string> {
-  const desired = (desiredRaw ?? "").trim() || "Untitled";
+  const desired = (desiredRaw ?? "").trim() || "Untitled Process Canvas";
 
   const desiredEsc = escapeIlikePattern(desired);
   const { data, error } = await supabase
-    .from("blueprints")
+    .from("process_canvas_blueprints")
     .select("id,name")
     .eq("owner_user_id", ownerUserId)
     .ilike("name", `${desiredEsc}%`);
 
   if (error) {
-    // Don’t block rename/create; DB constraint (if enabled) is the ultimate guardrail.
     return desired;
   }
 
@@ -74,45 +77,21 @@ function isUniqueViolation(err: any): boolean {
   return err?.code === "23505" || String(err?.message ?? "").toLowerCase().includes("duplicate key");
 }
 
-function deepClone<T>(x: T): T {
-  return JSON.parse(JSON.stringify(x));
+function makeStarterPCB(name: string): ProcessCanvasBlueprint {
+  const bp = makeBlankProcessCanvasBlueprint();
+  const next = deepClonePCB(bp);
+  next.meta.name = name;
+  next.meta.updatedAt = new Date().toISOString();
+  if (!next.meta.createdAt) next.meta.createdAt = next.meta.updatedAt;
+  return next;
 }
 
-function makeBlankActor(idNum: number, type: "Customer" | "Orchestrator" | "Other" = "Other") {
-  const id = `A${idNum}`;
-  return {
-    id,
-    type,
-    name: "Click to edit",
-    actorValueProposition: { statement: "Click to edit" },
-    costs: [{ type: "Financial" as const, description: "Click to edit" }],
-    benefits: [{ type: "Financial" as const, description: "Click to edit" }],
-    kpis: [],
-    services: [{ name: "Click to edit", operations: [] }],
-  };
-}
-
-function makeStarterBlueprint(name: string): CBMXBlueprint {
-  return {
-    meta: { id: "cbmx-new", name },
-    networkValueProposition: { statement: "Click to edit" },
-    actors: [
-      makeBlankActor(1, "Customer"),
-      makeBlankActor(2, "Orchestrator"),
-      makeBlankActor(3, "Other"),
-      makeBlankActor(4, "Other"),
-      makeBlankActor(5, "Other"),
-    ],
-    coCreationProcesses: [{ id: "P1", name: "Click to edit", participantActorIds: ["A1", "A2", "A3", "A4", "A5"] }],
-  };
-}
-
-export default function DashboardPage() {
+export default function PCBDashboardPage() {
   const { user } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
 
-  const [rows, setRows] = useState<BlueprintRowList[]>([]);
+  const [rows, setRows] = useState<PCBRowList[]>([]);
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
@@ -122,19 +101,20 @@ export default function DashboardPage() {
     }
 
     const { data, error } = await supabase
-      .from("blueprints")
+      .from("process_canvas_blueprints")
       .select("id,name,updated_at")
       .eq("owner_user_id", user.id)
       .order("updated_at", { ascending: false })
       .limit(200);
 
     if (error) {
-      console.error("List blueprints error:", error);
+      console.error("List PCBs error:", error);
       alert("List failed: " + error.message);
       setRows([]);
       return;
     }
-    setRows((data ?? []) as BlueprintRowList[]);
+
+    setRows((data ?? []) as PCBRowList[]);
   }
 
   useEffect(() => {
@@ -142,11 +122,9 @@ export default function DashboardPage() {
 
     const params = new URLSearchParams(loc.search);
 
-    // Landing CTA: /app?new=1
     if (params.get("new") === "1") {
-      // Prevent re-trigger loops by removing the flag ASAP.
       params.delete("new");
-      nav(`/app${params.toString() ? `?${params.toString()}` : ""}`, { replace: true });
+      nav(`/app/pcbs${params.toString() ? `?${params.toString()}` : ""}`, { replace: true });
 
       void createNew();
       return;
@@ -161,15 +139,15 @@ export default function DashboardPage() {
 
     setBusy(true);
 
-    const desired = makeDefaultBlueprintName();
+    const desired = makeDefaultPCBName();
     let name = await resolveUniqueNameForUser(user.id, desired);
-    let blueprint = makeStarterBlueprint(name);
+    let blueprint = makeStarterPCB(name);
 
-    const attempt = async (n: string, bp: CBMXBlueprint) =>
+    const attempt = async (n: string, bp: ProcessCanvasBlueprint) =>
       supabase
-        .from("blueprints")
+        .from("process_canvas_blueprints")
         .insert({
-          owner_user_id: user.id, // IMPORTANT: must match your column name
+          owner_user_id: user.id,
           name: n,
           blueprint_json: bp,
         })
@@ -180,7 +158,7 @@ export default function DashboardPage() {
 
     if (error && isUniqueViolation(error)) {
       name = await resolveUniqueNameForUser(user.id, name);
-      blueprint = makeStarterBlueprint(name);
+      blueprint = makeStarterPCB(name);
       const retry = await attempt(name, blueprint);
       data = retry.data as any;
       error = retry.error as any;
@@ -190,39 +168,48 @@ export default function DashboardPage() {
 
     if (error) return alert("Create failed: " + error.message);
 
-    nav(`/app/b/${(data as any).id}`);
+    nav(`/app/pcb/${(data as any).id}`);
   }
 
   async function renameRow(id: string, currentName: string) {
     if (!user) return;
 
-    const raw = window.prompt("Enter a new blueprint name:", currentName);
-    if (raw === null) return; // cancelled
+    const raw = window.prompt("Enter a new Process Canvas name:", currentName);
+    if (raw === null) return;
 
     const desired = raw.trim();
     if (!desired) return alert("Name cannot be empty.");
 
     setBusy(true);
 
-    // Ensure unique per user, excluding this blueprint
     let name = await resolveUniqueNameForUser(user.id, desired, id);
 
     const attempt = async (n: string) => {
-      // strict sync: fetch JSON, update meta.name, and update both fields together
       const { data: row, error: readErr } = await supabase
-        .from("blueprints")
+        .from("process_canvas_blueprints")
         .select("id,blueprint_json")
         .eq("id", id)
         .single();
 
       if (readErr) return { data: null as any, error: readErr as any };
 
-      const bp = deepClone((row as any).blueprint_json as CBMXBlueprint);
-      bp.meta = { ...(bp.meta ?? {}), name: n };
+      const bp = deepClonePCB((row as any).blueprint_json as ProcessCanvasBlueprint);
+      bp.meta = {
+        ...(bp.meta ?? {
+          id: "",
+          name: "",
+          version: "1.0.0",
+        }),
+        name: n,
+        updatedAt: new Date().toISOString(),
+      };
 
       return supabase
-        .from("blueprints")
-        .update({ name: n, blueprint_json: bp })
+        .from("process_canvas_blueprints")
+        .update({
+          name: n,
+          blueprint_json: bp,
+        })
         .eq("id", id)
         .select("id,name")
         .single();
@@ -231,7 +218,6 @@ export default function DashboardPage() {
     let { data, error } = await attempt(name);
 
     if (error && isUniqueViolation(error)) {
-      // race: bump once and retry
       name = await resolveUniqueNameForUser(user.id, name, id);
       const retry = await attempt(name);
       data = retry.data as any;
@@ -242,9 +228,12 @@ export default function DashboardPage() {
 
     if (error) return alert("Rename failed: " + error.message);
 
-    // Update local list immediately
     const newName = (data as any)?.name ?? name;
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, name: newName, updated_at: new Date().toISOString() } : r)));
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, name: newName, updated_at: new Date().toISOString() } : r,
+      ),
+    );
 
     if (newName !== desired) {
       alert(`That name was already used. Renamed as “${newName}”.`);
@@ -252,11 +241,11 @@ export default function DashboardPage() {
   }
 
   async function deleteRow(id: string) {
-    const ok = window.confirm("Delete this blueprint?");
+    const ok = window.confirm("Delete this Process Canvas?");
     if (!ok) return;
 
     setBusy(true);
-    const { error } = await supabase.from("blueprints").delete().eq("id", id);
+    const { error } = await supabase.from("process_canvas_blueprints").delete().eq("id", id);
     setBusy(false);
 
     if (error) return alert("Delete failed: " + error.message);
@@ -265,14 +254,35 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minWidth: 1200 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "left" }}>
-        <h2 style={{ margin: 0 }}>My CBMX Blueprints</h2>
-        <button type="button" onClick={createNew} disabled={busy} style={{ height: 40, borderRadius: 10 }}>
-          + New CBMX Blueprint
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+          alignItems: "left",
+        }}
+      >
+        <h2 style={{ margin: 0 }}>My Process Canvases</h2>
+        <button
+          type="button"
+          onClick={createNew}
+          disabled={busy}
+          style={{ height: 40, borderRadius: 10 }}
+        >
+          + New Process Canvas
         </button>
       </div>
 
-      <div style={{ marginTop: 12, border: "1px solid #ddd", borderRadius: 12, overflow: "hidden", background: "white" }}>
+      <div
+        style={{
+          marginTop: 12,
+          border: "1px solid #ddd",
+          borderRadius: 12,
+          overflow: "hidden",
+          background: "white",
+        }}
+      >
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "#f3f4f6" }}>
@@ -285,7 +295,7 @@ export default function DashboardPage() {
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={3} style={{ padding: 12, color: "#6b7280" }}>
-                  No blueprints yet. Click “New blueprint”.
+                  No Process Canvases yet. Click “New blueprint”.
                 </td>
               </tr>
             ) : (
@@ -296,7 +306,7 @@ export default function DashboardPage() {
                   <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
                     <button
                       type="button"
-                      onClick={() => nav(`/app/b/${r.id}`)}
+                      onClick={() => nav(`/app/pcb/${r.id}`)}
                       style={{ height: 34, borderRadius: 10, marginRight: 8 }}
                     >
                       Open
@@ -330,5 +340,15 @@ export default function DashboardPage() {
   );
 }
 
-const th: CSSProperties = { textAlign: "left", padding: "6px 8px", fontSize: 12, color: "#374151" };
-const td: CSSProperties = { textAlign: "left", padding: "6px 8px", fontSize: 13 };
+const th: CSSProperties = {
+  textAlign: "left",
+  padding: "6px 8px",
+  fontSize: 12,
+  color: "#374151",
+};
+
+const td: CSSProperties = {
+  textAlign: "left",
+  padding: "6px 8px",
+  fontSize: 13,
+};

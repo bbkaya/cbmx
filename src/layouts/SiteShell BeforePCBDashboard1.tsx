@@ -40,7 +40,7 @@ type SiteShellProps = {
 };
 
 function isPCBRoute(pathname: string) {
-  return pathname === "/app/pcbs" || pathname === "/app/pcb/new" || pathname.startsWith("/app/pcb/");
+  return pathname === "/app/pcb/new" || pathname.startsWith("/app/pcb/");
 }
 
 function isCBMXEditorRoute(pathname: string) {
@@ -52,36 +52,12 @@ export default function SiteShell({ children }: SiteShellProps) {
   const nav = useNavigate();
   const loc = useLocation();
 
-  const [blueprintsMenuOpen, setBlueprintsMenuOpen] = React.useState(false);
-  const blueprintsMenuRef = React.useRef<HTMLDivElement | null>(null);
-
   const onPCB = isPCBRoute(loc.pathname);
   const onCBMXEditor = isCBMXEditorRoute(loc.pathname);
   const shellMaxWidth = onPCB ? 1200 : 1200;
 
-  React.useEffect(() => {
-    function onDocMouseDown(e: MouseEvent) {
-      if (!blueprintsMenuRef.current) return;
-      if (!blueprintsMenuRef.current.contains(e.target as Node)) {
-        setBlueprintsMenuOpen(false);
-      }
-    }
-
-    function onDocKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setBlueprintsMenuOpen(false);
-    }
-
-    document.addEventListener("mousedown", onDocMouseDown);
-    document.addEventListener("keydown", onDocKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onDocMouseDown);
-      document.removeEventListener("keydown", onDocKeyDown);
-    };
-  }, []);
-
   function applyHover(e: React.MouseEvent<HTMLElement>) {
-    e.currentTarget.style.transition =
-      "background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease";
+    e.currentTarget.style.transition = "background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease";
     e.currentTarget.style.backgroundColor = "#f1f5f9";
     e.currentTarget.style.borderColor = "#94a3b8";
     e.currentTarget.style.color = "#0f172a";
@@ -113,11 +89,6 @@ export default function SiteShell({ children }: SiteShellProps) {
 
     const el = document.getElementById(targetId);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function goToBlueprints(path: string) {
-    setBlueprintsMenuOpen(false);
-    nav(path);
   }
 
   return (
@@ -242,56 +213,9 @@ export default function SiteShell({ children }: SiteShellProps) {
                   {user.email ?? "User"}
                 </div>
 
-                <div ref={blueprintsMenuRef} style={{ position: "relative" }}>
-                  <button
-                    type="button"
-                    onClick={() => setBlueprintsMenuOpen((v) => !v)}
-                    onMouseEnter={applyHover}
-                    onMouseLeave={clearHover}
-                    style={btn}
-                    aria-haspopup="menu"
-                    aria-expanded={blueprintsMenuOpen}
-                  >
-                    My Blueprints ▾
-                  </button>
-
-                  {blueprintsMenuOpen ? (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "calc(100% + 8px)",
-                        right: 0,
-                        minWidth: 220,
-                        background: "white",
-                        border: "1px solid #cbd5e1",
-                        borderRadius: 12,
-                        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.10)",
-                        padding: 8,
-                        zIndex: 40,
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => goToBlueprints("/app")}
-                        style={menuItemBtn}
-                        onMouseEnter={applyHover}
-                        onMouseLeave={clearHover}
-                      >
-                        My CBMX Blueprints
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => goToBlueprints("/app/pcbs")}
-                        style={menuItemBtn}
-                        onMouseEnter={applyHover}
-                        onMouseLeave={clearHover}
-                      >
-                        My Process Canvases
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
+                <Link to="/app" style={btnLink} onMouseEnter={applyHover} onMouseLeave={clearHover}>
+                  My CBMX Blueprints
+                </Link>
 
                 <Link to="/account" style={btnLink} onMouseEnter={applyHover} onMouseLeave={clearHover}>
                   Account
@@ -386,6 +310,13 @@ export default function SiteShell({ children }: SiteShellProps) {
   );
 }
 
+const navLink: React.CSSProperties = {
+  color: "#334155",
+  textDecoration: "none",
+  fontWeight: 600,
+  fontSize: 14,
+};
+
 const navLinkBtn: React.CSSProperties = {
   appearance: "none",
   display: "inline-flex",
@@ -431,22 +362,6 @@ const btn: React.CSSProperties = {
   padding: "0 12px",
   borderRadius: 10,
   border: "1px solid #cbd5e1",
-  background: "white",
-  color: "#0f172a",
-  cursor: "pointer",
-  fontSize: 14,
-  fontWeight: 600,
-};
-
-const menuItemBtn: React.CSSProperties = {
-  appearance: "none",
-  display: "block",
-  width: "100%",
-  textAlign: "left",
-  minHeight: 38,
-  padding: "0 12px",
-  borderRadius: 10,
-  border: "1px solid transparent",
   background: "white",
   color: "#0f172a",
   cursor: "pointer",
