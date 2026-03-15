@@ -35,7 +35,6 @@ export default function PCBEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [setSaveMessage] = useState<string | null>(null);
   const [linkContext, setLinkContext] = useState<PCBLinkContext | null>(null);
   const [lastSavedHash, setLastSavedHash] = useState<string>("");
 
@@ -152,9 +151,6 @@ export default function PCBEditorPage() {
     const ok = await saveBlueprint({ silent: true });
     setIsAutoSaving(false);
 
-    if (ok) {
-      setSaveMessage("Automatically saved.");
-    }
 
     return ok;
   }
