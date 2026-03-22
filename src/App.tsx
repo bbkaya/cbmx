@@ -9,6 +9,8 @@ import AppLayout from "./layouts/AppLayout";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import DashboardPage from "./pages/DashboardPage";
 import EditorPage from "./pages/EditorPage";
 import PCBEditorPage from "./pages/PCBEditorPage";
@@ -37,6 +39,15 @@ export default function App() {
               </RedirectIfAuthed>
             }
           />
+          <Route
+            path="/forgot-password"
+            element={
+              <RedirectIfAuthed>
+                <ForgotPasswordPage />
+              </RedirectIfAuthed>
+            }
+          />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
 
         <Route

@@ -16,7 +16,10 @@ export default function LoginPage() {
     if (!email.trim() || !password) return alert("Enter email + password first.");
 
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
     setBusy(false);
 
     if (error) return alert("Login error: " + error.message);
@@ -52,6 +55,10 @@ export default function LoginPage() {
       <button type="button" onClick={signIn} disabled={busy} style={{ height: 40, borderRadius: 10 }}>
         {busy ? "Signing in…" : "Login"}
       </button>
+
+      <div style={{ fontSize: 13 }}>
+        <Link to="/forgot-password">Forgot password?</Link>
+      </div>
 
       <div style={{ fontSize: 13 }}>
         No account? <Link to="/signup">Sign up</Link>

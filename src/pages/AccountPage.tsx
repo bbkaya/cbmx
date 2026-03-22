@@ -20,9 +20,13 @@ export default function AccountPage() {
           onClick={async () => {
             const email = user?.email;
             if (!email) return alert("No email found for user.");
-            const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+              redirectTo: `${window.location.origin}/#/reset-password`,
+            });
+
             if (error) return alert("Reset password error: " + error.message);
-            alert("Password reset email sent (if enabled in Supabase).");
+            alert("Password reset email sent.");
           }}
           style={{ height: 40, borderRadius: 10 }}
         >
