@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -10,6 +10,55 @@ function getHashRouteQueryParam(name: string): string | null {
   return new URLSearchParams(search).get(name);
 }
 
+function getPostRouteHashParam(name: string): string | null {
+  const hash = window.location.hash || "";
+  const secondHashIndex = hash.indexOf("#", 1);
+  if (secondHashIndex === -1) return null;
+  const fragment = hash.slice(secondHashIndex + 1);
+  return new URLSearchParams(fragment).get(name);
+}
+
+function getCombinedUrlParam(name: string): string | null {
+  return (
+    getPostRouteHashParam(name) ||
+    getHashRouteQueryParam(name) ||
+    new URLSearchParams(window.location.search).get(name) ||
+    null
+  );
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function isLockStolenError(error: unknown): boolean {
+  const message = String((error as { message?: string } | null)?.message ?? error ?? "").toLowerCase();
+  const name = String((error as { name?: string } | null)?.name ?? "").toLowerCase();
+  return (
+    name.includes("aborterror") ||
+    message.includes("lock was stolen by another request") ||
+    message.includes("navigatorlock")
+  );
+}
+
+function clearRecoveryParamsFromUrl() {
+  const current = new URL(window.location.href);
+  ["access_token", "refresh_token", "token_hash", "type", "expires_in", "expires_at"].forEach((key) => {
+    current.searchParams.delete(key);
+  });
+
+  const hash = current.hash || "";
+  const secondHashIndex = hash.indexOf("#", 1);
+  if (secondHashIndex !== -1) {
+    current.hash = hash.slice(0, secondHashIndex);
+  } else {
+    const qIndex = hash.indexOf("?");
+    if (qIndex !== -1) current.hash = hash.slice(0, qIndex);
+  }
+
+  window.history.replaceState({}, document.title, current.toString());
+}
+
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -19,71 +68,79 @@ export default function ResetPasswordPage() {
   const [errorText, setErrorText] = useState("");
 
   const nav = useNavigate();
+  const initStartedRef = useRef(false);
 
-  const tokenHash = useMemo(() => {
-    // Works for HashRouter URLs like /#/reset-password?token_hash=...&type=recovery
-    // and also for normal query URLs if you switch routers later.
-    return (
-      getHashRouteQueryParam("token_hash") ||
-      new URLSearchParams(window.location.search).get("token_hash")
-    );
-  }, []);
-
-  const type = useMemo(() => {
-    return (
-      getHashRouteQueryParam("type") ||
-      new URLSearchParams(window.location.search).get("type")
-    );
-  }, []);
+  const tokenHash = useMemo(() => getCombinedUrlParam("token_hash"), []);
+  const type = useMemo(() => getCombinedUrlParam("type"), []);
+  const accessToken = useMemo(() => getCombinedUrlParam("access_token"), []);
+  const refreshToken = useMemo(() => getCombinedUrlParam("refresh_token"), []);
 
   useEffect(() => {
-    let cancelled = false;
+    if (initStartedRef.current) return;
+    initStartedRef.current = true;
 
     async function init() {
       setChecked(false);
       setErrorText("");
 
-      // Preferred path: explicit token verification from the email link
-      if (tokenHash && type === "recovery") {
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: "recovery",
-        });
+      try {
+        if (tokenHash && type === "recovery") {
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: "recovery",
+          });
 
-        if (cancelled) return;
+          if (error) {
+            setRecoveryReady(false);
+            setErrorText("This password reset link is invalid or has expired.");
+            setChecked(true);
+            return;
+          }
 
-        if (error) {
-          setRecoveryReady(false);
-          setErrorText("This password reset link is invalid or has expired.");
+          clearRecoveryParamsFromUrl();
+          setRecoveryReady(true);
           setChecked(true);
           return;
         }
 
-        setRecoveryReady(true);
-        setChecked(true);
-        return;
-      }
+        if (accessToken && refreshToken && type === "recovery") {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
 
-      // Fallback: if a recovery session already exists
-      const { data } = await supabase.auth.getSession();
+          if (error) {
+            setRecoveryReady(false);
+            setErrorText("This password reset link is invalid or has expired.");
+            setChecked(true);
+            return;
+          }
 
-      if (cancelled) return;
+          clearRecoveryParamsFromUrl();
+          setRecoveryReady(true);
+          setChecked(true);
+          return;
+        }
 
-      if (data.session) {
-        setRecoveryReady(true);
-      } else {
+        const { data } = await supabase.auth.getSession();
+
+        if (data.session) {
+          setRecoveryReady(true);
+        } else {
+          setRecoveryReady(false);
+          setErrorText("This password reset link is invalid or has expired.");
+        }
+      } catch (err) {
         setRecoveryReady(false);
         setErrorText("This password reset link is invalid or has expired.");
+        console.error("Reset link init error:", err);
+      } finally {
+        setChecked(true);
       }
-      setChecked(true);
     }
 
-    init();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tokenHash, type]);
+    void init();
+  }, [tokenHash, type, accessToken, refreshToken]);
 
   async function updatePassword() {
     if (!recoveryReady) {
@@ -95,16 +152,46 @@ export default function ResetPasswordPage() {
     if (password !== password2) return alert("Passwords do not match.");
 
     setBusy(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setBusy(false);
 
-    if (error) {
-      alert("Update password error: " + error.message);
-      return;
+    let lastError: unknown = null;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) {
+          lastError = error;
+          if (isLockStolenError(error) && attempt < 2) {
+            await sleep(250 * (attempt + 1));
+            continue;
+          }
+
+          setBusy(false);
+          alert("Update password error: " + error.message);
+          return;
+        }
+
+        await supabase.auth.signOut();
+        setBusy(false);
+        alert("Password updated successfully. Please log in.");
+        nav("/login", { replace: true });
+        return;
+      } catch (err) {
+        lastError = err;
+        if (isLockStolenError(err) && attempt < 2) {
+          await sleep(250 * (attempt + 1));
+          continue;
+        }
+
+        setBusy(false);
+        const message = err instanceof Error ? err.message : String(err ?? "Unknown error");
+        alert("Update password error: " + message);
+        return;
+      }
     }
 
-    alert("Password updated successfully. Please log in.");
-    nav("/login", { replace: true });
+    setBusy(false);
+    const finalMessage = lastError instanceof Error ? lastError.message : String(lastError ?? "Unknown error");
+    alert("Update password error: " + finalMessage);
   }
 
   if (!checked) {
@@ -141,7 +228,7 @@ export default function ResetPasswordPage() {
       </label>
 
       <label style={{ display: "grid", gap: 6 }}>
-        <div style={{ fontSize: 12, color: "#6b7280" }}>Confirm new password</div>
+        <div style={{ fontSize: 12, color: "#6b7280" }}>Repeat new password</div>
         <input
           value={password2}
           onChange={(e) => setPassword2(e.target.value)}

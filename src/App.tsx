@@ -16,6 +16,8 @@ import EditorPage from "./pages/EditorPage";
 import PCBEditorPage from "./pages/PCBEditorPage";
 import PCBDashboardPage from "./pages/PCBDashboardPage";
 import AccountPage from "./pages/AccountPage";
+import BlueprintSharePage from "./pages/BlueprintSharePage";
+import PCBSharePage from "./pages/PCBSharePage";
 
 export default function App() {
   return (
@@ -59,9 +61,13 @@ export default function App() {
         >
           <Route path="/app" element={<DashboardPage />} />
           <Route path="/app/b/:blueprintId" element={<EditorPage />} />
+          <Route path="/app/b/:blueprintId/share" element={<BlueprintSharePage />} />
+
           <Route path="/app/pcbs" element={<PCBDashboardPage />} />
           <Route path="/app/pcb/new" element={<PCBEditorPage />} />
           <Route path="/app/pcb/:pcbId" element={<PCBEditorPage />} />
+          <Route path="/app/pcb/:pcbId/share" element={<PCBSharePage />} />
+
           <Route path="/account" element={<AccountPage />} />
         </Route>
 

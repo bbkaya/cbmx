@@ -2,8 +2,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
-import { supabase } from "../supabaseClient";
-import DashboardPage from "./DashboardPage";
+import { listAccessibleBlueprints } from "../cbmx/CBMXData";
 import { useLandingSectionRouting } from "../layouts/SiteShell";
 
 
@@ -87,24 +86,19 @@ export default function LandingPage() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("blueprints")
-        .select("id,name,updated_at")
-        .eq("owner_user_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(1);
+      try {
+        const rows = await listAccessibleBlueprints(user.id);
 
-      if (!alive) return;
+        if (!alive) return;
 
-      if (error) {
+        const row = rows[0] ?? null;
+        setRecentId(row?.id ?? null);
+        setRecentName(row?.name ?? null);
+      } catch {
+        if (!alive) return;
         setRecentId(null);
         setRecentName(null);
-        return;
       }
-
-      const row = (data ?? [])[0] as any;
-      setRecentId(row?.id ?? null);
-      setRecentName(row?.name ?? null);
     }
 
     void loadRecent();
@@ -182,6 +176,31 @@ export default function LandingPage() {
             <button type="button" onClick={() => scrollToId("example")} style={secondaryCta}>
               Explore an Example
             </button>
+
+            {user ? (
+              <Link to="/app" style={secondaryCtaLink}>
+                My Blueprints
+              </Link>
+            ) : null}
+
+            {user ? (
+              <button
+                type="button"
+                disabled={!recentId}
+                onClick={() => {
+                  if (!recentId) return;
+                  nav(`/app/b/${recentId}`);
+                }}
+                style={{
+                  ...secondaryCta,
+                  opacity: recentId ? 1 : 0.55,
+                  cursor: recentId ? "pointer" : "not-allowed",
+                }}
+                title={recentName ? `Open the last edited blueprint: ${recentName}` : "No recently edited blueprint"}
+              >
+                {recentName ? `Open the last edited Blueprint: ${recentName}` : "Open the last edited Blueprint"}
+              </button>
+            ) : null}
           </div>
 
           <div
@@ -495,52 +514,6 @@ export default function LandingPage() {
           </ul>
         </div>
       </Section>
-
-      {user ? (
-        <section style={{ border: "1px solid #e5e7eb", borderRadius: 20, background: "white", padding: 18 }}>
-          <div style={{ fontWeight: 1000, fontSize: 18, marginBottom: 6 }}>Welcome back</div>
-          <div style={{ color: "#6b7280", marginBottom: 12 }}>
-            Continue working on your collaborative business models.
-          </div>
-
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Link to="/app" style={secondaryCtaLink}>
-              My Blueprints
-            </Link>
-
-            <Link to="/app?new=1" style={primaryCta}>
-              Create New Blueprint
-            </Link>
-
-            <button
-              type="button"
-              disabled={!recentId}
-              onClick={() => {
-                if (!recentId) return;
-                nav(`/app/b/${recentId}`);
-              }}
-              style={{
-                ...secondaryCta,
-                opacity: recentId ? 1 : 0.55,
-                cursor: recentId ? "pointer" : "not-allowed",
-              }}
-              title={recentName ?? ""}
-            >
-              Open Recent Blueprint
-            </button>
-
-            <Link to="/account" style={secondaryCtaLink}>
-              Account Settings
-            </Link>
-          </div>
-
-          <div style={{ height: 14 }} />
-
-          <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 14 }}>
-            <DashboardPage />
-          </div>
-        </section>
-      ) : null}
 
       {exampleOpen ? (
         <div

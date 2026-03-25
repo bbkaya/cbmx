@@ -18,8 +18,9 @@ import type {
 
 type Props = {
   blueprint: ProcessCanvasBlueprint;
-  onChange: (next: ProcessCanvasBlueprint) => void;
+  onChange?: (next: ProcessCanvasBlueprint) => void;
   showHelpPanel?: boolean;
+  readOnly?: boolean;
 };
 
 type CommitFieldProps = {
@@ -28,7 +29,8 @@ type CommitFieldProps = {
   dark?: boolean;
   centered?: boolean;
   multiline?: boolean;
-  onCommit: (next: string) => void;
+  readOnly?: boolean;
+  onCommit?: (next: string) => void;
 };
 
 const BASE_URL = import.meta.env.BASE_URL ?? "/";
@@ -349,6 +351,7 @@ function CommitField({
   dark = false,
   centered = false,
   multiline = false,
+  readOnly = false,
   onCommit,
 }: CommitFieldProps) {
   const [editing, setEditing] = useState(false);
@@ -360,6 +363,7 @@ function CommitField({
 
   function commit() {
     setEditing(false);
+    if (readOnly || !onCommit) return;
     onCommit(draft.trim());
   }
 
@@ -370,30 +374,37 @@ function CommitField({
 
   const shown = value.trim() || placeholder;
 
-  if (!editing) {
+  if (!editing || readOnly || !onCommit) {
     return (
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
+      <div
         style={{
           display: "block",
           width: "100%",
-          border: "none",
-          background: "transparent",
           padding: 0,
           margin: 0,
           textAlign: centered ? "center" : "left",
           color: value.trim() ? (dark ? "#fff" : "#111827") : dark ? "rgba(255,255,255,0.82)" : "#6b7280",
-          cursor: "text",
+          cursor: readOnly || !onCommit ? "default" : "text",
           font: "inherit",
           lineHeight: 1.24,
           minHeight: 16,
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
+          border: "none",
+          background: "transparent",
+        }}
+        onClick={readOnly || !onCommit ? undefined : () => setEditing(true)}
+        role={readOnly || !onCommit ? undefined : "button"}
+        tabIndex={readOnly || !onCommit ? undefined : 0}
+        onKeyDown={readOnly || !onCommit ? undefined : (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setEditing(true);
+          }
         }}
       >
         {shown}
-      </button>
+      </div>
     );
   }
 
@@ -513,13 +524,14 @@ function parseNameWithOptionalDescription(value: string): { name: string; descri
   return { name: match[1].trim(), description: match[2].trim() };
 }
 
-export default function ProcessCanvas({ blueprint, onChange, showHelpPanel = true }: Props) {
+export default function ProcessCanvas({ blueprint, onChange, showHelpPanel = true, readOnly = false }: Props) {
   const layout = PROCESS_CANVAS_LAYOUT_V1;
   const [helpOpen, setHelpOpen] = useState(true);
   const [activeHelpId, setActiveHelpId] = useState<string>("purposeGoals");
   const activeHelp = HELP_CONTENT[activeHelpId] ?? HELP_CONTENT.purposeGoals;
 
   const update = (mutator: (draft: ProcessCanvasBlueprint) => void) => {
+    if (readOnly || !onChange) return;
     const next = clone(blueprint);
     mutator(next);
     next.meta.updatedAt = new Date().toISOString();
@@ -571,9 +583,10 @@ const gridStyle: CSSProperties = {
     setText: (item: T, value: string) => T;
     makeItem: (initialText?: string) => T;
     onChange: (next: T[]) => void;
+    readOnly?: boolean;
   }) {
     const values = args.items.map(args.getText);
-    const visibleCount = computeVisibleSlotCount(values, args.minSlots);
+    const visibleCount = args.readOnly ? Math.max(values.length, args.minSlots) : computeVisibleSlotCount(values, args.minSlots);
 
     return (
       <div>
@@ -591,6 +604,7 @@ const gridStyle: CSSProperties = {
                   placeholder="..."
                   dark={args.dark}
                   multiline
+                  readOnly={args.readOnly}
                   onCommit={(nextValue) => {
                     if (existing) {
                       if (!nextValue) {
@@ -625,6 +639,7 @@ const gridStyle: CSSProperties = {
     items: T[];
     dark?: boolean;
     onChange: (next: T[]) => void;
+    readOnly?: boolean;
   }) {
     return (
       <div>
@@ -633,7 +648,7 @@ const gridStyle: CSSProperties = {
           {args.groups.map((group) => {
             const groupItems = args.items.filter((x) => x.type === group.key);
             const values = groupItems.map(group.getText);
-            const visibleCount = computeVisibleSlotCount(values, group.minSlots);
+            const visibleCount = args.readOnly ? Math.max(values.length, group.minSlots) : computeVisibleSlotCount(values, group.minSlots);
 
             return (
               <div key={group.key}>
@@ -653,6 +668,7 @@ const gridStyle: CSSProperties = {
                           placeholder="..."
                           dark={args.dark}
                           multiline
+                          readOnly={args.readOnly}
                           onCommit={(nextValue) => {
                             if (existing) {
                               if (!nextValue) {
@@ -709,6 +725,7 @@ const gridStyle: CSSProperties = {
                 dark
                 centered
                 multiline
+                readOnly={readOnly}
                 onCommit={(next) => update((d) => { d.desirability.purpose = next; })}
               />
             </div>
@@ -729,6 +746,7 @@ const gridStyle: CSSProperties = {
                 setText: (x, value) => ({ ...x, statement: value }),
                 makeItem: (initialText = "") => ({ id: makeId("goal"), statement: initialText }),
                 onChange: (next) => update((d) => { d.goals = next; }),
+              readOnly,
               })}
             </div>
           </div>
@@ -744,6 +762,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, name: value }),
           makeItem: (initialText = "") => ({ id: makeId("cust"), name: initialText }),
           onChange: (next) => update((d) => { d.desirability.customers = next; }),
+        readOnly,
         });
 
       case "otherBeneficiaries":
@@ -762,6 +781,7 @@ const gridStyle: CSSProperties = {
             return { id: makeId("benef"), name: parsed.name, benefitDescription: parsed.description };
           },
           onChange: (next) => update((d) => { d.desirability.otherBeneficiaries = next; }),
+        readOnly,
         });
 
       case "customerRelationship":
@@ -774,6 +794,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("rel"), description: initialText }),
           onChange: (next) => update((d) => { d.desirability.customerRelationships = next; }),
+        readOnly,
         });
 
       case "customerChannels":
@@ -786,6 +807,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("chan"), description: initialText }),
           onChange: (next) => update((d) => { d.desirability.customerChannels = next; }),
+        readOnly,
         });
 
       case "keyActivities":
@@ -798,6 +820,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("act"), description: initialText }),
           onChange: (next) => update((d) => { d.feasibility.keyActivities = next; }),
+        readOnly,
         });
 
       case "keyPoliciesRegulations":
@@ -816,6 +839,7 @@ const gridStyle: CSSProperties = {
             return { id: makeId("pol"), name: parsed.name, description: parsed.description };
           },
           onChange: (next) => update((d) => { d.feasibility.keyPoliciesRegulations = next; }),
+        readOnly,
         });
 
       case "keyPartners":
@@ -842,6 +866,7 @@ const gridStyle: CSSProperties = {
           ],
           items: blueprint.feasibility.keyPartners,
           onChange: (next) => update((d) => { d.feasibility.keyPartners = next; }),
+        readOnly,
         });
 
       case "keyCapabilities":
@@ -868,6 +893,7 @@ const gridStyle: CSSProperties = {
           ],
           items: blueprint.feasibility.keyCapabilities,
           onChange: (next) => update((d) => { d.feasibility.keyCapabilities = next; }),
+        readOnly,
         });
 
       case "keyResources":
@@ -902,6 +928,7 @@ const gridStyle: CSSProperties = {
           ],
           items: blueprint.feasibility.keyResources,
           onChange: (next) => update((d) => { d.feasibility.keyResources = next; }),
+        readOnly,
         });
 
       case "economicCosts":
@@ -914,6 +941,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("cost"), description: initialText }),
           onChange: (next) => update((d) => { d.viability.economic.costs = next; }),
+        readOnly,
         });
 
       case "economicBenefits":
@@ -926,6 +954,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("ben"), description: initialText }),
           onChange: (next) => update((d) => { d.viability.economic.benefits = next; }),
+        readOnly,
         });
 
       case "envNegative":
@@ -938,6 +967,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("envn"), description: initialText }),
           onChange: (next) => update((d) => { d.viability.environmental.negative = next; }),
+        readOnly,
         });
 
       case "envPositive":
@@ -950,6 +980,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("envp"), description: initialText }),
           onChange: (next) => update((d) => { d.viability.environmental.positive = next; }),
+        readOnly,
         });
 
       case "socialNegative":
@@ -962,6 +993,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("socn"), description: initialText }),
           onChange: (next) => update((d) => { d.viability.social.negative = next; }),
+        readOnly,
         });
 
       case "socialPositive":
@@ -974,6 +1006,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("socp"), description: initialText }),
           onChange: (next) => update((d) => { d.viability.social.positive = next; }),
+        readOnly,
         });
 
       case "privacySecurity":
@@ -985,6 +1018,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("priv"), description: initialText }),
           onChange: (next) => update((d) => { d.responsibility.privacySecurity = next; }),
+        readOnly,
         });
 
       case "fairnessEthics":
@@ -996,6 +1030,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("fair"), description: initialText }),
           onChange: (next) => update((d) => { d.responsibility.fairnessEthics = next; }),
+        readOnly,
         });
 
       case "transparencyExplainability":
@@ -1007,6 +1042,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("tran"), description: initialText }),
           onChange: (next) => update((d) => { d.responsibility.transparencyExplainability = next; }),
+        readOnly,
         });
 
       case "accountabilityContestability":
@@ -1018,6 +1054,7 @@ const gridStyle: CSSProperties = {
           setText: (x, value) => ({ ...x, description: value }),
           makeItem: (initialText = "") => ({ id: makeId("acct"), description: initialText }),
           onChange: (next) => update((d) => { d.responsibility.accountabilityContestability = next; }),
+        readOnly,
         });
 
       default:

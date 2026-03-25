@@ -407,9 +407,17 @@ const processSlots = useMemo(() => {
     return names ? `${p.name} (${names})` : (p.name ?? "");
   }
 
-  function getProcessLink(processId: string) {
-    return (processLinks ?? []).find((x) => x.cbmx_process_id === processId) ?? null;
-  }
+function getProcessLink(processId: string) {
+  return (processLinks ?? []).find((x) => x.cbmx_process_id === processId) ?? null;
+}
+
+function canRoleViewPCB(role: "owner" | "editor" | "viewer" | null | undefined) {
+  return role === "owner" || role === "editor" || role === "viewer";
+}
+
+function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undefined) {
+  return role === "owner" || role === "editor";
+}
 
   function closePCBMenu() {
     setOpenPCBMenuProcessId(null);
@@ -720,7 +728,11 @@ const processSlots = useMemo(() => {
                           }}
                         >
                           <span style={{ color: "#64748b" }}>
-                            {link ? `PCB: ${link.process_canvas_blueprint_name}` : "No Canvas linked"}
+                            {!link?.link_exists
+                              ? "No PCB linked"
+                              : link.has_pcb_access
+                                ? `PCB: ${link.process_canvas_blueprint_name ?? link.process_canvas_blueprint_id ?? "Unnamed PCB"}`
+                                : "Linked PCB (no access)"}
                           </span>
 
                           {onChange ? (
@@ -753,7 +765,7 @@ const processSlots = useMemo(() => {
                                     position: "absolute",
                                     top: "calc(100% + 4px)",
                                     right: 0,
-                                    minWidth: 170,
+                                    minWidth: 260,
                                     border: "1px solid #d7dde5",
                                     borderRadius: 8,
                                     background: "#ffffff",
@@ -762,52 +774,7 @@ const processSlots = useMemo(() => {
                                     zIndex: 20,
                                   }}
                                 >
-                                  {link ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        role="menuitem"
-                                        onClick={() =>
-                                          runPCBAction(() =>
-                                            onOpenLinkedPCB?.(link.process_canvas_blueprint_id)
-                                          )
-                                        }
-                                        style={{
-                                          display: "block",
-                                          width: "100%",
-                                          textAlign: "left",
-                                          border: "none",
-                                          background: "transparent",
-                                          borderRadius: 6,
-                                          cursor: "pointer",
-                                          padding: "4px 8px",
-                                          fontSize: 12,
-                                        }}
-                                      >
-                                        Open linked Canvas
-                                      </button>
-                                      <button
-                                        type="button"
-                                        role="menuitem"
-                                        onClick={() =>
-                                          runPCBAction(() => onUnlinkPCBFromProcess?.(p.id))
-                                        }
-                                        style={{
-                                          display: "block",
-                                          width: "100%",
-                                          textAlign: "left",
-                                          border: "none",
-                                          background: "transparent",
-                                          borderRadius: 6,
-                                          cursor: "pointer",
-                                          padding: "4px 8px",
-                                          fontSize: 12,
-                                        }}
-                                      >
-                                        Remove link
-                                      </button>
-                                    </>
-                                  ) : (
+                                  {!link?.link_exists ? (
                                     <>
                                       <button
                                         type="button"
@@ -849,6 +816,198 @@ const processSlots = useMemo(() => {
                                       >
                                         Link existing Canvas
                                       </button>
+                                    </>
+                                  ) : link.has_pcb_access ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        onClick={() => {
+                                          if (link.process_canvas_blueprint_id && canRoleViewPCB(link.pcb_access_role)) {
+                                            runPCBAction(() =>
+                                              onOpenLinkedPCB?.(link.process_canvas_blueprint_id as string)
+                                            );
+                                          }
+                                        }}
+                                        style={{
+                                          display: "block",
+                                          width: "100%",
+                                          textAlign: "left",
+                                          border: "none",
+                                          background: "transparent",
+                                          borderRadius: 6,
+                                          cursor: "pointer",
+                                          padding: "4px 8px",
+                                          fontSize: 12,
+                                        }}
+                                      >
+                                        Open linked Canvas
+                                      </button>
+
+                                      {canRoleMutatePCBLink(link.pcb_access_role) ? (
+                                        <>
+                                          <button
+                                            type="button"
+                                            role="menuitem"
+                                            onClick={() =>
+                                              runPCBAction(() => onCreatePCBForProcess?.(p.id))
+                                            }
+                                            style={{
+                                              display: "block",
+                                              width: "100%",
+                                              textAlign: "left",
+                                              border: "none",
+                                              background: "transparent",
+                                              borderRadius: 6,
+                                              cursor: "pointer",
+                                              padding: "4px 8px",
+                                              fontSize: 12,
+                                            }}
+                                          >
+                                            Replace with new Canvas
+                                          </button>
+                                          <button
+                                            type="button"
+                                            role="menuitem"
+                                            onClick={() =>
+                                              runPCBAction(() => onLinkExistingPCBToProcess?.(p.id))
+                                            }
+                                            style={{
+                                              display: "block",
+                                              width: "100%",
+                                              textAlign: "left",
+                                              border: "none",
+                                              background: "transparent",
+                                              borderRadius: 6,
+                                              cursor: "pointer",
+                                              padding: "4px 8px",
+                                              fontSize: 12,
+                                            }}
+                                          >
+                                            Relink to existing Canvas
+                                          </button>
+                                          <button
+                                            type="button"
+                                            role="menuitem"
+                                            onClick={() =>
+                                              runPCBAction(() => onUnlinkPCBFromProcess?.(p.id))
+                                            }
+                                            style={{
+                                              display: "block",
+                                              width: "100%",
+                                              textAlign: "left",
+                                              border: "none",
+                                              background: "transparent",
+                                              borderRadius: 6,
+                                              cursor: "pointer",
+                                              padding: "4px 8px",
+                                              fontSize: 12,
+                                            }}
+                                          >
+                                            Remove link
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <div
+                                          style={{
+                                            padding: "6px 8px",
+                                            fontSize: 12,
+                                            color: "#64748b",
+                                            lineHeight: 1.35,
+                                          }}
+                                        >
+                                          You can open this linked Process Canvas, but only PCB editors can replace, relink, or unlink it.
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        disabled
+                                        style={{
+                                          display: "block",
+                                          width: "100%",
+                                          textAlign: "left",
+                                          border: "none",
+                                          background: "transparent",
+                                          borderRadius: 6,
+                                          cursor: "not-allowed",
+                                          padding: "4px 8px",
+                                          fontSize: 12,
+                                          color: "#94a3b8",
+                                        }}
+                                      >
+                                        Open linked Canvas
+                                      </button>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        disabled
+                                        style={{
+                                          display: "block",
+                                          width: "100%",
+                                          textAlign: "left",
+                                          border: "none",
+                                          background: "transparent",
+                                          borderRadius: 6,
+                                          cursor: "not-allowed",
+                                          padding: "4px 8px",
+                                          fontSize: 12,
+                                          color: "#94a3b8",
+                                        }}
+                                      >
+                                        Create Process Canvas
+                                      </button>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        disabled
+                                        style={{
+                                          display: "block",
+                                          width: "100%",
+                                          textAlign: "left",
+                                          border: "none",
+                                          background: "transparent",
+                                          borderRadius: 6,
+                                          cursor: "not-allowed",
+                                          padding: "4px 8px",
+                                          fontSize: 12,
+                                          color: "#94a3b8",
+                                        }}
+                                      >
+                                        Link existing Canvas
+                                      </button>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        disabled
+                                        style={{
+                                          display: "block",
+                                          width: "100%",
+                                          textAlign: "left",
+                                          border: "none",
+                                          background: "transparent",
+                                          borderRadius: 6,
+                                          cursor: "not-allowed",
+                                          padding: "4px 8px",
+                                          fontSize: 12,
+                                          color: "#94a3b8",
+                                        }}
+                                      >
+                                        Remove link
+                                      </button>
+                                      <div
+                                        style={{
+                                          padding: "6px 8px",
+                                          fontSize: 12,
+                                          color: "#64748b",
+                                          lineHeight: 1.35,
+                                        }}
+                                      >
+                                        This co-creation process is already linked to a Process Canvas. Ask the owner to share that canvas if you need access.
+                                      </div>
                                     </>
                                   )}
                                 </div>

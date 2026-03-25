@@ -7,8 +7,12 @@ import {
   makeBlankProcessCanvasBlueprint,
   type ProcessCanvasBlueprint,
 } from "../pcb/processCanvasDomain";
+import {
+  listAccessiblePCBs,
+  type AccessiblePCBRow,
+} from "../pcb/PCBData";
 
-type PCBRowList = { id: string; name: string; updated_at: string };
+type PCBRowList = AccessiblePCBRow;
 
 const BASE_URL = import.meta.env.BASE_URL ?? "/";
 const FULL_FIGURE_SRC = `${BASE_URL}images/PC-full.png`;
@@ -150,6 +154,19 @@ function cardStyle(): CSSProperties {
   };
 }
 
+function ownerLabel(row: PCBRowList) {
+  if (row.role === "owner") return "You";
+  return row.owner_display_name?.trim() || row.owner_email || "Unknown user";
+}
+
+function canRenamePCB(row: PCBRowList) {
+  return row.role === "owner" || row.role === "editor";
+}
+
+function canDeletePCB(row: PCBRowList) {
+  return row.role === "owner";
+}
+
 export default function PCBDashboardPage() {
   const { user } = useAuth();
   const nav = useNavigate();
@@ -165,21 +182,14 @@ export default function PCBDashboardPage() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("process_canvas_blueprints")
-      .select("id,name,updated_at")
-      .eq("owner_user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(200);
-
-    if (error) {
+    try {
+      const data = await listAccessiblePCBs(user.id);
+      setRows(data);
+    } catch (error: any) {
       console.error("List PCBs error:", error);
-      alert("List failed: " + error.message);
+      alert("List failed: " + String(error?.message ?? error));
       setRows([]);
-      return;
     }
-
-    setRows((data ?? []) as PCBRowList[]);
   }
 
   useEffect(() => {
@@ -238,8 +248,12 @@ export default function PCBDashboardPage() {
     nav(`/app/pcb/${(data as any).id}`);
   }
 
-  async function renameRow(id: string, currentName: string) {
+  async function renameRow(id: string, currentName: string, role: PCBRowList["role"], ownerUserId: string) {
     if (!user) return;
+    if (!(role === "owner" || role === "editor")) {
+      alert("You do not have permission to rename this Process Canvas.");
+      return;
+    }
 
     const raw = window.prompt("Enter a new Process Canvas name:", currentName);
     if (raw === null) return;
@@ -249,7 +263,7 @@ export default function PCBDashboardPage() {
 
     setBusy(true);
 
-    let name = await resolveUniqueNameForUser(user.id, desired, id);
+    let name = await resolveUniqueNameForUser(ownerUserId, desired, id);
 
     const attempt = async (n: string) => {
       const { data: row, error: readErr } = await supabase
@@ -287,7 +301,7 @@ export default function PCBDashboardPage() {
     let { data, error } = await attempt(name);
 
     if (error && isUniqueViolation(error)) {
-      name = await resolveUniqueNameForUser(user.id, name, id);
+      name = await resolveUniqueNameForUser(ownerUserId, name, id);
       const retry = await attempt(name);
       data = retry.data as any;
       error = retry.error as any;
@@ -311,7 +325,12 @@ export default function PCBDashboardPage() {
     }
   }
 
-  async function deleteRow(id: string) {
+  async function deleteRow(id: string, role: PCBRowList["role"]) {
+    if (role !== "owner") {
+      alert("Only the owner can delete this Process Canvas.");
+      return;
+    }
+
     const ok = window.confirm("Delete this Process Canvas?");
     if (!ok) return;
 
@@ -361,6 +380,8 @@ export default function PCBDashboardPage() {
           <thead>
             <tr style={{ background: "#f3f4f6" }}>
               <th style={th}>Name</th>
+              <th style={th}>Role</th>
+              <th style={th}>Owner</th>
               <th style={th}>Last updated</th>
               <th style={{ ...th, width: 320 }} />
             </tr>
@@ -368,52 +389,87 @@ export default function PCBDashboardPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={3} style={{ padding: 12, color: "#6b7280" }}>
+                <td colSpan={5} style={{ padding: 12, color: "#6b7280" }}>
                   No Process Canvases yet. Click “New Process Canvas”.
                 </td>
               </tr>
             ) : (
-              rows.map((r) => (
-                <tr key={r.id} style={{ borderTop: "1px solid #eee" }}>
-                  <td style={td}>{r.name}</td>
-                  <td style={td}>
-                    {new Date(r.updated_at).toLocaleString()}
-                  </td>
-                  <td
-                    style={{
-                      ...td,
-                      textAlign: "right",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => nav(`/app/pcb/${r.id}`)}
-                      style={{ height: 34, borderRadius: 10, marginRight: 8 }}
-                    >
-                      Open
-                    </button>
+              rows.map((r) => {
+                const mayRename = canRenamePCB(r);
+                const mayDelete = canDeletePCB(r);
 
-                    <button
-                      type="button"
-                      onClick={() => void renameRow(r.id, r.name)}
-                      disabled={busy}
-                      style={{ height: 34, borderRadius: 10, marginRight: 8 }}
-                    >
-                      Rename
-                    </button>
+                return (
+                  <tr key={r.id} style={{ borderTop: "1px solid #eee" }}>
+                    <td style={td}>{r.name}</td>
+                    <td style={td}>{r.role}</td>
+                    <td style={td}>{ownerLabel(r)}</td>
+                    <td style={td}>
+                      {new Date(r.updated_at).toLocaleString()}
+                    </td>
 
-                    <button
-                      type="button"
-                      onClick={() => void deleteRow(r.id)}
-                      disabled={busy}
-                      style={{ height: 34, borderRadius: 10 }}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
+<td
+  style={{
+    ...td,
+    textAlign: "right",
+    whiteSpace: "nowrap",
+  }}
+>
+  <button
+    type="button"
+    onClick={() => nav(`/app/pcb/${r.id}`)}
+    style={{
+      height: 34,
+      borderRadius: 10,
+      marginRight: 8,
+    }}
+  >
+    Open
+  </button>
+
+  <button
+    type="button"
+    onClick={() => nav(`/app/pcb/${r.id}/share`)}
+    style={{
+      height: 34,
+      borderRadius: 10,
+      marginRight: mayRename || mayDelete ? 8 : 0,
+    }}
+  >
+    Share
+  </button>
+
+  {mayRename ? (
+    <button
+      type="button"
+      onClick={() => void renameRow(r.id, r.name, r.role, r.owner_user_id)}
+      disabled={busy}
+      style={{
+        height: 34,
+        borderRadius: 10,
+        marginRight: mayDelete ? 8 : 0,
+      }}
+    >
+      Rename
+    </button>
+  ) : null}
+
+  {mayDelete ? (
+    <button
+      type="button"
+      onClick={() => void deleteRow(r.id, r.role)}
+      disabled={busy}
+      style={{ height: 34, borderRadius: 10 }}
+    >
+      Delete
+    </button>
+  ) : null}
+</td>
+
+
+
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -437,7 +493,7 @@ export default function PCBDashboardPage() {
                 lineHeight: 1.08,
                 margin: "0 0 18px 0",
                 maxWidth: 760,
-textAlign: "left",
+                textAlign: "left",
               }}
             >
               Explore business processes through feasibility, viability,
@@ -450,7 +506,7 @@ textAlign: "left",
                 color: "#475569",
                 margin: "0 0 24px 0",
                 maxWidth: 760,
-textAlign: "left",
+                textAlign: "left",
               }}
             >
               The Process Canvas helps represent the strategic layer of a

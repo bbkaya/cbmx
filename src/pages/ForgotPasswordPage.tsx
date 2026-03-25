@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
+const resetPasswordRedirectTo = `${window.location.origin}${import.meta.env.BASE_URL}#/reset-password`
+
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -14,7 +16,7 @@ export default function ForgotPasswordPage() {
 
     setBusy(true);
     const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
-      redirectTo: `${window.location.origin}/#/reset-password`,
+      redirectTo: resetPasswordRedirectTo,
     });
     setBusy(false);
 

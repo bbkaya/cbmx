@@ -3,9 +3,9 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../auth";
-import type { CBMXBlueprint } from "../components/cbmx/CBMXTable";
+import { listAccessibleBlueprints, type AccessibleBlueprintRow } from "../cbmx/CBMXData";
 
-type BlueprintRowList = { id: string; name: string; updated_at: string };
+type BlueprintRowList = AccessibleBlueprintRow;
 
 function makeDefaultBlueprintName() {
   const d = new Date();
@@ -55,7 +55,6 @@ async function resolveUniqueNameForUser(ownerUserId: string, desiredRaw: string,
     .ilike("name", `${desiredEsc}%`);
 
   if (error) {
-    // Don’t block rename/create; DB constraint (if enabled) is the ultimate guardrail.
     return desired;
   }
 
@@ -74,37 +73,17 @@ function isUniqueViolation(err: any): boolean {
   return err?.code === "23505" || String(err?.message ?? "").toLowerCase().includes("duplicate key");
 }
 
-function deepClone<T>(x: T): T {
-  return JSON.parse(JSON.stringify(x));
+function ownerLabel(row: BlueprintRowList) {
+  if (row.role === "owner") return "You";
+  return row.owner_display_name?.trim() || row.owner_email || "Unknown user";
 }
 
-function makeBlankActor(idNum: number, type: "Customer" | "Orchestrator" | "Other" = "Other") {
-  const id = `A${idNum}`;
-  return {
-    id,
-    type,
-    name: "Click to edit",
-    actorValueProposition: { statement: "Click to edit" },
-    costs: [{ type: "Financial" as const, description: "Click to edit" }],
-    benefits: [{ type: "Financial" as const, description: "Click to edit" }],
-    kpis: [],
-    services: [{ name: "Click to edit", operations: [] }],
-  };
+function canRenameBlueprint(row: BlueprintRowList) {
+  return row.role === "owner" || row.role === "editor";
 }
 
-function makeStarterBlueprint(name: string): CBMXBlueprint {
-  return {
-    meta: { id: "cbmx-new", name },
-    networkValueProposition: { statement: "Click to edit" },
-    actors: [
-      makeBlankActor(1, "Customer"),
-      makeBlankActor(2, "Orchestrator"),
-      makeBlankActor(3, "Other"),
-      makeBlankActor(4, "Other"),
-      makeBlankActor(5, "Other"),
-    ],
-    coCreationProcesses: [{ id: "P1", name: "Click to edit", participantActorIds: ["A1", "A2", "A3", "A4", "A5"] }],
-  };
+function canDeleteBlueprint(row: BlueprintRowList) {
+  return row.role === "owner";
 }
 
 export default function DashboardPage() {
@@ -121,20 +100,14 @@ export default function DashboardPage() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("blueprints")
-      .select("id,name,updated_at")
-      .eq("owner_user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(200);
-
-    if (error) {
+    try {
+      const data = await listAccessibleBlueprints(user.id);
+      setRows(data);
+    } catch (error: any) {
       console.error("List blueprints error:", error);
-      alert("List failed: " + error.message);
+      alert("List failed: " + String(error?.message ?? error));
       setRows([]);
-      return;
     }
-    setRows((data ?? []) as BlueprintRowList[]);
   }
 
   useEffect(() => {
@@ -142,9 +115,7 @@ export default function DashboardPage() {
 
     const params = new URLSearchParams(loc.search);
 
-    // Landing CTA: /app?new=1
     if (params.get("new") === "1") {
-      // Prevent re-trigger loops by removing the flag ASAP.
       params.delete("new");
       nav(`/app${params.toString() ? `?${params.toString()}` : ""}`, { replace: true });
 
@@ -163,25 +134,87 @@ export default function DashboardPage() {
 
     const desired = makeDefaultBlueprintName();
     let name = await resolveUniqueNameForUser(user.id, desired);
-    let blueprint = makeStarterBlueprint(name);
 
-    const attempt = async (n: string, bp: CBMXBlueprint) =>
+    const blueprint = {
+      meta: { id: "cbmx-new", name },
+      networkValueProposition: { statement: "Click to edit" },
+      actors: [
+        {
+          id: "A1",
+          type: "Customer",
+          name: "Click to edit",
+          actorValueProposition: { statement: "Click to edit" },
+          costs: [{ type: "Financial", description: "Click to edit" }],
+          benefits: [{ type: "Financial", description: "Click to edit" }],
+          kpis: [],
+          services: [{ name: "Click to edit", operations: [] }],
+        },
+        {
+          id: "A2",
+          type: "Orchestrator",
+          name: "Click to edit",
+          actorValueProposition: { statement: "Click to edit" },
+          costs: [{ type: "Financial", description: "Click to edit" }],
+          benefits: [{ type: "Financial", description: "Click to edit" }],
+          kpis: [],
+          services: [{ name: "Click to edit", operations: [] }],
+        },
+        {
+          id: "A3",
+          type: "Other",
+          name: "Click to edit",
+          actorValueProposition: { statement: "Click to edit" },
+          costs: [{ type: "Financial", description: "Click to edit" }],
+          benefits: [{ type: "Financial", description: "Click to edit" }],
+          kpis: [],
+          services: [{ name: "Click to edit", operations: [] }],
+        },
+        {
+          id: "A4",
+          type: "Other",
+          name: "Click to edit",
+          actorValueProposition: { statement: "Click to edit" },
+          costs: [{ type: "Financial", description: "Click to edit" }],
+          benefits: [{ type: "Financial", description: "Click to edit" }],
+          kpis: [],
+          services: [{ name: "Click to edit", operations: [] }],
+        },
+        {
+          id: "A5",
+          type: "Other",
+          name: "Click to edit",
+          actorValueProposition: { statement: "Click to edit" },
+          costs: [{ type: "Financial", description: "Click to edit" }],
+          benefits: [{ type: "Financial", description: "Click to edit" }],
+          kpis: [],
+          services: [{ name: "Click to edit", operations: [] }],
+        },
+      ],
+      coCreationProcesses: [
+        {
+          id: "P1",
+          name: "Click to edit",
+          participantActorIds: ["A1", "A2", "A3", "A4", "A5"],
+        },
+      ],
+    };
+
+    const attempt = async (n: string) =>
       supabase
         .from("blueprints")
         .insert({
-          owner_user_id: user.id, // IMPORTANT: must match your column name
+          owner_user_id: user.id,
           name: n,
-          blueprint_json: bp,
+          blueprint_json: { ...blueprint, meta: { ...blueprint.meta, name: n } },
         })
         .select("id")
         .single();
 
-    let { data, error } = await attempt(name, blueprint);
+    let { data, error } = await attempt(name);
 
     if (error && isUniqueViolation(error)) {
       name = await resolveUniqueNameForUser(user.id, name);
-      blueprint = makeStarterBlueprint(name);
-      const retry = await attempt(name, blueprint);
+      const retry = await attempt(name);
       data = retry.data as any;
       error = retry.error as any;
     }
@@ -193,46 +226,35 @@ export default function DashboardPage() {
     nav(`/app/b/${(data as any).id}`);
   }
 
-  async function renameRow(id: string, currentName: string) {
+  async function renameRow(id: string, currentName: string, role: BlueprintRowList["role"], ownerUserId: string) {
     if (!user) return;
+    if (!(role === "owner" || role === "editor")) {
+      alert("You do not have permission to rename this blueprint.");
+      return;
+    }
 
     const raw = window.prompt("Enter a new blueprint name:", currentName);
-    if (raw === null) return; // cancelled
+    if (raw === null) return;
 
     const desired = raw.trim();
     if (!desired) return alert("Name cannot be empty.");
 
     setBusy(true);
 
-    // Ensure unique per user, excluding this blueprint
-    let name = await resolveUniqueNameForUser(user.id, desired, id);
+    let name = await resolveUniqueNameForUser(ownerUserId, desired, id);
 
-    const attempt = async (n: string) => {
-      // strict sync: fetch JSON, update meta.name, and update both fields together
-      const { data: row, error: readErr } = await supabase
+    const attempt = async (n: string) =>
+      supabase
         .from("blueprints")
-        .select("id,blueprint_json")
+        .update({ name: n })
         .eq("id", id)
+        .select("id,name,updated_at")
         .single();
-
-      if (readErr) return { data: null as any, error: readErr as any };
-
-      const bp = deepClone((row as any).blueprint_json as CBMXBlueprint);
-      bp.meta = { ...(bp.meta ?? {}), name: n };
-
-      return supabase
-        .from("blueprints")
-        .update({ name: n, blueprint_json: bp })
-        .eq("id", id)
-        .select("id,name")
-        .single();
-    };
 
     let { data, error } = await attempt(name);
 
     if (error && isUniqueViolation(error)) {
-      // race: bump once and retry
-      name = await resolveUniqueNameForUser(user.id, name, id);
+      name = await resolveUniqueNameForUser(ownerUserId, name, id);
       const retry = await attempt(name);
       data = retry.data as any;
       error = retry.error as any;
@@ -242,16 +264,32 @@ export default function DashboardPage() {
 
     if (error) return alert("Rename failed: " + error.message);
 
-    // Update local list immediately
     const newName = (data as any)?.name ?? name;
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, name: newName, updated_at: new Date().toISOString() } : r)));
+    const newUpdatedAt = (data as any)?.updated_at ?? new Date().toISOString();
+
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              name: newName,
+              updated_at: newUpdatedAt,
+            }
+          : r,
+      ),
+    );
 
     if (newName !== desired) {
       alert(`That name was already used. Renamed as “${newName}”.`);
     }
   }
 
-  async function deleteRow(id: string) {
+  async function deleteRow(id: string, role: BlueprintRowList["role"]) {
+    if (role !== "owner") {
+      alert("Only the owner can delete this blueprint.");
+      return;
+    }
+
     const ok = window.confirm("Delete this blueprint?");
     if (!ok) return;
 
@@ -265,18 +303,36 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minWidth: 1200 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "left" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+          alignItems: "left",
+        }}
+      >
         <h2 style={{ margin: 0 }}>My CBMX Blueprints</h2>
         <button type="button" onClick={createNew} disabled={busy} style={{ height: 40, borderRadius: 10 }}>
           + New CBMX Blueprint
         </button>
       </div>
 
-      <div style={{ marginTop: 12, border: "1px solid #ddd", borderRadius: 12, overflow: "hidden", background: "white" }}>
+      <div
+        style={{
+          marginTop: 12,
+          border: "1px solid #ddd",
+          borderRadius: 12,
+          overflow: "hidden",
+          background: "white",
+        }}
+      >
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "#f3f4f6" }}>
               <th style={th}>Name</th>
+              <th style={th}>Role</th>
+              <th style={th}>Owner</th>
               <th style={th}>Last updated</th>
               <th style={{ ...th, width: 320 }} />
             </tr>
@@ -284,44 +340,67 @@ export default function DashboardPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={3} style={{ padding: 12, color: "#6b7280" }}>
+                <td colSpan={5} style={{ padding: 12, color: "#6b7280" }}>
                   No blueprints yet. Click “New blueprint”.
                 </td>
               </tr>
             ) : (
-              rows.map((r) => (
-                <tr key={r.id} style={{ borderTop: "1px solid #eee" }}>
-                  <td style={td}>{r.name}</td>
-                  <td style={td}>{new Date(r.updated_at).toLocaleString()}</td>
-                  <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
-                    <button
-                      type="button"
-                      onClick={() => nav(`/app/b/${r.id}`)}
-                      style={{ height: 34, borderRadius: 10, marginRight: 8 }}
-                    >
-                      Open
-                    </button>
+              rows.map((r) => {
+                const mayRename = canRenameBlueprint(r);
+                const mayDelete = canDeleteBlueprint(r);
 
-                    <button
-                      type="button"
-                      onClick={() => void renameRow(r.id, r.name)}
-                      disabled={busy}
-                      style={{ height: 34, borderRadius: 10, marginRight: 8 }}
-                    >
-                      Rename
-                    </button>
+                return (
+                  <tr key={r.id} style={{ borderTop: "1px solid #eee" }}>
+                    <td style={td}>{r.name}</td>
+                    <td style={td}>{r.role}</td>
+                    <td style={td}>{ownerLabel(r)}</td>
+                    <td style={td}>{new Date(r.updated_at).toLocaleString()}</td>
 
-                    <button
-                      type="button"
-                      onClick={() => void deleteRow(r.id)}
-                      disabled={busy}
-                      style={{ height: 34, borderRadius: 10 }}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
+<td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
+  <button
+    type="button"
+    onClick={() => nav(`/app/b/${r.id}`)}
+    style={{ height: 34, borderRadius: 10, marginRight: 8 }}
+  >
+    Open
+  </button>
+
+  <button
+    type="button"
+    onClick={() => nav(`/app/b/${r.id}/share`)}
+    style={{ height: 34, borderRadius: 10, marginRight: mayRename || mayDelete ? 8 : 0 }}
+  >
+    Share
+  </button>
+
+  {mayRename ? (
+    <button
+      type="button"
+      onClick={() => void renameRow(r.id, r.name, r.role, r.owner_user_id)}
+      disabled={busy}
+      style={{ height: 34, borderRadius: 10, marginRight: mayDelete ? 8 : 0 }}
+    >
+      Rename
+    </button>
+  ) : null}
+
+  {mayDelete ? (
+    <button
+      type="button"
+      onClick={() => void deleteRow(r.id, r.role)}
+      disabled={busy}
+      style={{ height: 34, borderRadius: 10 }}
+    >
+      Delete
+    </button>
+  ) : null}
+</td>
+
+
+
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

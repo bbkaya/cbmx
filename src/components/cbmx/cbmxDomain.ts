@@ -52,10 +52,15 @@ export type ProcessCanvasBlueprintRow = {
   updated_at?: string;
 };
 
+export type PCBAccessRole = "owner" | "editor" | "viewer";
+
 export type ProcessCanvasLinkSummary = {
   cbmx_process_id: string;
-  process_canvas_blueprint_id: string;
-  process_canvas_blueprint_name: string;
+  link_exists: boolean;
+  process_canvas_blueprint_id: string | null;
+  process_canvas_blueprint_name: string | null;
+  pcb_access_role: PCBAccessRole | null;
+  has_pcb_access: boolean;
 };
 
 /** Exported validation (used in App.tsx). No throwing. */

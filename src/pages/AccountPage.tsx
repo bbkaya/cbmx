@@ -2,8 +2,10 @@
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../auth";
 
+const resetPasswordRedirectTo = `${window.location.origin}${import.meta.env.BASE_URL}#/reset-password`
+
 export default function AccountPage() {
-  const { user } = useAuth();
+  const { user, displayName } = useAuth();
 
   return (
     <div style={{ maxWidth: 720 }}>
@@ -11,7 +13,12 @@ export default function AccountPage() {
 
       <div style={{ border: "1px solid #ddd", borderRadius: 12, padding: 12, background: "white" }}>
         <div style={{ fontSize: 12, color: "#6b7280" }}>Signed in as</div>
-        <div style={{ fontWeight: 700 }}>{user?.email}</div>
+        <div style={{ display: "grid", gap: 2 }}>
+          <div style={{ fontWeight: 700 }}>{displayName || "User"}</div>
+          {user?.email ? (
+            <div style={{ fontSize: 13, color: "#6b7280" }}>{user.email}</div>
+          ) : null}
+        </div>
 
         <div style={{ height: 1, background: "#eee", margin: "12px 0" }} />
 
@@ -22,7 +29,7 @@ export default function AccountPage() {
             if (!email) return alert("No email found for user.");
 
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-              redirectTo: `${window.location.origin}/#/reset-password`,
+              redirectTo: resetPasswordRedirectTo,
             });
 
             if (error) return alert("Reset password error: " + error.message);

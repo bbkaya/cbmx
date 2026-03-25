@@ -44,7 +44,7 @@ function isPCBRoute(pathname: string) {
 }
 
 export default function SiteShell({ children }: SiteShellProps) {
-  const { loading, user } = useAuth();
+  const { loading, user, displayName } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
 
@@ -222,19 +222,41 @@ export default function SiteShell({ children }: SiteShellProps) {
                 <div
                   title={user.email ?? ""}
                   style={{
-                    fontSize: 13,
-                    color: "#111827",
+                    display: "grid",
+                    gap: 2,
                     maxWidth: 240,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
                     border: "1px solid #e5e7eb",
                     background: "white",
                     borderRadius: 10,
                     padding: "7px 10px",
+                    lineHeight: 1.15,
                   }}
                 >
-                  {user.email ?? "User"}
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "#111827",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {displayName || "User"}
+                  </div>
+                  {user.email ? (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#6b7280",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {user.email}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div ref={blueprintsMenuRef} style={{ position: "relative" }}>
