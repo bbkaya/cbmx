@@ -333,7 +333,6 @@ function handleBlueprintSaveFailure(
         setDraft(savedBlueprint);
         setLoadedVersionNo(saved.version_no ?? null);
         setLastSavedHash(stableHash(savedBlueprint));
-        setHasConflict(false);
 
         if (saved.name !== desiredName && !options?.silent) {
           alert(`That name was already used. Saved as “${saved.name}”.`);
