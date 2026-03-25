@@ -340,9 +340,11 @@ export async function updatePCBWithVersion(args: {
     throw new Error("Could not save Process Canvas Blueprint.");
   }
 
-  if (!row.ok || row.reason !== "ok") {
-    return { ok: false, reason: row.reason };
-  }
+if (!row.ok || row.reason !== "ok") {
+  const reason: "stale" | "forbidden" | "not_found" =
+    row.reason === "ok" ? "stale" : row.reason;
+  return { ok: false, reason };
+}
 
   if (
     !row.id ||

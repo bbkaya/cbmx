@@ -42,7 +42,6 @@ export default function EditorPage() {
   const [blueprintRole, setBlueprintRole] = useState<BlueprintAccessRole | null>(null);
   const [blueprintOwnerUserId, setBlueprintOwnerUserId] = useState<string | null>(null);
   const [loadedVersionNo, setLoadedVersionNo] = useState<number | null>(null);
-  const [hasConflict, setHasConflict] = useState(false);
 
   // Draft blueprint (working copy)
   const [draft, setDraft] = useState<CBMXBlueprint | null>(null);
@@ -127,7 +126,6 @@ export default function EditorPage() {
       setBlueprintRole(nextRole);
       setBlueprintOwnerUserId(row.owner_user_id ?? null);
       setLoadedVersionNo(row.version_no ?? null);
-      setHasConflict(false);
       setLastSavedHash(stableHash(loaded));
     }
 
@@ -243,34 +241,33 @@ export default function EditorPage() {
     return err?.code === "23505" || String(err?.message ?? "").toLowerCase().includes("duplicate key");
   }
 
-  function handleBlueprintSaveFailure(
-    reason: "stale" | "forbidden" | "not_found",
-    options?: { silent?: boolean },
-  ): Promise<boolean> | boolean {
-    if (reason === "stale") {
-      setHasConflict(true);
-      return reloadBlueprintFromDb().then(() => {
-        if (!options?.silent) {
-          alert("This blueprint was updated elsewhere. Your local changes were not saved, and the latest version has been reloaded.");
-        }
-        return false;
-      });
-    }
 
-    if (reason === "forbidden") {
-      setHasConflict(false);
+
+function handleBlueprintSaveFailure(
+  reason: "stale" | "forbidden" | "not_found",
+  options?: { silent?: boolean },
+): Promise<boolean> | boolean {
+  if (reason === "stale") {
+    return reloadBlueprintFromDb().then(() => {
       if (!options?.silent) {
-        alert("You no longer have permission to save changes to this blueprint. Your access may have been changed, or this blueprint may now be view-only.");
+        alert("This blueprint was updated elsewhere. Your local changes were not saved, and the latest version has been reloaded.");
       }
       return false;
-    }
+    });
+  }
 
-    setHasConflict(false);
+  if (reason === "forbidden") {
     if (!options?.silent) {
-      alert("This blueprint could not be found. It may have been deleted or you may no longer have access to it.");
+      alert("You no longer have permission to save changes to this blueprint. Your access may have been changed, or this blueprint may now be view-only.");
     }
     return false;
   }
+
+  if (!options?.silent) {
+    alert("This blueprint could not be found. It may have been deleted or you may no longer have access to it.");
+  }
+  return false;
+}
 
   async function saveBlueprintToDbDirect(bp: CBMXBlueprint, options?: { silent?: boolean }): Promise<boolean> {
     if (isReadOnly) return false;
@@ -305,7 +302,6 @@ export default function EditorPage() {
       setDraft(savedBlueprint);
       setLoadedVersionNo(saved.version_no ?? null);
       setLastSavedHash(stableHash(savedBlueprint));
-      setHasConflict(false);
 
       if (saved.name !== desiredName && !options?.silent) {
         alert(`That name was already used. Saved as “${saved.name}”.`);
@@ -387,7 +383,6 @@ export default function EditorPage() {
       setBlueprintOwnerUserId(row.owner_user_id ?? null);
       setLoadedVersionNo(row.version_no ?? null);
       setLastSavedHash(stableHash(loaded));
-      setHasConflict(false);
       return true;
     } catch (err) {
       if (options?.alertOnError) {
