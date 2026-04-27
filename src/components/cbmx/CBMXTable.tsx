@@ -147,14 +147,14 @@ const CBMX_HELP = {
   actorValueProposition:
     "The distinct value an actor contributes as part of delivering the network value proposition. E.g., Safe public-space integration and policy alignment",
   costsBenefits:
-    "Actors participate because expected benefits outweigh the costs of joining and contributing to the network.",
-  financial: "Direct economic gains or losses.",
+    "An outcome is an actor-specific consequence of the collaborative business model. It is a change in the situation of a specific actor resulting directly or indirectly from the co-creation processes. Outcomes may be positive (benefits) or negative (costs). Actors participate because expected benefits outweigh the costs of joining and contributing to the network.",
+  financial: "Direct economic gains or losses. These are outcomes expressed in monetary or economic terms, including revenues, costs, savings, investments, fees, subsidies, financial risks, or changes in economic viability.",
   environmental:
-    "Impact on the natural environment (e.g., air pollution/emissions, material reuse/recycling, energy use).",
+    "Outcomes related to natural resources, emissions, energy, waste, pollution, circularity, biodiversity, or ecological footprint, as experienced or caused by a specific actor.",
   social:
-    "Impact on social welfare and well-being (e.g., accessibility, diversity, inclusiveness).",
+    "Outcomes related to people, users, employees, communities, accessibility, inclusion, safety, health, well-being, fairness, skills, workload, or social acceptance, as experienced or caused by a specific actor.",
   otherNonFinancial:
-    "Other non-financial effects (e.g., reputation and trust, stakeholder relations, brand awareness/recognition).",
+    "Actor-specific outcomes that are not primarily financial, environmental, or social, but still matter for the actor’s participation in the collaborative business model. These may include strategic, operational, relational, reputational, learning, data-related, legitimacy-related, or capability-related outcomes.",
   kpis:
     "Key Performance Indicators for an actor, used for viability evaluation and performance monitoring. (E.g., User adoption rate, average daily emission)",
   actorServices:
@@ -170,7 +170,7 @@ const HELP_LABELS: Record<HelpKey, string> = {
   actorType: "Actor Type",
   actor: "Actor",
   actorValueProposition: "Actor Value Proposition",
-  costsBenefits: "Costs & Benefits",
+  costsBenefits: "Actor-specific Outcomes (Costs & Benefits)",
   financial: "Financial",
   environmental: "Environmental",
   social: "Social",
@@ -556,15 +556,15 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
 
             <tr style={rowStyle("costsBenefitsHeader")} {...rowHelpProps("costsBenefits", setActiveHelpKey)}>
               <td style={{ ...rowLabelCellTight, backgroundColor: "#D7DBDF" }}>
-                <RowLabel text="Costs & Benefits" helpKey="costsBenefits" />
+                <RowLabel text="Outcomes (Costs & Benefits)" helpKey="costsBenefits" />
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
                   <th style={thCellTight}>
-                    <span style={{ fontStyle: "italic", fontWeight: 400 }}>Costs</span>
+                    <span style={{ fontStyle: "italic", fontWeight: 400 }}>Costs (Negative)</span>
                   </th>
                   <th style={thCellTight}>
-                    <span style={{ fontStyle: "italic", fontWeight: 400 }}>Benefits</span>
+                    <span style={{ fontStyle: "italic", fontWeight: 400 }}>Benefits (Positive)</span>
                   </th>
                 </Fragment>
               ))}
