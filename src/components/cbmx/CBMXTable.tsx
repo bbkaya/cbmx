@@ -11,6 +11,7 @@ import {
   deepClone,
   indicesOfType,
   normalizeActors,
+  validateServiceScenario,
 } from "./cbmxDomain";
 
 import {
@@ -19,6 +20,7 @@ import {
   setActorVP,
   setKpiSlotFlexible,
   setNetworkVP,
+  setServiceScenario,
   setNthValueItem,
   setProcessSlot,
   setServiceSlot,
@@ -41,6 +43,8 @@ export function validateCBMXBlueprint(bp: CBMXBlueprint): ValidationIssue[] {
     issues.push({ level: "error", message: "Blueprint is missing." });
     return issues;
   }
+
+  issues.push(...validateServiceScenario(bp));
 
   const name = (bp.meta?.name ?? "").trim();
   if (!name) issues.push({ level: "warning", message: "Blueprint name is empty (meta.name)." });
@@ -161,6 +165,8 @@ const CBMX_HELP = {
     "An actor’s capabilities that collectively realize its value proposition and define how it participates in value co-creation. Services may be detailed into operations (optional), which can map to process tasks/activities. (E.g., Fleet maintenance.)",
   coCreationProcesses:
     "Processes that operationalize the network value proposition. Multiple actors (potentially including the customer) participate and exchange services with the customer and each other. (E.g., Incident handling (across operator and city authorities).)",
+  serviceScenario:
+    "A narrative description of how the network value proposition is realized from the customer's perspective and how other actors contribute to its realization through their activities, interactions, and service exchanges",
 } as const;
 
 type HelpKey = keyof typeof CBMX_HELP;
@@ -178,6 +184,7 @@ const HELP_LABELS: Record<HelpKey, string> = {
   kpis: "KPIs",
   actorServices: "Actor Services",
   coCreationProcesses: "Co-Creation Processes",
+  serviceScenario: "Service Scenario",
 };
 
 /** --- TIGHT SPACING OVERRIDES (local, no global CSS needed) --- */
@@ -207,7 +214,8 @@ type RowKind =
   | "valueOther"
   | "kpis"
   | "services"
-  | "processes";
+  | "processes"
+  | "serviceScenario";
 
 function rowStyle(kind: RowKind): CSSProperties {
   // light, print/export friendly pastels
@@ -233,6 +241,7 @@ function rowStyle(kind: RowKind): CSSProperties {
       return { backgroundColor: "#EAF2FF" };
 
     case "kpis":
+    case "serviceScenario":
       return { backgroundColor: "#ffffff" };
     case "services":
       return { backgroundColor: "#F2F9FF" };
@@ -316,6 +325,8 @@ export default function CBMXTable({
 }) {
   const { actors, N } = useMemo(() => normalizeActors(blueprint.actors), [blueprint.actors]);
   const colspanNetwork = N * 2;
+  // A display fallback must not add defaults to legacy JSON and trigger autosave.
+  const serviceScenario = typeof blueprint.serviceScenario === "string" ? blueprint.serviceScenario : "";
   const [activeHelpKey, setActiveHelpKey] = useState<HelpKey>("networkValueProposition");
   const [helpOpen, setHelpOpen] = useState(false);
   const [openPCBMenuProcessId, setOpenPCBMenuProcessId] = useState<string | null>(null);
@@ -1019,6 +1030,24 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                     );
                   })}
                 </div>
+              </td>
+            </tr>
+            <tr style={rowStyle("serviceScenario")} {...rowHelpProps("serviceScenario", setActiveHelpKey)}>
+              <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
+                <RowLabel text="Service Scenario" helpKey="serviceScenario" />
+              </td>
+              <td colSpan={colspanNetwork} style={cellLeftTight}>
+                <EditableText
+                  value={serviceScenario}
+                  multiline
+                  readOnly={!onChange}
+                  placeholder={onChange ? "Click to edit" : ""}
+                  onCommit={(value) => {
+                    if (value !== serviceScenario) {
+                      updateBlueprint((next) => setServiceScenario(next, value));
+                    }
+                  }}
+                />
               </td>
             </tr>
           </tbody>

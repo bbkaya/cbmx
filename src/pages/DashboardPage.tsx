@@ -138,6 +138,7 @@ export default function DashboardPage() {
     const blueprint = {
       meta: { id: "cbmx-new", name },
       networkValueProposition: { statement: "Click to edit" },
+      serviceScenario: "",
       actors: [
         {
           id: "A1",

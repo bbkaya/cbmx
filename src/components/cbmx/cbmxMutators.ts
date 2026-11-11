@@ -17,6 +17,10 @@ export function setNetworkVP(next: CBMXBlueprint, statement: string) {
   next.networkValueProposition.statement = statement;
 }
 
+export function setServiceScenario(next: CBMXBlueprint, text: string) {
+  next.serviceScenario = text;
+}
+
 export function setActorName(next: CBMXBlueprint, actorId: string, name: string) {
   const a = next.actors.find((x) => x.id === actorId);
   if (!a) return;

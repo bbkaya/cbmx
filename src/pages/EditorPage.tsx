@@ -17,6 +17,7 @@ import {
 } from "../cbmx/CBMXData";
 import { canEditPCB, canRoleEditPCB, listAccessiblePCBs } from "../pcb/PCBData";
 import { makeBlankProcessCanvasBlueprint } from "../pcb/processCanvasDomain";
+import { prepareCBMXJsonExport } from "../components/cbmx/cbmxDomain";
 
 type ValidationIssue = { level: "error" | "warning"; message: string };
 
@@ -745,7 +746,8 @@ ${options}`,
     if (!draft) return;
 
     const name = (draft.meta?.name ?? "cbmx-blueprint").trim() || "cbmx-blueprint";
-    downloadJson(`${safeFilename(name)}.json`, draft);
+    // Include the field in legacy exports without changing the draft or its saved hash.
+    downloadJson(`${safeFilename(name)}.json`, prepareCBMXJsonExport(draft));
   }
 
   function openImportDialog() {
@@ -805,7 +807,7 @@ ${options}`,
     const node = document.getElementById("cbmx-canvas");
     if (!node) return alert("Canvas not found.");
 
-    const dataUrl = await toPng(node, { pixelRatio: 2 });
+    const dataUrl = await captureBlueprintPng(node);
     const link = document.createElement("a");
     link.download = "cbmx-blueprint.png";
     link.href = dataUrl;
@@ -819,7 +821,7 @@ ${options}`,
     const node = document.getElementById("cbmx-canvas");
     if (!node) return alert("Canvas not found.");
 
-    const dataUrl = await toPng(node, { pixelRatio: 2 });
+    const dataUrl = await captureBlueprintPng(node);
 
     const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
 
@@ -997,6 +999,26 @@ ${options}`,
       </div>
     </div>
   );
+}
+
+function captureBlueprintPng(node: HTMLElement) {
+  const bounds = node.getBoundingClientRect();
+  const padding = 8;
+
+  // Round up fractional bounds and leave room for the table's outer borders.
+  // Apply spacing only to the export clone, keeping the live matrix unchanged.
+  return toPng(node, {
+    pixelRatio: 2,
+    backgroundColor: "#ffffff",
+    width: Math.ceil(Math.max(bounds.width, node.scrollWidth)) + padding * 2,
+    height: Math.ceil(Math.max(bounds.height, node.scrollHeight)) + padding * 2,
+    style: {
+      boxSizing: "border-box",
+      padding: `${padding}px`,
+      margin: "0",
+      overflow: "visible",
+    },
+  });
 }
 
 function MenuItem({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {

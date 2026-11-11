@@ -20,13 +20,16 @@ export default function EditableText({
     if (!editing) setDraft(value ?? "");
   }, [value, editing]);
 
+  const shown = multiline ? (value ?? "") : (value ?? "").trim();
+  const multilineStyle: CSSProperties | undefined = multiline
+    ? { whiteSpace: "pre-wrap", overflowWrap: "anywhere" }
+    : undefined;
+
   if (readOnly) {
-    const shown = (value ?? "").trim();
-    return shown ? <div>{shown}</div> : <div style={{ color: "#888" }}>{placeholder ?? ""}</div>;
+    return shown ? <div style={multilineStyle}>{shown}</div> : <div style={{ color: "#888" }}>{placeholder ?? ""}</div>;
   }
 
   if (!editing) {
-    const shown = (value ?? "").trim();
     return (
       <div
         onClick={() => setEditing(true)}
@@ -36,6 +39,7 @@ export default function EditableText({
           padding: 2,
           borderRadius: 4,
           minHeight: multiline ? 28 : undefined,
+          ...multilineStyle,
         }}
         onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.outline = "2px solid #bbb")}
         onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.outline = "none")}

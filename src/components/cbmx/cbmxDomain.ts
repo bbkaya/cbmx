@@ -25,9 +25,14 @@ export type CoCreationProcess = {
 export type CBMXBlueprint = {
   meta?: { id?: string; name?: string };
   networkValueProposition?: { statement?: string };
+  serviceScenario?: string;
   actors: Actor[];
   coCreationProcesses?: CoCreationProcess[];
 };
+
+export function prepareCBMXJsonExport(blueprint: CBMXBlueprint): CBMXBlueprint {
+  return { ...blueprint, serviceScenario: blueprint.serviceScenario ?? "" };
+}
 
 export type CBMXProcessLink = {
   id: string;
@@ -73,6 +78,8 @@ export function validateCBMXBlueprint(
     issues.push({ level: "error", message: "Blueprint is missing the actors array." });
     return issues;
   }
+
+  issues.push(...validateServiceScenario(bp));
 
   if (bp.actors.length < 2) {
     issues.push({ level: "error", message: "At least 2 actors are required (Customer + Orchestrator)." });
@@ -141,6 +148,12 @@ export function validateCBMXBlueprint(
   }
 
   return issues;
+}
+
+export function validateServiceScenario(bp: CBMXBlueprint) {
+  return bp.serviceScenario !== undefined && typeof bp.serviceScenario !== "string"
+    ? [{ level: "error" as const, message: "Service Scenario must be plain text." }]
+    : [];
 }
 
 /* ---------------- domain helpers ---------------- */
