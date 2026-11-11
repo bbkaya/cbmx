@@ -202,6 +202,14 @@ export default function SiteShell({ children }: SiteShellProps) {
                   {it.label}
                 </button>
               ))}
+              <Link
+                to="/app/pcbs"
+                onMouseEnter={applyHover}
+                onMouseLeave={clearHover}
+                style={{ ...navLinkBtn, textDecoration: "none" }}
+              >
+                Process Canvas
+              </Link>
             </nav>
           </div>
 
@@ -362,40 +370,51 @@ export default function SiteShell({ children }: SiteShellProps) {
         }}
       >
         <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16 }}>
-          <div style={{ marginBottom: 8 }}>
-            <Link
-              to="/"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 10,
-                textDecoration: "none",
-                color: "inherit",
-                whiteSpace: "nowrap",
-              }}
-            >
-              <img
-                src={`${import.meta.env.BASE_URL}images/CBMX-logo.png`}
-                alt="CBMX logo"
-                style={{ width: 70, height: 20, borderRadius: 5, objectFit: "contain" }}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
-            </Link>{" "}
-            is developed by the Information Systems Group at Eindhoven University of Technology (TU/e), The Netherlands.
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
+              gap: "24px 40px",
+              lineHeight: 1.6,
+            }}
+          >
+            <section aria-label="CBMX attribution" style={{ minWidth: 0 }}>
+              <div style={footerLogoSlot}>
+                <Link to="/" aria-label="CBMX home" style={{ display: "inline-flex" }}>
+                  <img
+                    src={`${import.meta.env.BASE_URL}images/CBMX-logo.png`}
+                    alt="CBMX logo"
+                    style={{ width: 120, height: "auto", objectFit: "contain" }}
+                  />
+                </Link>
+              </div>
+              <p style={footerAttribution}>
+                Developed by the Information Systems Group at Eindhoven University of Technology (TU/e), The Netherlands.
+              </p>
+              <p style={footerCopyright}>© 2026 Eindhoven University of Technology (TU/e)</p>
+            </section>
+
+            <section aria-label="Process Canvas attribution" style={{ minWidth: 0 }}>
+              <div style={footerLogoSlot}>
+                <img
+                  src={`${import.meta.env.BASE_URL}images/PClogo.png`}
+                  alt="Process Canvas logo"
+                  style={{ height: 56, width: "auto", objectFit: "contain" }}
+                />
+              </div>
+              <p style={footerAttribution}>
+                Developed by Prof. Dr. M. Rosemann (QUT), Prof. Dr. O. Türetken (TU/e), and Prof. Dr. C. Buck (THA).
+              </p>
+              <p style={footerCopyright}>
+                © 2026 Queensland University of Technology (QUT), Eindhoven University of Technology (TU/e), and Technische Hochschule Augsburg (THA)
+              </p>
+            </section>
           </div>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => {
-                alert("Contact o.turetken@tue.nl for any inquiries");
-              }}
-              style={footerLinkBtn}
-            >
+          <div style={{ borderTop: "1px solid #e5e7eb", marginTop: 20, paddingTop: 12 }}>
+            <a href="mailto:o.turetken@tue.nl" style={footerLink}>
               Contact
-            </button>
+            </a>
           </div>
         </div>
       </footer>
@@ -471,12 +490,24 @@ const menuItemBtn: React.CSSProperties = {
   fontWeight: 600,
 };
 
-const footerLinkBtn: React.CSSProperties = {
-  appearance: "none",
-  background: "transparent",
-  border: "none",
-  padding: 0,
-  cursor: "pointer",
+const footerLogoSlot: React.CSSProperties = {
+  height: 56,
+  display: "flex",
+  alignItems: "center",
+};
+
+const footerAttribution: React.CSSProperties = {
+  margin: "12px 0 8px",
+};
+
+const footerCopyright: React.CSSProperties = {
+  margin: 0,
+  fontSize: 11,
+  lineHeight: 1.55,
+  color: "#64748b",
+};
+
+const footerLink: React.CSSProperties = {
   color: "#475569",
   textDecoration: "underline",
   fontSize: 13,
