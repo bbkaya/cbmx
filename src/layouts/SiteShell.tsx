@@ -351,7 +351,7 @@ export default function SiteShell({ children }: SiteShellProps) {
           maxWidth: shellMaxWidth,
           width: "100%",
           margin: "0 auto",
-          padding: "20px 16px 48px 16px",
+          padding: "20px 16px 72px 16px",
           alignSelf: "start",
         }}
       >
@@ -363,19 +363,19 @@ export default function SiteShell({ children }: SiteShellProps) {
           maxWidth: shellMaxWidth,
           width: "100%",
           margin: "0 auto",
-          padding: "0 16px 24px 16px",
+          padding: "0 16px 12px 16px",
           color: "#6b7280",
-          fontSize: 13,
+          fontSize: 11,
           textAlign: "left",
         }}
       >
-        <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16 }}>
+        <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 10 }}>
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
-              gap: "24px 40px",
-              lineHeight: 1.6,
+              gap: "16px 32px",
+              lineHeight: 1.4,
             }}
           >
             <section aria-label="CBMX attribution" style={{ minWidth: 0 }}>
@@ -384,7 +384,7 @@ export default function SiteShell({ children }: SiteShellProps) {
                   <img
                     src={`${import.meta.env.BASE_URL}images/CBMX-logo.png`}
                     alt="CBMX logo"
-                    style={{ width: 120, height: "auto", objectFit: "contain" }}
+                    style={{ width: 92, height: "auto", objectFit: "contain" }}
                   />
                 </Link>
               </div>
@@ -399,7 +399,7 @@ export default function SiteShell({ children }: SiteShellProps) {
                 <img
                   src={`${import.meta.env.BASE_URL}images/PClogo.png`}
                   alt="Process Canvas logo"
-                  style={{ height: 56, width: "auto", objectFit: "contain" }}
+                  style={{ height: 36, width: "auto", objectFit: "contain" }}
                 />
               </div>
               <p style={footerAttribution}>
@@ -411,7 +411,7 @@ export default function SiteShell({ children }: SiteShellProps) {
             </section>
           </div>
 
-          <div style={{ borderTop: "1px solid #e5e7eb", marginTop: 20, paddingTop: 12 }}>
+          <div style={{ borderTop: "1px solid #e5e7eb", marginTop: 12, paddingTop: 8 }}>
             <a href="mailto:o.turetken@tue.nl" style={footerLink}>
               Contact
             </a>
@@ -491,24 +491,24 @@ const menuItemBtn: React.CSSProperties = {
 };
 
 const footerLogoSlot: React.CSSProperties = {
-  height: 56,
+  height: 36,
   display: "flex",
   alignItems: "center",
 };
 
 const footerAttribution: React.CSSProperties = {
-  margin: "12px 0 8px",
+  margin: "6px 0 4px",
 };
 
 const footerCopyright: React.CSSProperties = {
   margin: 0,
-  fontSize: 11,
-  lineHeight: 1.55,
+  fontSize: 10,
+  lineHeight: 1.4,
   color: "#64748b",
 };
 
 const footerLink: React.CSSProperties = {
   color: "#475569",
   textDecoration: "underline",
-  fontSize: 13,
+  fontSize: 11,
 };
