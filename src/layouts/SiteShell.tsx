@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { supabase } from "../supabaseClient";
+import { useAdminAccess } from "../admin/useAdminAccess";
 
 type NavItem = { label: string; targetId: string };
 
@@ -45,6 +46,7 @@ function isPCBRoute(pathname: string) {
 
 export default function SiteShell({ children }: SiteShellProps) {
   const { loading, user, displayName } = useAuth();
+  const adminAccess = useAdminAccess();
   const nav = useNavigate();
   const loc = useLocation();
 
@@ -321,6 +323,10 @@ export default function SiteShell({ children }: SiteShellProps) {
                 <Link to="/account" style={btnLink} onMouseEnter={applyHover} onMouseLeave={clearHover}>
                   Account
                 </Link>
+
+                {adminAccess.status === "allowed" && <Link to="/app/admin" style={btnLink}
+                  aria-current={loc.pathname === "/app/admin" ? "page" : undefined}
+                  onMouseEnter={applyHover} onMouseLeave={clearHover}>Admin</Link>}
 
                 <button
                   type="button"

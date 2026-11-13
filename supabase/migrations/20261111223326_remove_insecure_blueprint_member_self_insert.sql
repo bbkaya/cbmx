@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS blueprint_members_insert_own ON public.blueprint_members;

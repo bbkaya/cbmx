@@ -18,10 +18,14 @@ import PCBDashboardPage from "./pages/PCBDashboardPage";
 import AccountPage from "./pages/AccountPage";
 import BlueprintSharePage from "./pages/BlueprintSharePage";
 import PCBSharePage from "./pages/PCBSharePage";
+import AdminAccessProvider from "./admin/AdminAccessProvider";
+import RequireAdmin from "./admin/RequireAdmin";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 
 export default function App() {
   return (
     <AuthProvider>
+      <AdminAccessProvider>
       <Routes>
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
@@ -69,10 +73,12 @@ export default function App() {
           <Route path="/app/pcb/:pcbId/share" element={<PCBSharePage />} />
 
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/app/admin" element={<RequireAdmin><AdminDashboardPage /></RequireAdmin>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </AdminAccessProvider>
     </AuthProvider>
   );
 }

@@ -1,0 +1,43 @@
+.admin-dashboard { color: #0f172a; color-scheme: light; text-align: left; min-width: 0; contain: inline-size; }
+.admin-dashboard h1 { margin: 0 0 6px; font-size: 25px; line-height: 1.3; }
+.admin-dashboard h2 { margin: 0; font-size: 18px; }
+.admin-page-heading { margin-bottom: 24px; }
+.admin-page-heading p { color: #64748b; margin: 0; font-size: 14px; }
+.admin-section { margin-top: 28px; min-width: 0; }
+.admin-section-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.admin-statistics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.admin-statistic { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-size: 13px; color: #475569; }
+.admin-statistic strong { display: block; margin-top: 6px; font-size: 27px; line-height: 1.3; color: #0f172a; }
+.admin-dashboard button, .admin-dashboard input, .admin-dashboard select { font: inherit; font-size: 13px; color: #0f172a; background: white; border: 1px solid #cbd5e1; border-radius: 7px; padding: 8px 10px; box-sizing: border-box; }
+.admin-dashboard button { cursor: pointer; font-weight: 600; }
+.admin-dashboard button:hover:not(:disabled) { background: #f1f5f9; border-color: #94a3b8; }
+.admin-dashboard button:disabled { opacity: .5; cursor: default; }
+.admin-dashboard :focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.admin-filters, .admin-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
+.admin-filters { margin-bottom: 14px; }
+.admin-filters label { display: grid; gap: 5px; font-size: 13px; font-weight: 600; }
+.admin-search { flex: 1 1 280px; max-width: 480px; min-width: 0; }
+.admin-search input { width: 100%; }
+.admin-table-scroll { overflow-x: auto; max-width: 100%; border: 1px solid #e2e8f0; border-radius: 9px; background: white; }
+.admin-dashboard table { width: 100%; min-width: 850px; border-collapse: collapse; font-size: 13px; }
+.admin-dashboard th, .admin-dashboard td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid #e2e8f0; overflow-wrap: anywhere; }
+.admin-dashboard th { background: #f1f5f9; font-size: 12px; font-weight: 700; }
+.admin-dashboard tbody tr:last-child td { border-bottom: 0; }
+.admin-dashboard .admin-sort { background: transparent; border: 0; border-radius: 3px; padding: 0; text-align: left; font-size: 12px; }
+.admin-type, .admin-account-status { display: inline-block; padding: 2px 7px; border-radius: 5px; font-size: 12px; font-weight: 600; background: #f1f5f9; }
+.admin-account-banned { background: #fef2f2; color: #991b1b; }
+.admin-account-confirmed { background: #f0fdf4; color: #166534; }
+.admin-account-unconfirmed { background: #fffbeb; color: #92400e; }
+.admin-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 12px; color: #475569; }
+.admin-pagination p { margin: 0; }
+.admin-pagination label { display: flex; align-items: center; gap: 6px; }
+.admin-error { border: 1px solid #fecaca; background: #fff7f7; padding: 12px; border-radius: 8px; font-size: 13px; color: #991b1b; }
+.admin-error p { margin: 0 0 10px; }
+.admin-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (max-width: 600px) {
+  .admin-statistics { grid-template-columns: 1fr; gap: 8px; }
+  .admin-statistic { padding: 12px; }
+  .admin-statistic strong { font-size: 23px; }
+  .admin-search { max-width: none; }
+  .admin-controls { gap: 8px; }
+}
