@@ -17,7 +17,8 @@ import {
 } from "../cbmx/CBMXData";
 import { canEditPCB, canRoleEditPCB, listAccessiblePCBs } from "../pcb/PCBData";
 import { makeBlankProcessCanvasBlueprint } from "../pcb/processCanvasDomain";
-import { prepareCBMXJsonExport } from "../components/cbmx/cbmxDomain";
+import { assignNewImportedProcessIds, prepareCBMXJsonExport } from "../components/cbmx/cbmxDomain";
+import DeleteProcessDialog from "../components/cbmx/ui/DeleteProcessDialog";
 
 type ValidationIssue = { level: "error" | "warning"; message: string };
 
@@ -50,6 +51,15 @@ export default function EditorPage() {
   // Tracks last DB-synced state to compute dirtiness (instead of "Save local")
   const [lastSavedHash, setLastSavedHash] = useState<string>("");
   const [processLinks, setProcessLinks] = useState<ProcessCanvasLinkSummary[]>([]);
+  const savingRef = useRef(false);
+  const deletingRef = useRef(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletionStale, setDeletionStale] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    processName: string; pcbName: string; resolve: (confirmed: boolean) => void;
+  } | null>(null);
+  const confirmationRef = useRef<((confirmed: boolean) => void) | null>(null);
+  useEffect(() => () => { confirmationRef.current?.(false); }, []);
 
   // Autosave
   const [isAutoSaving, setIsAutoSaving] = useState(false);
@@ -271,19 +281,20 @@ function handleBlueprintSaveFailure(
 }
 
   async function saveBlueprintToDbDirect(bp: CBMXBlueprint, options?: { silent?: boolean }): Promise<boolean> {
+    if (savingRef.current || deletingRef.current || deletionStale) return false;
     if (isReadOnly) return false;
     if (!blueprintId) return false;
     if (!user?.id) return false;
     if (loadedVersionNo == null) return false;
 
-    const desiredName = normalizeName(bp.meta?.name);
-    const uniqueName = await resolveUniqueNameForOwner(desiredName, blueprintId);
-
-    const toSave = deepClone(bp);
-    toSave.meta = { ...(toSave.meta ?? {}), name: uniqueName };
-
+    savingRef.current = true;
     setDbBusy(true);
+    const desiredName = normalizeName(bp.meta?.name);
+    let uniqueName = desiredName;
+    const toSave = deepClone(bp);
     try {
+      uniqueName = await resolveUniqueNameForOwner(desiredName, blueprintId);
+      toSave.meta = { ...(toSave.meta ?? {}), name: uniqueName };
       const result = await updateBlueprintWithVersion({
         blueprintId,
         loadedVersionNo,
@@ -347,7 +358,61 @@ function handleBlueprintSaveFailure(
       }
       return false;
     } finally {
+      savingRef.current = false;
       setDbBusy(false);
+    }
+  }
+
+  async function deleteProcess(processId: string): Promise<boolean> {
+    if (isReadOnly || !blueprintId || !draft || !user || loadedVersionNo == null) return false;
+    if (savingRef.current || deletingRef.current) throw new Error("A save is in progress. Please try deleting again when it finishes.");
+    if (deletionStale) throw new Error("Reload the latest blueprint before trying to delete again.");
+    if (hasBlocking) throw new Error("Fix blueprint validation errors before deleting a process.");
+    const process = findProcessById(processId);
+    if (!process) throw new Error("This co-creation process no longer exists. Reload the blueprint.");
+    deletingRef.current = true;
+    setDeleting(true);
+    if (autoSaveTimerRef.current != null) window.clearTimeout(autoSaveTimerRef.current);
+    try {
+      // Never infer the absence of a link from a cached or failed frontend load.
+      const links = await loadProcessLinks(blueprintId);
+      const link = links.find((item) => item.cbmx_process_id === processId);
+      if (link?.link_exists) {
+        if (!link.has_pcb_access || !canRoleMutatePCBLink(link.pcb_access_role)) {
+          throw new Error("Deleting this process requires edit access to its linked Process Canvas. Ask the owner for access.");
+        }
+        const confirmed = await new Promise<boolean>((resolve) => {
+          confirmationRef.current = resolve;
+          setDeleteConfirmation({ processName: process.name || process.id,
+            pcbName: link.process_canvas_blueprint_name || "Unnamed Process Canvas", resolve });
+        });
+        confirmationRef.current = null;
+        if (!confirmed) return false;
+      }
+      const toSave = deepClone(draft);
+      const name = await resolveUniqueNameForOwner(normalizeName(draft.meta?.name), blueprintId);
+      toSave.meta = { ...(toSave.meta ?? {}), name };
+      const result = await updateBlueprintWithVersion({ blueprintId, loadedVersionNo, userId: user.id,
+        name, blueprint: toSave, deletion: { processId, expectedPCBId: link?.link_exists ? link.process_canvas_blueprint_id : null } });
+      if (!result.ok) {
+        // Retain the draft on failure; do not let autosave overwrite a newer version.
+        if (result.reason === "stale") setDeletionStale(true);
+        throw new Error(result.reason === "stale"
+          ? "This blueprint changed elsewhere. The process was not deleted. Reload the blueprint before trying again."
+          : "The process could not be deleted. Your edit access may have changed.");
+      }
+      const saved = deepClone(result.row.blueprint_json);
+      saved.meta = { ...(saved.meta ?? {}), name: result.row.name };
+      setDraft(saved);
+      setLoadedVersionNo(result.row.version_no);
+      setLastSavedHash(stableHash(saved));
+      setProcessLinks(links.filter((item) => item.cbmx_process_id !== processId));
+      return true;
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : (error as { message?: string })?.message || "Could not delete process. Nothing was removed.");
+    } finally {
+      deletingRef.current = false;
+      setDeleting(false);
     }
   }
 
@@ -383,6 +448,7 @@ function handleBlueprintSaveFailure(
       setBlueprintOwnerUserId(row.owner_user_id ?? null);
       setLoadedVersionNo(row.version_no ?? null);
       setLastSavedHash(stableHash(loaded));
+      setDeletionStale(false);
       return true;
     } catch (err) {
       if (options?.alertOnError) {
@@ -706,6 +772,7 @@ ${options}`,
   }
 
   useEffect(() => {
+    if (deleting || deletionStale) return;
     if (isReadOnly) return;
     if (!draft) return;
     if (!isDirty) return;
@@ -726,7 +793,7 @@ ${options}`,
         autoSaveTimerRef.current = null;
       }
     };
-  }, [draftHash, isDirty, hasBlocking, blueprintId]);
+  }, [draftHash, isDirty, hasBlocking, blueprintId, deleting, deletionStale]);
 
   // ---------------- JSON Export/Import ----------------
   function downloadJson(filename: string, obj: unknown) {
@@ -759,6 +826,7 @@ ${options}`,
   }
 
   async function handleImportFile(file: File) {
+    if (deletingRef.current || savingRef.current) return;
     if (isReadOnly) {
       alert("You have read-only access to this CBMX blueprint.");
       return;
@@ -783,12 +851,26 @@ ${options}`,
     const importedIssues: ValidationIssue[] = validateCBMXBlueprint(candidate);
     const importedErrors = importedIssues.filter((x) => x.level === "error");
 
-    // Always load into the editor view
+    // Linked removals must go through the explicit, confirmed deletion workflow.
     const imported = deepClone(candidate);
+    try {
+      if (!blueprintId || !draft) return;
+      const links = await loadProcessLinks(blueprintId);
+      const ids = new Set((imported.coCreationProcesses ?? []).map((process) => process.id));
+      const currentIds = new Set((draft.coCreationProcesses ?? []).map((process) => process.id));
+      if (links.some((link) => link.link_exists && currentIds.has(link.cbmx_process_id) && !ids.has(link.cbmx_process_id))) {
+        alert("This import removes a linked co-creation process. Delete that process explicitly first, then import again.");
+        return;
+      }
+      assignNewImportedProcessIds(imported, draft);
+    } catch {
+      alert("Could not verify Process Canvas associations. The import was not applied.");
+      return;
+    }
     imported.meta = { ...(imported.meta ?? {}), name: normalizeName(imported.meta?.name) };
-    setDraft(imported);
 
     if (importedErrors.length > 0) {
+      setDraft(imported);
       alert(`Import completed with ${importedErrors.length} validation error(s). Fix them, then click “Save Now”.`);
       return;
     }
@@ -796,7 +878,7 @@ ${options}`,
     // Auto-save imported blueprint to repository-DB (name uniqueness enforced on save)
     const ok = await saveBlueprintToDbDirect(imported, { silent: false });
     if (ok) alert("Import successful and saved to the repository.");
-    else alert("Imported, but save to the repository failed.");
+    else alert("Import could not be saved. Review the editor before trying again.");
   }
 
   // ---------------- PNG/PDF Export ----------------
@@ -872,6 +954,13 @@ ${options}`,
 
   return (
     <div>
+      <fieldset disabled={deleting} inert={deleting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+      {deletionStale && <p role="alert" style={{ color: "#b91c1c" }}>
+        This blueprint changed elsewhere. Your draft is preserved and autosave is paused. {" "}
+        <button type="button" onClick={() => void reloadBlueprintFromDb({ alertOnError: true })}>
+          Reload latest (discard local edits)
+        </button>
+      </p>}
       <div
         style={{
           display: "flex",
@@ -995,8 +1084,13 @@ ${options}`,
           onLinkExistingPCBToProcess={isReadOnly ? undefined : (processId) => void linkExistingPCBToProcess(processId)}
           onOpenLinkedPCB={openLinkedPCB}
           onUnlinkPCBFromProcess={isReadOnly ? undefined : (processId) => void unlinkPCBFromProcess(processId)}
+          onDeleteProcess={isReadOnly ? undefined : deleteProcess}
         />
       </div>
+      </fieldset>
+      {deleteConfirmation && <DeleteProcessDialog
+        processName={deleteConfirmation.processName} pcbName={deleteConfirmation.pcbName}
+        onClose={(confirmed) => { setDeleteConfirmation(null); deleteConfirmation.resolve(confirmed); }} />}
     </div>
   );
 }

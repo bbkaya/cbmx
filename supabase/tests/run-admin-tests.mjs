@@ -60,7 +60,7 @@ try {
     "20261111224202_restrict_privileged_function_execution_to_authenticated.sql": "982b0f6c21e842bd695980d648bf8d9d284f126f8fc8d3a615cba319e28d41c4",
     "20261111224503_pin_search_path_for_public_helper_and_trigger_functions.sql": "79509c8c7520d60d2f1ebac39e1a492d3b3ae9b7a15604acfd342b49f506dc3c",
   };
-  assert.deepEqual(allMigrationNames, [...Object.keys(recoveredHistory), migrationNames[0]], "Admin migration must follow all three recovered migrations");
+  assert.deepEqual(allMigrationNames.slice(0, 4), [...Object.keys(recoveredHistory), migrationNames[0]], "Admin migration must follow all three recovered migrations; later migrations run in their own suites");
   for (const [name, digest] of Object.entries(recoveredHistory)) {
     const bytes = await readFile(new URL("../migrations/" + name, import.meta.url));
     assert.equal(createHash("sha256").update(bytes).digest("hex"), digest, "Recovered migration must remain byte-for-byte unchanged: " + name);

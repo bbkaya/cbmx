@@ -1,9 +1,19 @@
-# Read-only Administrator Dashboard: database layer
+# Supabase database changes
+
+The co-creation process deletion migration and its isolated tests
+are documented in [co-creation process editing](../docs/co-creation-process-editing.md).
+It was deployed to cbmx1 with explicit user approval as
+`20261114091941_safe_cbmx_process_deletion` on 2026-11-14. Its SQL bytes were
+preserved when aligning the local filename with the deployed version. Do not
+replay it. Blueprint data, PCBs, and links were unchanged by deployment;
+historical-orphan cleanup still requires separate approval.
+
+## Read-only Administrator Dashboard: database layer
 
 The maintainer reports the database layer has been deployed and verified in
 cbmx1 as `20261113093318_read_only_admin_dashboard`. The repository file was renamed
-to that deployed version without changing its SQL bytes. All four migrations in
-this directory are historical records for cbmx1 and must not be replayed there.
+to that deployed version without changing its SQL bytes. The four migrations
+described in this section are historical records for cbmx1 and must not be replayed there.
 The React integration is described in [the frontend guide](../docs/admin-dashboard.md).
 No hosted database was contacted or changed during frontend implementation.
 

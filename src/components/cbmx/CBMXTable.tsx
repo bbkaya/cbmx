@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import EditableText from "./ui/EditableText";
+import EditableProcess from "./ui/EditableProcess";
 import SlotStack from "./ui/SlotStack";
 
 import {
@@ -23,6 +24,7 @@ import {
   setServiceScenario,
   setNthValueItem,
   setProcessSlot,
+  renameProcessById,
   setServiceSlot,
   addActor,
   removeActor,
@@ -314,6 +316,7 @@ export default function CBMXTable({
   onLinkExistingPCBToProcess,
   onOpenLinkedPCB,
   onUnlinkPCBFromProcess,
+  onDeleteProcess,
 }: {
   blueprint: CBMXBlueprint;
   onChange?: (next: CBMXBlueprint) => void;
@@ -322,6 +325,7 @@ export default function CBMXTable({
   onLinkExistingPCBToProcess?: (processId: string) => void;
   onOpenLinkedPCB?: (processCanvasBlueprintId: string) => void;
   onUnlinkPCBFromProcess?: (processId: string) => void;
+  onDeleteProcess?: (processId: string) => Promise<boolean>;
 }) {
   const { actors, N } = useMemo(() => normalizeActors(blueprint.actors), [blueprint.actors]);
   const colspanNetwork = N * 2;
@@ -697,10 +701,9 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                           }}
                         >
                           <div style={{ flex: "1 1 auto", minWidth: 0 }}>
-                            <EditableText
+                            <EditableProcess
                               value=""
                               readOnly={!onChange}
-                              placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
                               onCommit={(v) => updateBlueprint((next) => setProcessSlot(next, i, v))}
                             />
                           </div>
@@ -720,11 +723,12 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                         }}
                       >
                         <div style={{ flex: "1 1 auto", minWidth: 0 }}>
-                          <EditableText
+                          <EditableProcess
                             value={getProcessSlotLine(i)}
+                            existing
                             readOnly={!onChange}
-                            placeholder={onChange ? "Process (Actor 1, Actor 2)" : ""}
-                            onCommit={(v) => updateBlueprint((next) => setProcessSlot(next, i, v))}
+                            onCommit={(v) => updateBlueprint((next) => renameProcessById(next, p.id, v))}
+                            onDelete={onDeleteProcess ? () => onDeleteProcess(p.id) : undefined}
                           />
                         </div>
 

@@ -284,15 +284,23 @@ export async function updateBlueprintWithVersion(args: {
   userId: string;
   name: string;
   blueprint: CBMXBlueprint;
+  deletion?: { processId: string; expectedPCBId: string | null };
 }): Promise<SaveCBMXResult> {
-  const { data, error } = await supabase.rpc("save_blueprint_with_version", {
+  const { data, error } = await supabase.rpc(args.deletion ? "delete_cbmx_process_with_version" : "save_blueprint_with_version", {
     p_blueprint_id: args.blueprintId,
     p_loaded_version_no: args.loadedVersionNo,
     p_name: args.name,
     p_blueprint_json: args.blueprint,
+    ...(args.deletion ? {
+      p_process_id: args.deletion.processId,
+      p_expected_pcb_id: args.deletion.expectedPCBId,
+    } : {}),
   });
 
   if (error) {
+    if (args.deletion && error.code === "PGRST202") {
+      throw new Error("Safe process deletion is not available yet. Ask the application administrator to finish the update, then try again. Nothing was deleted.");
+    }
     throw new Error(error.message || "Could not save blueprint.");
   }
 

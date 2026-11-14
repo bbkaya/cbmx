@@ -151,13 +151,8 @@ export function setProcessSlot(next: CBMXBlueprint, slotIndex: number, line: str
   const arr = next.coCreationProcesses.slice();
   const cleaned = (line ?? "").trim();
 
-  if (!cleaned) {
-    if (slotIndex < arr.length) arr.splice(slotIndex, 1);
-    next.coCreationProcesses = arr;
-    return;
-  }
-
   const parsed = parseProcessLine(cleaned, next.actors ?? []);
+  if (!parsed.name.trim()) throw new Error("Enter a co-creation process name.");
 
   if (slotIndex < arr.length) {
     arr[slotIndex] = { ...arr[slotIndex], name: parsed.name, participantActorIds: parsed.participantActorIds };
@@ -171,6 +166,12 @@ export function setProcessSlot(next: CBMXBlueprint, slotIndex: number, line: str
   }
 
   next.coCreationProcesses = arr;
+}
+
+export function renameProcessById(next: CBMXBlueprint, processId: string, line: string) {
+  const index = (next.coCreationProcesses ?? []).findIndex((process) => process.id === processId);
+  if (index < 0) throw new Error("This co-creation process no longer exists. Reload the blueprint.");
+  setProcessSlot(next, index, line);
 }
 
 export function addProcessSlot(next: CBMXBlueprint) {

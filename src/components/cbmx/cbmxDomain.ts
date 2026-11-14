@@ -210,7 +210,18 @@ export function nextProcessNumericId(processes: CoCreationProcess[] | undefined)
 }
 
 export function makeNewProcessId(processes: CoCreationProcess[] | undefined): string {
-  return `P${nextProcessNumericId(processes)}`;
+  // Numeric IDs can be reused after deletion (including by legacy orphan links).
+  const used = new Set((processes ?? []).map((process) => process.id));
+  let id: string;
+  do { id = `P-${crypto.randomUUID()}`; } while (used.has(id));
+  return id;
+}
+
+export function assignNewImportedProcessIds(imported: CBMXBlueprint, current: CBMXBlueprint) {
+  const existing = new Set((current.coCreationProcesses ?? []).map((process) => process.id));
+  for (const process of imported.coCreationProcesses ?? []) {
+    if (!existing.has(process.id)) process.id = makeNewProcessId(imported.coCreationProcesses);
+  }
 }
 
 export function parseServiceLine(line: string): Service {
