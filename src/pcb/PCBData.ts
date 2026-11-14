@@ -33,6 +33,63 @@ export type PCBLinkContext = {
   cbmx_process_name: string;
 };
 
+export type AvailableProcessCanvas = {
+  id: string;
+  name: string;
+  role: "owner" | "editor";
+};
+
+export type ProcessCanvasLinkOptions = {
+  current_canvas: { id: string; name: string } | null;
+  canvases: AvailableProcessCanvas[];
+};
+
+function processCanvasLinkError(error: { code?: string; message?: string }): Error {
+  if (error.code === "PGRST202") {
+    return new Error("Canvas selection is not available yet. Ask the application administrator to finish the update, then try again.");
+  }
+  if (error.code === "42501") {
+    return new Error("You need edit access to the CBMX blueprint, the selected Canvas, and any currently linked Canvas. Your access may have changed, or a Canvas may have been deleted.");
+  }
+  if (error.code === "40001") {
+    return new Error("The current Canvas association changed. Reload the list before trying again.");
+  }
+  if (["23505", "23503"].includes(error.code ?? "")) {
+    return new Error("The selected Canvas is no longer available. Reload the list and select another Canvas.");
+  }
+  if (error.code === "22023") {
+    return new Error("This process is not saved yet or no longer exists. Wait for autosave, then reload the list.");
+  }
+  return new Error("Could not confirm the Canvas association. Reload the list to check its current state before trying again.");
+}
+
+export async function loadProcessCanvasLinkOptions(blueprintId: string, processId: string): Promise<ProcessCanvasLinkOptions> {
+  const { data, error } = await supabase.rpc("get_cbmx_process_canvas_options", {
+    p_cbmx_blueprint_id: blueprintId,
+    p_cbmx_process_id: processId,
+  });
+  if (error) throw processCanvasLinkError(error);
+  if (!data || !Array.isArray(data.canvases)) throw new Error("Could not load available Process Canvases. Reload the list and try again.");
+  const options = data as ProcessCanvasLinkOptions;
+  return { ...options, canvases: options.canvases.slice().sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.id.localeCompare(b.id)) };
+}
+
+export async function linkAvailableProcessCanvas(args: {
+  blueprintId: string;
+  processId: string;
+  pcbId: string;
+  expectedCurrentPCBId: string | null;
+}): Promise<void> {
+  const { error } = await supabase.rpc("link_available_cbmx_process_canvas", {
+    p_cbmx_blueprint_id: args.blueprintId,
+    p_cbmx_process_id: args.processId,
+    p_process_canvas_blueprint_id: args.pcbId,
+    p_expected_current_pcb_id: args.expectedCurrentPCBId,
+  });
+  if (error) throw processCanvasLinkError(error);
+}
+
 type PCBRowBase = {
   id: string;
   owner_user_id: string;

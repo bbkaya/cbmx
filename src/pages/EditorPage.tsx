@@ -15,10 +15,11 @@ import {
   type BlueprintAccessRole,
   type CBMXRow,
 } from "../cbmx/CBMXData";
-import { canEditPCB, canRoleEditPCB, listAccessiblePCBs } from "../pcb/PCBData";
+import { canEditPCB, linkAvailableProcessCanvas } from "../pcb/PCBData";
 import { makeBlankProcessCanvasBlueprint } from "../pcb/processCanvasDomain";
 import { assignNewImportedProcessIds, prepareCBMXJsonExport } from "../components/cbmx/cbmxDomain";
 import DeleteProcessDialog from "../components/cbmx/ui/DeleteProcessDialog";
+import LinkProcessCanvasDialog from "../components/cbmx/ui/LinkProcessCanvasDialog";
 
 type ValidationIssue = { level: "error" | "warning"; message: string };
 
@@ -60,6 +61,9 @@ export default function EditorPage() {
   } | null>(null);
   const confirmationRef = useRef<((confirmed: boolean) => void) | null>(null);
   useEffect(() => () => { confirmationRef.current?.(false); }, []);
+  const [pcbSelection, setPCBSelection] = useState<{
+    blueprintId: string; userId: string; processId: string; processName: string; initiallyLinked: boolean;
+  } | null>(null);
 
   // Autosave
   const [isAutoSaving, setIsAutoSaving] = useState(false);
@@ -504,11 +508,12 @@ function handleBlueprintSaveFailure(
 
   async function refreshProcessLinks() {
     if (!blueprintId) return;
-    const links = await loadProcessLinks(blueprintId).catch((err: { message?: string }) => {
-      alert("Failed to refresh Process Canvas links: " + (err?.message ?? "Unknown error"));
-      return [] as ProcessCanvasLinkSummary[];
-    });
-    setProcessLinks(links);
+    try {
+      setProcessLinks(await loadProcessLinks(blueprintId));
+    } catch (error) {
+      const message = (error as { message?: string })?.message ?? "Unknown error";
+      alert("Failed to refresh Process Canvas links: " + message + ". Reload the blueprint to see the current association.");
+    }
   }
 
   async function createPCBForProcess(processId: string) {
@@ -585,84 +590,27 @@ function handleBlueprintSaveFailure(
     navigate(`/app/pcb/${(pcbRow as ProcessCanvasBlueprintRow).id}`);
   }
 
-  async function linkExistingPCBToProcess(processId: string) {
+  function linkExistingPCBToProcess(processId: string) {
     if (isReadOnly) {
       alert("You have read-only access to this CBMX blueprint.");
       return;
     }
-    if (!blueprintId || !user?.id) return;
+    if (!blueprintId || !user?.id || deletingRef.current) return;
     const process = findProcessById(processId);
     if (!process) return alert("Process not found.");
 
-    const currentLink = getProcessLink(processId);
-    if (currentLink?.link_exists) {
-      if (!currentLink.has_pcb_access) {
-        alert(
-          "This co-creation process is already linked to a Process Canvas, but you do not have access to it. Ask the owner to share that canvas if you need access."
-        );
-        return;
-      }
+    setPCBSelection({ blueprintId, userId: user.id, processId, processName: process.name || process.id,
+      initiallyLinked: Boolean(getProcessLink(processId)?.link_exists) });
+  }
 
-      if (!canRoleMutatePCBLink(currentLink.pcb_access_role as PCBAccessRole | null | undefined)) {
-        alert(
-          "This co-creation process is already linked to a Process Canvas. You can open it, but only PCB editors can replace or relink it."
-        );
-        return;
-      }
+  async function confirmPCBSelection(pcbId: string, expectedCurrentPCBId: string | null) {
+    if (!pcbSelection || pcbSelection.blueprintId !== blueprintId || pcbSelection.userId !== user?.id || isReadOnly || deletingRef.current) {
+      throw new Error("This blueprint is no longer available for linking. Close the dialog and reload the blueprint.");
     }
-
-    setDbBusy(true);
-    let accessibleRows;
-    try {
-      accessibleRows = await listAccessiblePCBs(user.id);
-    } catch (err) {
-      setDbBusy(false);
-      const message = err instanceof Error ? err.message : "Unknown error";
-      return alert("Load existing PCBs failed: " + message);
-    }
-    setDbBusy(false);
-
-    const rows = accessibleRows
-      .filter((row) => canRoleEditPCB(row.role))
-      .map((row) => ({ id: row.id, name: row.name, owner_user_id: row.owner_user_id } satisfies ProcessCanvasBlueprintRow))
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    if (rows.length === 0) {
-      alert("No editable Process Canvas blueprints found yet. Create one first or ask for editor access.");
-      return;
-    }
-
-    const options = rows.map((row) => row.name).join("\n");
-    const chosenName = window.prompt(
-      `Type the exact PCB name to link to process “${process.name || process.id}”.
-
-Available editable PCBs:
-${options}`,
-      rows[0]?.name ?? ""
-    );
-    if (chosenName == null) return;
-
-    const chosen = rows.find((row) => row.name.trim().toLowerCase() === chosenName.trim().toLowerCase());
-    if (!chosen) {
-      alert("No editable PCB matched that name exactly.");
-      return;
-    }
-
-    const verified = await verifyEditableArtifacts(chosen.id);
-    if (!verified.ok) return;
-
-    setDbBusy(true);
-    const { error: linkError } = await supabase.rpc("upsert_cbmx_process_link", {
-      p_cbmx_blueprint_id: blueprintId,
-      p_cbmx_process_id: processId,
-      p_process_canvas_blueprint_id: chosen.id,
-    });
-    setDbBusy(false);
-
-    if (linkError) return alert("Link existing PCB failed: " + linkError.message);
-
+    if (!findProcessById(pcbSelection.processId)) throw new Error("This co-creation process no longer exists. Close the dialog and reload the blueprint.");
+    await linkAvailableProcessCanvas({ blueprintId: pcbSelection.blueprintId, processId: pcbSelection.processId, pcbId, expectedCurrentPCBId });
     await refreshProcessLinks();
-    alert("The Process Canvas was linked to the CBMX process. This creates only the association between the artefacts; it does not copy access rights automatically.");
+    setPCBSelection(null);
   }
 
 
@@ -1091,6 +1039,10 @@ ${options}`,
       {deleteConfirmation && <DeleteProcessDialog
         processName={deleteConfirmation.processName} pcbName={deleteConfirmation.pcbName}
         onClose={(confirmed) => { setDeleteConfirmation(null); deleteConfirmation.resolve(confirmed); }} />}
+      {pcbSelection && pcbSelection.blueprintId === blueprintId && pcbSelection.userId === user?.id && !isReadOnly && <LinkProcessCanvasDialog
+        key={`${pcbSelection.blueprintId}:${pcbSelection.processId}:${pcbSelection.userId}`}
+        blueprintId={pcbSelection.blueprintId} processId={pcbSelection.processId} processName={pcbSelection.processName}
+        initiallyLinked={pcbSelection.initiallyLinked} onCancel={() => setPCBSelection(null)} onConfirm={confirmPCBSelection} />}
     </div>
   );
 }

@@ -1,5 +1,12 @@
 # Supabase database changes
 
+The link/relink dropdown migration is documented in
+[Process Canvas link selection](../docs/process-canvas-link-selection.md).
+`20261114143904_process_canvas_link_selection.sql` was deployed to cbmx1 with
+explicit approval on 2026-11-14. Do not replay it. Its local filename matches the
+deployed version without changing the SQL bytes. It reuses the existing one-to-one
+constraints; deployment preserved all application records and historical associations.
+
 The co-creation process deletion migration and its isolated tests
 are documented in [co-creation process editing](../docs/co-creation-process-editing.md).
 It was deployed to cbmx1 with explicit user approval as

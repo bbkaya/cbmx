@@ -5,7 +5,7 @@ import { act, createElement } from "react";
 import { createServer } from "vite";
 
 let server, window, root, container, createRoot, MemoryRouter, Routes, Route, EditorPage, domain, mutators;
-let row, links, calls, alerts, rpcOverride;
+let row, links, calls, alerts, rpcOverride, availableCanvases, blueprintRole, createdCanvas;
 const blueprint = () => ({
   meta: { id: "test", name: "Test" }, networkValueProposition: { statement: "Value" },
   actors: ["Customer", "Orchestrator"].map((type, i) => ({ id: `A${i + 1}`, type, name: `Actor ${i + 1}`,
@@ -19,6 +19,24 @@ const linked = (access = "owner") => [{ cbmx_process_id: "P1", link_exists: true
 const ok = (data) => ({ data: structuredClone(data), error: null });
 async function defaultRpc(name, args) {
   if (name === "list_cbmx_process_links_with_access") return ok(links);
+  if (name === "get_cbmx_process_canvas_options") {
+    const current = links.find(link => link.cbmx_process_id === args.p_cbmx_process_id);
+    if (current && !["owner", "editor"].includes(current.pcb_access_role)) return { data: null, error: { code: "42501" } };
+    return ok({ current_canvas: current ? { id: current.process_canvas_blueprint_id, name: current.process_canvas_blueprint_name } : null,
+      canvases: availableCanvases.filter(canvas => !links.some(link => link.process_canvas_blueprint_id === canvas.id)) });
+  }
+  if (["link_available_cbmx_process_canvas", "upsert_cbmx_process_link"].includes(name)) {
+    const current = links.find(link => link.cbmx_process_id === args.p_cbmx_process_id);
+    if (name === "link_available_cbmx_process_canvas" && (current?.process_canvas_blueprint_id ?? null) !== args.p_expected_current_pcb_id)
+      return { data: null, error: { code: "40001" } };
+    const canvas = [...availableCanvases, ...(createdCanvas ? [createdCanvas] : [])].find(canvas => canvas.id === args.p_process_canvas_blueprint_id);
+    if (!canvas) return { data: null, error: { code: "23505" } };
+    links = links.filter(link => link.cbmx_process_id !== args.p_cbmx_process_id);
+    links.push({ cbmx_process_id: args.p_cbmx_process_id, link_exists: true, process_canvas_blueprint_id: canvas.id,
+      process_canvas_blueprint_name: canvas.name, has_pcb_access: true, pcb_access_role: canvas.role || "owner" });
+    return ok([]);
+  }
+  if (name === "unlink_cbmx_process_link") { links = links.filter(link => link.cbmx_process_id !== args.p_cbmx_process_id); return ok([]); }
   if (["save_blueprint_with_version", "delete_cbmx_process_with_version"].includes(name)) {
     assert.equal(args.p_loaded_version_no, row.version_no);
     row.blueprint_json = structuredClone(args.p_blueprint_json);
@@ -46,7 +64,9 @@ before(async () => {
   };
   globalThis.__processTestFrom = (table) => {
     const query = { select() { return query; }, eq() { return query; }, ilike() { return query; },
-      single: async () => ok(row), maybeSingle: async () => ok({ role: "owner" }),
+      insert(value) { assert.equal(table, "process_canvas_blueprints"); createdCanvas = { ...value, id: "created-canvas", role: "owner" }; return query; },
+      single: async () => ok(table === "process_canvas_blueprints" ? createdCanvas : row),
+      maybeSingle: async () => ok({ role: table === "blueprint_members" ? blueprintRole : "owner" }),
       then(resolve, reject) { return Promise.resolve(ok(table === "blueprints" ? [{ id: row.id, name: row.name }] : [])).then(resolve, reject); },
     };
     return query;
@@ -71,6 +91,11 @@ beforeEach(() => {
   row = { id: "test-id", name: "Test", owner_user_id: "owner-id", blueprint_json: blueprint(),
     version_no: 1, updated_at: "2026-11-14T12:00:00Z", updated_by_user_id: "owner-id" };
   links = []; calls = []; alerts = []; rpcOverride = null;
+  blueprintRole = "owner"; createdCanvas = null;
+  availableCanvases = [{ id: "canvas-z", name: "Zulu", role: "owner" },
+    { id: "canvas-owned", name: "Alpha", role: "owner" }, { id: "canvas-editor", name: "Alpha", role: "editor" }];
+  window.prompt = () => assert.fail("Selection must not use text prompts");
+  window.confirm = () => false;
   container = document.createElement("div"); document.body.append(container); root = createRoot(container);
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
@@ -79,14 +104,16 @@ const flush = async () => { await act(async () => { await new Promise(resolve =>
 const button = (label, scope = container) => [...scope.querySelectorAll("button")].find(b => b.textContent === label);
 const click = async (element) => { assert.ok(element, "control exists"); await act(async () => element.click()); await flush(); };
 const change = async (element, value) => { assert.ok(element); await act(async () => {
-  Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set.call(element, value);
-  element.dispatchEvent(new window.Event("input", { bubbles: true }));
+  const prototype = element.tagName === "SELECT" ? window.HTMLSelectElement.prototype : window.HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(prototype, "value").set.call(element, value);
+  element.dispatchEvent(new window.Event(element.tagName === "SELECT" ? "change" : "input", { bubbles: true }));
 }); };
 const input = () => container.querySelector('input[aria-label="Co-creation process"]');
-const writes = () => calls.filter(c => c.name !== "list_cbmx_process_links_with_access");
+const writes = () => calls.filter(c => !["list_cbmx_process_links_with_access", "get_cbmx_process_canvas_options"].includes(c.name));
 async function mount() {
   await act(async () => root.render(createElement(MemoryRouter, { initialEntries: ["/app/editor/test-id"] },
-    createElement(Routes, null, createElement(Route, { path: "/app/editor/:blueprintId", element: createElement(EditorPage) })))));
+    createElement(Routes, null, createElement(Route, { path: "/app/editor/:blueprintId", element: createElement(EditorPage) }),
+      createElement(Route, { path: "/app/pcb/:pcbId", element: createElement("div", null, "Process Canvas editor") })))));
   await flush();
 }
 const edit = async () => click([...container.querySelectorAll("button[title='Click to edit']")].find(b => b.textContent.startsWith("Delivery")));
@@ -246,4 +273,133 @@ test("deletion cannot race an in-flight autosave", async () => {
   assert.match(container.querySelector('[role="alert"]').textContent, /save is in progress/);
   assert.equal(calls.filter(c => c.name === "delete_cbmx_process_with_version").length, 0);
   await act(async () => release()); await flush();
+});
+
+const selection = () => container.querySelector("dialog select");
+async function openCanvasSelection() {
+  await click(button("Process Canvas ▾"));
+  await click(button(links.some(link => link.cbmx_process_id === "P1") ? "Relink to existing Canvas" : "Link existing Canvas"));
+}
+for (const role of ["owner", "editor"]) test(`${role} of CBMX can choose an owned or shared Editor Canvas by ID`, async () => {
+  blueprintRole = role;
+  if (role === "editor") row.owner_user_id = "another-owner";
+  await mount(); await openCanvasSelection();
+  const dialog = container.querySelector("dialog");
+  assert.match(dialog.textContent, /Link Existing Process Canvas/); assert.match(dialog.textContent, /Co-creation process: Delivery/);
+  assert.equal(selection().value, ""); assert.equal(button("Link Canvas").disabled, true);
+  const options = [...selection().options];
+  assert.equal(options[0].textContent, "Select a Process Canvas...");
+  assert.deepEqual(options.slice(1).map(option => option.value), ["canvas-editor", "canvas-owned", "canvas-z"]);
+  assert.match(options[1].textContent, /Alpha.*Shared as Editor.*canvas-editor/);
+  assert.match(options[2].textContent, /Alpha.*Owned by you.*canvas-owned/);
+  await change(selection(), role === "owner" ? "canvas-owned" : "canvas-editor");
+  assert.equal(button("Link Canvas").disabled, false); await click(button("Link Canvas"));
+  assert.equal(container.querySelector("dialog"), null);
+  const call = writes()[0]; assert.equal(call.name, "link_available_cbmx_process_canvas");
+  assert.equal(call.args.p_process_canvas_blueprint_id, role === "owner" ? "canvas-owned" : "canvas-editor");
+  assert.equal(call.args.p_expected_current_pcb_id, null);
+  assert.ok(container.textContent.includes("PCB: Alpha"));
+});
+test("relink shows current Canvas separately and replaces the association without unlinking or editing the process", async () => {
+  links = linked(); const original = structuredClone(row.blueprint_json); await mount(); await openCanvasSelection();
+  assert.match(container.querySelector("dialog").textContent, /Relink Process Canvas/);
+  assert.match(container.querySelector("dialog").textContent, /Currently linked Canvas: Delivery Canvas/);
+  assert.equal([...selection().options].some(option => option.value === "canvas-id"), false);
+  assert.match(container.querySelector("dialog label").textContent, /Select replacement Process Canvas/);
+  await change(selection(), "canvas-editor"); await click(button("Relink Canvas"));
+  assert.equal(links[0].process_canvas_blueprint_id, "canvas-editor");
+  assert.equal(writes().length, 1); assert.equal(writes()[0].args.p_expected_current_pcb_id, "canvas-id");
+  assert.deepEqual(row.blueprint_json, original); assert.equal(row.version_no, 1);
+});
+for (const relink of [false, true]) test(`Cancel or Escape ${relink ? "relinking" : "linking"} makes no mutation`, async () => {
+  links = relink ? linked() : []; const before = structuredClone(links); await mount(); await openCanvasSelection();
+  await change(selection(), "canvas-z"); await click(button("Cancel", container.querySelector("dialog")));
+  assert.equal(container.querySelector("dialog"), null); assert.deepEqual(links, before); assert.equal(writes().length, 0);
+  await openCanvasSelection();
+  await act(async () => container.querySelector("dialog").dispatchEvent(new window.Event("cancel", { cancelable: true })));
+  assert.equal(container.querySelector("dialog"), null); assert.deepEqual(links, before); assert.equal(writes().length, 0);
+});
+test("empty selection shows the requested explanation, no dropdown, and a disabled Link button", async () => {
+  availableCanvases = []; await mount(); await openCanvasSelection();
+  assert.equal(selection(), null);
+  assert.ok(container.querySelector("dialog").textContent.includes("No available Process Canvases were found. You can create a new Process Canvas or request editor access to an existing unlinked Canvas."));
+  assert.equal(button("Link Canvas").disabled, true);
+});
+for (const code of ["23505", "42501", "40001", "23503", "XX000"]) test(`${code} relink failure leaves the original association and supports reloading options`, async () => {
+  links = linked(); await mount(); await openCanvasSelection(); await change(selection(), "canvas-owned");
+  rpcOverride = (name, args) => name === "link_available_cbmx_process_canvas" ? { data: null, error: { code } } : defaultRpc(name, args);
+  await click(button("Relink Canvas"));
+  assert.ok(container.querySelector("dialog")); assert.deepEqual(links, linked());
+  assert.ok(container.querySelector('dialog [role="alert"]'));
+  assert.equal(writes().length, 1); assert.equal(writes()[0].name, "link_available_cbmx_process_canvas");
+  availableCanvases = availableCanvases.filter(canvas => canvas.id !== "canvas-owned");
+  await click(button("Reload list")); assert.equal(selection().value, ""); assert.equal(button("Relink Canvas").disabled, true);
+  assert.equal([...selection().options].some(option => option.value === "canvas-owned"), false);
+});
+test("missing migration or revoked access shows an actionable load error without disclosing a current Canvas name", async () => {
+  for (const code of ["PGRST202", "42501"]) {
+    links = linked(); await mount();
+    rpcOverride = (name, args) => name === "get_cbmx_process_canvas_options" ? { data: null, error: { code } } : defaultRpc(name, args);
+    await openCanvasSelection(); const dialog = container.querySelector("dialog");
+    assert.ok(dialog.querySelector('[role="alert"]')); assert.equal(selection(), null);
+    assert.ok(!dialog.textContent.includes("Delivery Canvas")); assert.equal(button("Relink Canvas").disabled, true);
+    await click(button("Cancel", dialog));
+    await act(async () => root.unmount()); root = createRoot(container); rpcOverride = null;
+  }
+});
+test("loading can be cancelled and a late result cannot reopen the selection dialog", async () => {
+  await mount(); let release;
+  rpcOverride = (name, args) => name === "get_cbmx_process_canvas_options"
+    ? new Promise(resolve => { release = () => resolve(defaultRpc(name, args)); }) : defaultRpc(name, args);
+  await openCanvasSelection(); assert.match(container.querySelector('dialog [role="status"]').textContent, /Loading/);
+  assert.equal(button("Link Canvas").disabled, true); await click(button("Cancel", container.querySelector("dialog")));
+  await act(async () => release()); await flush(); assert.equal(container.querySelector("dialog"), null);
+});
+test("a current association deleted while the dialog is open requires reloading before linking", async () => {
+  links = linked(); await mount(); await openCanvasSelection(); await change(selection(), "canvas-z"); links = [];
+  await click(button("Relink Canvas")); assert.match(container.querySelector('dialog [role="alert"]').textContent, /association changed/);
+  assert.deepEqual(links, []); await click(button("Reload list"));
+  assert.match(container.querySelector("dialog h2").textContent, /Link Existing Process Canvas/);
+  assert.equal(selection().value, "");
+});
+test("double submission is blocked while relinking", async () => {
+  links = linked(); await mount(); await openCanvasSelection(); await change(selection(), "canvas-z"); let release;
+  rpcOverride = (name, args) => name === "link_available_cbmx_process_canvas"
+    ? new Promise(resolve => { release = () => resolve(defaultRpc(name, args)); }) : defaultRpc(name, args);
+  await click(button("Relink Canvas")); assert.equal(button("Linking…").disabled, true);
+  await act(async () => { container.querySelector("dialog form").dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })); });
+  assert.equal(writes().length, 1); await act(async () => release()); await flush(); assert.equal(container.querySelector("dialog"), null);
+});
+test("autosave continues while the selection dialog is open, without creating an association on cancel", async () => {
+  await mount(); await change(container.querySelector('input[aria-label="Blueprint name"]'), "Updated blueprint");
+  await openCanvasSelection(); await waitForAutosave(); assert.equal(row.name, "Updated blueprint");
+  await click(button("Cancel", container.querySelector("dialog"))); assert.deepEqual(links, []);
+  assert.deepEqual(writes().map(call => call.name), ["save_blueprint_with_version"]);
+});
+test("CBMX viewers still cannot link and PCB viewers cannot relink through the menu", async () => {
+  row.owner_user_id = "another-owner"; blueprintRole = "viewer"; await mount(); assert.equal(button("Process Canvas ▾"), undefined);
+  await act(async () => root.unmount()); root = createRoot(container); blueprintRole = "owner"; row.owner_user_id = "owner-id";
+  links = linked("viewer"); await mount(); await click(button("Process Canvas ▾"));
+  assert.equal(button("Relink to existing Canvas"), undefined); assert.ok(button("Open linked Canvas"));
+});
+test("Open linked Canvas and Unlink retain their existing actions", async () => {
+  links = linked(); await mount(); await click(button("Process Canvas ▾")); await click(button("Open linked Canvas"));
+  assert.match(container.textContent, /Process Canvas editor/); assert.equal(writes().length, 0);
+  await act(async () => root.unmount()); root = createRoot(container); await mount();
+  window.confirm = () => true; await click(button("Process Canvas ▾")); await click(button("Remove link"));
+  assert.deepEqual(links, []); assert.equal(writes()[0].name, "unlink_cbmx_process_link");
+});
+test("Create Process Canvas keeps the existing creation and upsert workflow", async () => {
+  await mount(); window.prompt = () => "New Canvas"; await click(button("Process Canvas ▾")); await click(button("Create Process Canvas"));
+  assert.equal(createdCanvas.name, "New Canvas"); assert.equal(writes()[0].name, "upsert_cbmx_process_link");
+  assert.equal(writes()[0].args.p_process_canvas_blueprint_id, "created-canvas"); assert.match(container.textContent, /Process Canvas editor/);
+});
+test("a failed link-status refresh preserves cached links and explains how to reload the committed association", async () => {
+  links = linked(); await mount(); await openCanvasSelection(); await change(selection(), "canvas-z");
+  rpcOverride = (name, args) => name === "list_cbmx_process_links_with_access"
+    ? { data: null, error: { message: "Network unavailable" } } : defaultRpc(name, args);
+  await click(button("Relink Canvas")); assert.equal(links[0].process_canvas_blueprint_id, "canvas-z");
+  assert.equal(container.querySelector("dialog"), null); assert.ok(container.textContent.includes("PCB: Delivery Canvas"));
+  assert.ok(alerts.some(message => message.includes("Reload the blueprint to see the current association")));
+  assert.equal(writes().length, 1);
 });
