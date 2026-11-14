@@ -1,10 +1,13 @@
 import { useCallback } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { listAdminBlueprints } from "./AdminData";
 import { AdminPagination, ReportError } from "./AdminTableUI";
 import { formatAdminDate } from "./adminFormat";
 import { useAdminQuery } from "./useAdminQuery";
 import { useAdminResource } from "./useAdminResource";
 import type { BlueprintSearchParams, BlueprintSort, BlueprintType } from "./adminTypes";
+import { adminInventoryReturnState } from "./adminNavigation";
+import "../pages/dashboard.css";
 
 const columns: { key: BlueprintSort; label: string }[] = [
   { key: "blueprint_type", label: "Type" }, { key: "name", label: "Blueprint Name" },
@@ -13,9 +16,9 @@ const columns: { key: BlueprintSort; label: string }[] = [
 ];
 
 export default function BlueprintInventory() {
-  const { query, setQuery, searchInput, setSearchInput } = useAdminQuery<BlueprintSearchParams>({
-    search: "", type: null, sortBy: "updated_at", sortDirection: "desc", page: 1, pageSize: 25,
-  });
+  const location = useLocation();
+  const { query, setQuery, searchInput, setSearchInput } = useAdminQuery<BlueprintSearchParams>(
+    adminInventoryReturnState(location.state).adminInventoryQuery);
   const load = useCallback((signal: AbortSignal) => listAdminBlueprints(query, signal), [query]);
   const report = useAdminResource(load);
   const sort = (column: BlueprintSort) => setQuery((previous) => ({
@@ -46,7 +49,8 @@ export default function BlueprintInventory() {
         </tr></thead><tbody>
           {report.data?.items.map((row) => <tr key={`${row.blueprint_type}:${row.blueprint_id}`}>
             <td><span className="admin-type">{row.blueprint_type}</span></td>
-            <td>{row.name?.trim() || "Untitled blueprint"}</td><td>{row.owner_name?.trim() || "Unknown owner"}</td>
+            <td><Link className="blueprint-name-link" to={`/app/admin/${row.blueprint_type === "CBMX" ? "b" : "pcb"}/${row.blueprint_id}`}
+              state={{ adminInventoryQuery: query }}>{row.name?.trim() || "Untitled blueprint"}</Link></td><td>{row.owner_name?.trim() || "Unknown owner"}</td>
             <td>{row.owner_email || "—"}</td><td>{formatAdminDate(row.created_at)}</td><td>{formatAdminDate(row.updated_at)}</td>
           </tr>)}
           {report.data?.items.length === 0 && <tr><td colSpan={6}>No blueprints match these criteria.</td></tr>}

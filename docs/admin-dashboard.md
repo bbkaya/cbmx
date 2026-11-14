@@ -1,5 +1,10 @@
 # Administrator Dashboard frontend
 
+The pending local [administrative artifact viewing enhancement](admin-artifact-viewing.md)
+adds inventory name links and a separate, server-authorized content-read endpoint.
+Its migration has not been deployed. The original reporting endpoints below
+remain metadata-only and do not grant artifact mutation rights.
+
 Route: `/#/app/admin`. The existing HashRouter, authenticated Supabase client, and
 shared SiteShell remain in use. The database is reported deployed and verified by
 the maintainer; no hosted database access is needed to build or test this feature.
@@ -35,7 +40,7 @@ and RLS are untouched.
 
 ## UI and RPC contracts
 
-`src/admin/AdminData.ts` centralizes only these four calls:
+`src/admin/AdminData.ts` centralizes these four reporting calls:
 
 - `admin_get_access`: strictly boolean capability result.
 - `admin_get_statistics`: non-negative numeric totals for three overview cards.
@@ -45,7 +50,8 @@ and RLS are untouched.
   status, and ban status, with server search/pagination.
 
 Responses are validated and reconstructed using only known fields; unexpected
-payloads such as blueprint JSON are discarded. Invalid contracts and missing RPCs
+payloads such as blueprint JSON are discarded from reporting responses. The new
+artifact loader has its own explicit content contract. Invalid contracts and missing RPCs
 produce a maintainer-facing error message; the frontend never changes the database
 to work around a mismatch. Null display names/emails/dates have readable fallbacks.
 Dates use `toLocaleString()`, matching the existing dashboard date convention.
@@ -59,7 +65,8 @@ scroll regions on narrow screens, and overview cards stack at 600px.
 
 Users are displayed exactly as returned by the RPC, including banned and
 unconfirmed registrations. Banned status takes visual precedence over confirmation.
-Zero counts are explicit. There are no content/editor links, write actions,
+Zero counts are explicit. Blueprint names link to protected viewers with actual
+artifact-specific edit rights. Inventory tables add no write actions,
 collaboration controls, account-management actions, or administrator assignments.
 
 Each report has separate loading, empty, error/retry, and refresh behavior. Results
@@ -99,7 +106,8 @@ a profile; this feature itself calls only read-only reporting RPCs.
 2. Search each table; filter All/CBMX/Process Canvas; toggle column sorting; change
    pages and page size. Confirm totals, page resets, empty results, and zero counts.
 3. Confirm banned users are listed as Banned even if confirmed, unconfirmed users
-   are labeled, and no edit/delete/content links appear.
+   are labeled, and no edit/delete inventory buttons appear. After the new migration
+   is approved/deployed, verify that blueprint names open in the correct access mode.
 4. Check keyboard navigation and narrow mobile widths. Verify that tables scroll
    within their regions and overview cards stack.
 5. Sign out: previous rows disappear and direct admin access goes to login. Sign

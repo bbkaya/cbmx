@@ -4,9 +4,27 @@ import { Window } from "happy-dom";
 import { act, createElement } from "react";
 import { createServer } from "vite";
 
-let server, window, createRoot, root, container, App, MemoryRouter, data, Controller;
+let server, window, createRoot, root, container, App, MemoryRouter, data, Controller, makePCB;
 let calls = [];
 let handler;
+let artifactRole, linkedArtifacts, roleOverrides, alerts, exportBlobs;
+const artifactContent = (type, name) => type === "PC" ? { ...makePCB(), meta: { ...makePCB().meta, name } } : {
+  meta: { id: "fixture", name }, networkValueProposition: { statement: "Complete admin-visible content" }, serviceScenario: "Private scenario narrative",
+  actors: ["Customer", "Orchestrator"].map((type, index) => ({ id: `A${index + 1}`, type, name: `Actor ${index + 1}`,
+    actorValueProposition: { statement: "Contribution" }, costs: [{ type: "Financial", description: "Cost" }],
+    benefits: [{ type: "Financial", description: "Benefit" }], kpis: [], services: [] })),
+  coCreationProcesses: [{ id: "P1", name: "Delivery", participantActorIds: ["A1", "A2"] }],
+};
+function artifact(type, id) {
+  const role = Object.hasOwn(roleOverrides, type) ? roleOverrides[type] : artifactRole;
+  const name = `${type} Private artifact`;
+  return { blueprint_type: type, role, row: { id, name, owner_user_id: role === "owner" ? globalThis.__adminTestAuth.user.id : "another-owner",
+    blueprint_json: artifactContent(type, name), created_at: "2026-01-01T12:00:00Z", updated_at: "2026-11-14T12:00:00Z", version_no: 1, updated_by_user_id: null },
+    process_links: linkedArtifacts && type === "CBMX" ? [{ cbmx_process_id: "P1", link_exists: true,
+      process_canvas_blueprint_id: "linked-pcb", process_canvas_blueprint_name: "Linked Canvas", has_pcb_access: true, pcb_access_role: "viewer" }] : [],
+    link_context: linkedArtifacts && type === "PC" ? { link_id: "link-id", cbmx_blueprint_id: "linked-cbmx",
+      cbmx_process_id: "P1", cbmx_blueprint_name: "Linked CBMX", cbmx_process_name: "Delivery" } : null };
+}
 const ok = (data) => ({ data, error: null, status: 200 });
 const denied = () => ({ data: null, error: { code: "42501", message: "denied" }, status: 403 });
 const stats = { total_registered_users: 67, total_cbmx_blueprints: 112, total_pc_blueprints: 42 };
@@ -24,6 +42,12 @@ const users = Array.from({ length: 28 }, (_, i) => ({
 function defaultHandler(name, args) {
   if (name === "admin_get_access") return ok(true);
   if (name === "admin_get_statistics") return ok(stats);
+  if (name === "admin_load_artifact") return ok(artifact(args.p_blueprint_type, args.p_blueprint_id));
+  if (name === "save_blueprint_with_version" || name === "save_process_canvas_blueprint_with_version") {
+    const type = name === "save_blueprint_with_version" ? "CBMX" : "PC";
+    const value = artifact(type, args.p_blueprint_id || args.p_process_canvas_blueprint_id);
+    return ok([{ ok: true, reason: "ok", ...value.row, name: args.p_name, blueprint_json: args.p_blueprint_json, version_no: args.p_loaded_version_no + 1 }]);
+  }
   if (name === "admin_list_blueprints") {
     const items = Array.from({ length: 52 }, (_, i) => blueprint(i, i % 2 ? "PC" : "CBMX"))
       .filter((row) => (!args.p_blueprint_type || row.blueprint_type === args.p_blueprint_type) &&
@@ -42,6 +66,9 @@ before(async () => {
   for (const key of ["window", "document", "navigator", "sessionStorage", "localStorage", "HTMLElement", "HTMLInputElement", "HTMLSelectElement", "Node", "Event", "MouseEvent"])
     Object.defineProperty(globalThis, key, { configurable: true, value: key === "window" ? window : window[key] });
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  globalThis.alert = window.alert = message => alerts.push(message);
+  globalThis.URL.createObjectURL = blob => { exportBlobs.push(blob); return "blob:http://localhost/fixture"; };
+  globalThis.URL.revokeObjectURL = () => {};
   globalThis.__adminAuthListeners = new Set();
   globalThis.__adminTestRpc = (name, args) => {
     const call = { name, args, signal: null };
@@ -50,6 +77,17 @@ before(async () => {
     const request = {
       then: promise.then.bind(promise),
       abortSignal(signal) { call.signal = signal; return request; },
+    };
+    return request;
+  };
+  globalThis.__adminTestFrom = table => {
+    const filters = {};
+    const type = table.startsWith("process_canvas") ? "PC" : "CBMX";
+    const request = { select() { return request; }, eq(key, value) { filters[key] = value; return request; },
+      ilike() { return request; }, in() { return request; },
+      maybeSingle: async () => ok(table.endsWith("members") && artifactRole ? { role: artifactRole } : null),
+      single: async () => artifactRole ? ok(artifact(type, filters.id).row) : { data: null, error: { message: "Access denied" } },
+      then(resolve, reject) { return Promise.resolve(ok([])).then(resolve, reject); },
     };
     return request;
   };
@@ -74,6 +112,7 @@ before(async () => {
         `;
         if (id === "\0admin-test-supabase") return `export const supabase = {
           rpc: (...args) => globalThis.__adminTestRpc(...args),
+          from: (...args) => globalThis.__adminTestFrom(...args),
           auth: { signOut() { throw new Error('Real authentication is disabled in tests'); } }
         };`;
       },
@@ -82,10 +121,12 @@ before(async () => {
   App = (await server.ssrLoadModule("/src/App.tsx")).default;
   data = await server.ssrLoadModule("/src/admin/AdminData.ts");
   Controller = (await server.ssrLoadModule("/src/admin/AdminAccessController.ts")).AdminAccessController;
+  makePCB = (await server.ssrLoadModule("/src/pcb/processCanvasDomain.ts")).makeBlankProcessCanvasBlueprint;
 });
 beforeEach(() => {
   calls = [];
   handler = defaultHandler;
+  artifactRole = null; linkedArtifacts = false; roleOverrides = {}; alerts = []; exportBlobs = [];
   globalThis.__adminTestAuth = { loading: false, user: { id: "admin-a", email: "admin@example.invalid" }, displayName: "Test Administrator" };
   container = document.createElement("div");
   document.body.append(container);
@@ -138,10 +179,140 @@ test("admin route renders statistics, read-only tables, statuses, and confirmed 
   assert.equal(userRows[1].children[3].textContent, "Banned");
   assert.equal(userRows[2].children[3].textContent, "Unconfirmed");
   assert.ok(!text().includes("hidden-user-"));
-  assert.equal(section("admin-blueprints-title").querySelectorAll("tbody a, tbody button").length, 0);
+  assert.equal(section("admin-blueprints-title").querySelectorAll("tbody button").length, 0);
+  assert.equal(section("admin-blueprints-title").querySelectorAll("tbody a.blueprint-name-link").length, 25);
   assert.equal(calls.filter((call) => call.name === "admin_get_access").length, 1, "navigation and guard share one access request");
   assert.equal(localStorage.length, 0, "admin reports are not persisted locally");
   assert.equal(sessionStorage.length, 0, "admin reports are not persisted for the browser session");
+});
+
+const mutations = () => calls.filter(call => /^(save_|add_|update_|delete_|unlink_|upsert_|link_available)/.test(call.name));
+for (const type of ["CBMX", "PC"]) {
+  const path = `/app/admin/${type === "CBMX" ? "b" : "pcb"}/private-artifact`;
+  for (const role of ["owner", "editor", "viewer", null]) test(`${type} admin viewing respects ${role ?? "no membership"} permissions on direct navigation and refresh`, async () => {
+    artifactRole = role;
+    for (let visit = 0; visit < 2; visit++) {
+      await mount(path); await flush(5);
+      assert.ok(text().includes(`${type} Private artifact`) || container.querySelector(`input[value="${type} Private artifact"]`));
+      assert.ok(container.querySelector('a[href="/app/admin"]'));
+      const editable = role === "owner" || role === "editor";
+      assert.equal(text().includes("Admin View — Read Only"), !editable);
+      assert.equal(Boolean(container.querySelector(type === "CBMX" ? 'input[aria-label="Blueprint name"]' : 'input[placeholder="Untitled PCB"]')), editable);
+      assert.equal(Boolean(button("Process Canvas ▾")), editable && type === "CBMX");
+      assert.ok(!text().includes("Share"));
+      assert.equal(mutations().length, 0);
+      await act(async () => root.unmount()); root = createRoot(container);
+    }
+  });
+  test(`${type} administrative read-only mode permits export without autosave or imports`, async () => {
+    await mount(path); await flush(5); await click(button("Export ▾"));
+    assert.equal(button(type === "CBMX" ? "Import CBMX from JSON" : "Import Canvas from JSON"), undefined);
+    await click(button(type === "CBMX" ? "Export CBMX to JSON" : "Export Canvas to JSON"));
+    assert.equal(exportBlobs.length, 1);
+    const exported = JSON.parse(await exportBlobs[0].text()); assert.equal(exported.meta.name, `${type} Private artifact`);
+    const fileInput = container.querySelector('input[type="file"]');
+    Object.defineProperty(fileInput, "files", { configurable: true, value: [{ text: async () => "{}" }] });
+    await act(async () => fileInput.dispatchEvent(new window.Event("change", { bubbles: true })));
+    await flush(1300); assert.equal(mutations().length, 0);
+    assert.ok(alerts.some(value => /read-only|view-only/.test(value)));
+  });
+  for (const role of ["owner", "editor"]) test(`${type} ${role} admin retains normal autosave`, async () => {
+    artifactRole = role; await mount(path); await flush(5);
+    await change(container.querySelector(type === "CBMX" ? 'input[aria-label="Blueprint name"]' : 'input[placeholder="Untitled PCB"]'), "Edited by member");
+    await flush(1300); await flush(5);
+    assert.equal(mutations().length, 1); assert.equal(mutations()[0].name, type === "CBMX" ? "save_blueprint_with_version" : "save_process_canvas_blueprint_with_version");
+    assert.equal(mutations()[0].args.p_loaded_version_no, 1);
+    assert.ok(!text().includes("Admin View — Read Only"));
+  });
+  test(`${type} same-account profile refresh does not reset an editor's pending changes`, async () => {
+    artifactRole = "editor"; await mount(path); await flush(5);
+    const selector = type === "CBMX" ? 'input[aria-label="Blueprint name"]' : 'input[placeholder="Untitled PCB"]';
+    await change(container.querySelector(selector), "Pending name");
+    await auth({ ...globalThis.__adminTestAuth, displayName: "Updated display name" });
+    assert.equal(container.querySelector(selector).value, "Pending name");
+    await flush(1300); await flush(5); assert.equal(mutations()[0].args.p_name, "Pending name");
+  });
+  test(`${type} non-admin cannot open the admin route or grant access with URL/state flags`, async () => {
+    handler = (name, args) => name === "admin_get_access" ? ok(false) : defaultHandler(name, args);
+    await mount({ pathname: path, search: "?admin=true&role=owner", state: { isAdmin: true, role: "owner" } });
+    assert.match(text(), /Administrator access required/);
+    assert.ok(!calls.some(call => call.name === "admin_load_artifact")); assert.equal(mutations().length, 0);
+  });
+  test(`${type} normal route keeps unshared admin access denied`, async () => {
+    await mount(path.replace("/admin/", "/")); await flush(5);
+    assert.ok(!text().includes(`${type} Private artifact`));
+    assert.ok(!calls.some(call => call.name === "admin_load_artifact")); assert.equal(mutations().length, 0);
+  });
+}
+test("inventory name links use the correct admin routes, support modified clicks, and restore controls on return", async () => {
+  await mount();
+  const report = section("admin-blueprints-title");
+  const anchors = [...report.querySelectorAll("tbody a")];
+  assert.equal(anchors[0].getAttribute("href"), "/app/admin/b/blueprint-0");
+  assert.equal(anchors[1].getAttribute("href"), "/app/admin/pcb/blueprint-1");
+  for (const flags of [{ ctrlKey: true }, { metaKey: true }, { button: 1 }]) {
+    const event = new window.MouseEvent("click", { bubbles: true, cancelable: true, ...flags });
+    await act(async () => anchors[0].dispatchEvent(event)); assert.equal(event.defaultPrevented, false);
+  }
+  await change(report.querySelector('input[type="search"]'), "Blueprint"); await flush(350);
+  await change(report.querySelector("select"), "CBMX"); await click(button("Sort by Blueprint Name", report));
+  await click(button("Next blueprints page", report));
+  const before = calls.filter(call => call.name === "admin_list_blueprints").at(-1).args;
+  await click(report.querySelector("tbody a")); await flush(5);
+  assert.match(text(), /Admin View — Read Only/); await click([...container.querySelectorAll("a")].find(a => a.textContent.includes("Back to Admin Dashboard")));
+  const restored = calls.filter(call => call.name === "admin_list_blueprints").at(-1).args;
+  assert.deepEqual(restored, before); assert.equal(section("admin-blueprints-title").querySelector('input[type="search"]').value, "Blueprint");
+});
+test("navigation state never promotes an admin-only reader to editor", async () => {
+  await mount({ pathname: "/app/admin/b/private", state: { role: "owner", canEdit: true, adminInventoryQuery: { page: -1, pageSize: 999, type: "DROP" } } });
+  assert.match(text(), /Admin View — Read Only/); assert.equal(container.querySelector('input[aria-label="Blueprint name"]'), null);
+});
+test("linked admin views retain admin routing without granting PCB association mutations", async () => {
+  linkedArtifacts = true; roleOverrides = { CBMX: "owner", PC: null };
+  await mount("/app/admin/b/linked-cbmx"); await flush(5);
+  assert.ok(text().includes("PCB: Linked Canvas")); await click(button("Process Canvas ▾"));
+  assert.equal(button("Relink to existing Canvas"), undefined);
+  await click(button("Open linked Canvas")); await flush(5);
+  assert.match(text(), /Admin View — Read Only/); assert.ok(text().includes("Linked CBMX"));
+  await click(button("Linked CBMX")); await flush(5);
+  assert.ok(container.querySelector('input[aria-label="Blueprint name"]'));
+  assert.equal(mutations().length, 0);
+});
+test("artifact authorization denial revokes the admin view and does not display stale content", async () => {
+  handler = (name, args) => name === "admin_load_artifact" ? denied() : defaultHandler(name, args);
+  await mount("/app/admin/b/private"); await flush(5);
+  assert.match(text(), /Administrator access required/); assert.ok(!text().includes("Private artifact"));
+});
+test("a late artifact response from another account cannot display that account's content", async () => {
+  const delayed = deferred();
+  handler = (name, args) => name === "admin_load_artifact" ? delayed.promise
+    : name === "admin_get_access" ? ok(globalThis.__adminTestAuth.user.id === "admin-a") : defaultHandler(name, args);
+  await mount("/app/admin/b/private");
+  const oldArtifact = artifact("CBMX", "private");
+  oldArtifact.row.name = "Previous account private content";
+  oldArtifact.row.blueprint_json.meta.name = "Previous account private content";
+  await auth({ loading: false, user: { id: "admin-b" }, displayName: "Other administrator" });
+  await act(async () => delayed.resolve(ok(oldArtifact))); await flush(5);
+  assert.match(text(), /Administrator access required/); assert.ok(!text().includes("Previous account private content"));
+  assert.equal(calls.filter(call => call.name === "admin_load_artifact").length, 1); assert.equal(mutations().length, 0);
+});
+test("admin viewing cannot bypass the current PCB edit requirement for process deletion", async () => {
+  linkedArtifacts = true; roleOverrides = { CBMX: "owner", PC: null };
+  await mount("/app/admin/b/linked-cbmx"); await flush(5);
+  await click([...container.querySelectorAll('button[title="Click to edit"]')].find(value => value.textContent.includes("Delivery")));
+  await click(button("Delete")); await flush(5);
+  assert.match(container.querySelector('[role="alert"]').textContent, /requires edit access/);
+  assert.equal(mutations().length, 0);
+});
+test("admin artifact contracts reject invalid roles, mismatched IDs and malformed content", async () => {
+  for (const malformed of [
+    { ...artifact("CBMX", "private"), role: "admin" },
+    artifact("CBMX", "different-id"),
+    { ...artifact("CBMX", "private"), row: { ...artifact("CBMX", "private").row, blueprint_json: null } },
+  ]) {
+    handler = (name, args) => name === "admin_load_artifact" ? ok(malformed) : defaultHandler(name, args);
+    await assert.rejects(data.loadAdminArtifact("CBMX", "private"), error => error.code === "RPC_CONTRACT");
+  }
 });
 
 test("ordinary accounts cannot access the protected route or see the Admin link", async () => {

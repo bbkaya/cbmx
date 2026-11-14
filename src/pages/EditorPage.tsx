@@ -1,7 +1,7 @@
 // src/pages/EditorPage.tsx
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import CBMXTable, { type CBMXBlueprint, type ProcessCanvasLinkSummary, validateCBMXBlueprint } from "../components/cbmx/CBMXTable";
 import { supabase } from "../supabaseClient";
@@ -20,6 +20,7 @@ import { makeBlankProcessCanvasBlueprint } from "../pcb/processCanvasDomain";
 import { assignNewImportedProcessIds, prepareCBMXJsonExport } from "../components/cbmx/cbmxDomain";
 import DeleteProcessDialog from "../components/cbmx/ui/DeleteProcessDialog";
 import LinkProcessCanvasDialog from "../components/cbmx/ui/LinkProcessCanvasDialog";
+import type { AdminCBMXArtifact, AdminViewSession } from "../admin/AdminData";
 
 type ValidationIssue = { level: "error" | "warning"; message: string };
 
@@ -36,7 +37,7 @@ type CBMXProcessLinkAccessRow = {
   has_pcb_access: boolean;
 };
 
-export default function EditorPage() {
+export default function EditorPage({ adminView }: { adminView?: AdminViewSession<AdminCBMXArtifact> } = {}) {
   const { blueprintId } = useParams<{ blueprintId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -76,7 +77,8 @@ export default function EditorPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  async function loadProcessLinks(currentBlueprintId: string): Promise<ProcessCanvasLinkSummary[]> {
+  const loadProcessLinks = useCallback(async (currentBlueprintId: string): Promise<ProcessCanvasLinkSummary[]> => {
+    if (adminView) return (await adminView.reload()).process_links;
     const { data, error } = await supabase.rpc("list_cbmx_process_links_with_access", {
       p_cbmx_blueprint_id: currentBlueprintId,
     });
@@ -93,7 +95,7 @@ export default function EditorPage() {
       pcb_access_role: row.pcb_access_role,
       has_pcb_access: Boolean(row.has_pcb_access),
     }));
-  }
+  }, [adminView]);
 
   // Load blueprint from DB
   useEffect(() => {
@@ -105,7 +107,7 @@ export default function EditorPage() {
       setDbBusy(true);
       let row: BlueprintRowFull;
       try {
-        row = await loadBlueprint(blueprintId);
+        row = adminView?.initial.row ?? await loadBlueprint(blueprintId);
       } catch (err) {
         setDbBusy(false);
         if (!alive) return;
@@ -117,7 +119,9 @@ export default function EditorPage() {
       if (!alive) return;
 
       let nextRole: BlueprintAccessRole | null = null;
-      if (user?.id) {
+      if (adminView) {
+        nextRole = adminView.initial.role;
+      } else if (user?.id) {
         try {
           nextRole = await getBlueprintRole(blueprintId, user.id);
         } catch (err) {
@@ -127,10 +131,11 @@ export default function EditorPage() {
       }
 
       const loaded = deepClone(row.blueprint_json);
-      const loadedLinks = await loadProcessLinks(blueprintId).catch((err: { message?: string }) => {
+      const loadedLinks = adminView?.initial.process_links ?? await loadProcessLinks(blueprintId).catch((err: { message?: string }) => {
         alert("Failed to load Process Canvas links: " + (err?.message ?? "Unknown error"));
         return [] as ProcessCanvasLinkSummary[];
       });
+      if (!alive) return;
 
       // Canonical name is DB name; keep JSON meta in sync for exports/imports.
       const canonicalName = (row.name ?? loaded.meta?.name ?? "").trim() || "Untitled";
@@ -149,7 +154,7 @@ export default function EditorPage() {
     return () => {
       alive = false;
     };
-  }, [blueprintId, user?.id]);
+  }, [blueprintId, user?.id, adminView, loadProcessLinks]);
 
   const draftHash = useMemo(() => stableHash(draft), [draft]);
   const isDirty = draftHash !== lastSavedHash;
@@ -440,16 +445,18 @@ function handleBlueprintSaveFailure(
     if (!blueprintId) return false;
 
     try {
-      const row = await loadBlueprint(blueprintId);
+      const administrative = adminView ? await adminView.reload() : null;
+      const row = administrative?.row ?? await loadBlueprint(blueprintId);
       const loaded = deepClone(row.blueprint_json);
       const canonicalName = (row.name ?? loaded.meta?.name ?? "").trim() || "Untitled";
       loaded.meta = { ...(loaded.meta ?? {}), name: canonicalName };
 
-      const loadedLinks = await loadProcessLinks(blueprintId).catch(() => [] as ProcessCanvasLinkSummary[]);
+      const loadedLinks = administrative?.process_links ?? await loadProcessLinks(blueprintId).catch(() => [] as ProcessCanvasLinkSummary[]);
 
       setDraft(loaded);
       setProcessLinks(loadedLinks);
       setBlueprintOwnerUserId(row.owner_user_id ?? null);
+      if (administrative) setBlueprintRole(administrative.role);
       setLoadedVersionNo(row.version_no ?? null);
       setLastSavedHash(stableHash(loaded));
       setDeletionStale(false);
@@ -668,7 +675,8 @@ function handleBlueprintSaveFailure(
       return;
     }
 
-    navigate(`/app/pcb/${processCanvasBlueprintId}`);
+    navigate(`${adminView ? "/app/admin" : "/app"}/pcb/${processCanvasBlueprintId}`,
+      adminView ? { state: adminView.linkedArtifactState } : undefined);
   }
 
   async function saveDraftToDb(): Promise<boolean> {
@@ -932,7 +940,7 @@ function handleBlueprintSaveFailure(
               }}
             >
               <div style={{ fontWeight: 800, fontSize: 16 }}>{draft.meta?.name ?? ""}</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>View only</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>{adminView ? "Admin View — Read Only" : "View only"}</div>
             </div>
           ) : (
             <input

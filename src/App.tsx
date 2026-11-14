@@ -21,6 +21,7 @@ import PCBSharePage from "./pages/PCBSharePage";
 import AdminAccessProvider from "./admin/AdminAccessProvider";
 import RequireAdmin from "./admin/RequireAdmin";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
+import AdminArtifactPage from "./admin/AdminArtifactPage";
 
 export default function App() {
   return (
@@ -74,6 +75,8 @@ export default function App() {
 
           <Route path="/account" element={<AccountPage />} />
           <Route path="/app/admin" element={<RequireAdmin><AdminDashboardPage /></RequireAdmin>} />
+          <Route path="/app/admin/b/:blueprintId" element={<RequireAdmin><AdminArtifactPage type="CBMX" /></RequireAdmin>} />
+          <Route path="/app/admin/pcb/:pcbId" element={<RequireAdmin><AdminArtifactPage type="PC" /></RequireAdmin>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

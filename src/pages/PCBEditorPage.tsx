@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { useNavigate, useParams } from "react-router-dom";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
+import type { AdminPCBArtifact, AdminViewSession } from "../admin/AdminData";
 import ProcessCanvas from "../components/pcb/ProcessCanvas";
 import { useAuth } from "../auth";
 import { canViewBlueprint } from "../cbmx/CBMXData";
@@ -23,7 +24,7 @@ function stableHash(obj: unknown): string {
   return JSON.stringify(obj);
 }
 
-export default function PCBEditorPage() {
+export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSession<AdminPCBArtifact> } = {}) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { pcbId } = useParams<{ pcbId: string }>();
@@ -50,7 +51,7 @@ export default function PCBEditorPage() {
 
   const issues = useMemo<ValidationIssue[]>(() => validateProcessCanvasBlueprint(blueprint), [blueprint]);
   const hasBlocking = issues.some((x) => x.level === "error");
-  const isNew = !pcbId || pcbId === "new";
+  const isNew = !adminView && (!pcbId || pcbId === "new");
   const blueprintHash = useMemo(() => stableHash(blueprint), [blueprint]);
   const isDirty = blueprintHash !== lastSavedHash;
   const canEditCurrentPCB = isNew || canRoleEditPCB(pcbRole);
@@ -77,11 +78,13 @@ export default function PCBEditorPage() {
           return;
         }
 
-        const row = await loadPCB(pcbId);
-        const ctx = await loadPCBLinkContext(pcbId);
+        const row = adminView?.initial.row ?? await loadPCB(pcbId!);
+        const ctx = adminView ? adminView.initial.link_context : await loadPCBLinkContext(pcbId!);
 
         let nextCanOpenLinkedBlueprint = false;
-        if (ctx && user?.id) {
+        if (adminView) {
+          nextCanOpenLinkedBlueprint = Boolean(ctx);
+        } else if (ctx && user?.id) {
           try {
             nextCanOpenLinkedBlueprint = await canViewBlueprint(ctx.cbmx_blueprint_id, user.id);
           } catch {
@@ -90,9 +93,11 @@ export default function PCBEditorPage() {
         }
 
         let nextRole: PCBAccessRole | null = null;
-        if (user?.id) {
+        if (adminView) {
+          nextRole = adminView.initial.role;
+        } else if (user?.id) {
           try {
-            nextRole = await getPCBRole(pcbId, user.id);
+            nextRole = await getPCBRole(pcbId!, user.id);
           } catch {
             nextRole = null;
           }
@@ -118,7 +123,7 @@ export default function PCBEditorPage() {
     return () => {
       alive = false;
     };
-  }, [isNew, pcbId, user?.id]);
+  }, [isNew, pcbId, user?.id, adminView]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -154,11 +159,14 @@ export default function PCBEditorPage() {
     if (!pcbId || isNew) return false;
 
     try {
-      const row = await loadPCB(pcbId);
-      const ctx = await loadPCBLinkContext(pcbId);
+      const administrative = adminView ? await adminView.reload() : null;
+      const row = administrative?.row ?? await loadPCB(pcbId);
+      const ctx = administrative ? administrative.link_context : await loadPCBLinkContext(pcbId);
 
       let nextCanOpenLinkedBlueprint = false;
-      if (ctx && user?.id) {
+      if (administrative) {
+        nextCanOpenLinkedBlueprint = Boolean(ctx);
+      } else if (ctx && user?.id) {
         try {
           nextCanOpenLinkedBlueprint = await canViewBlueprint(ctx.cbmx_blueprint_id, user.id);
         } catch {
@@ -167,7 +175,9 @@ export default function PCBEditorPage() {
       }
 
       let nextRole: PCBAccessRole | null = null;
-      if (user?.id) {
+      if (administrative) {
+        nextRole = administrative.role;
+      } else if (user?.id) {
         try {
           nextRole = await getPCBRole(pcbId, user.id);
         } catch {
@@ -464,7 +474,7 @@ export default function PCBEditorPage() {
           <div style={{ fontSize: 22, fontWeight: 800 }}>Process Canvas Designer</div>
           {isReadOnly ? (
             <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>
-              View only
+              {adminView ? "Admin View — Read Only" : "View only"}
             </div>
           ) : null}
         </div>
@@ -572,7 +582,8 @@ export default function PCBEditorPage() {
               <>
                 <button
                   type="button"
-                  onClick={() => navigate(`/app/b/${linkContext.cbmx_blueprint_id}`)}
+                  onClick={() => navigate(`${adminView ? "/app/admin" : "/app"}/b/${linkContext.cbmx_blueprint_id}`,
+                    adminView ? { state: adminView.linkedArtifactState } : undefined)}
                   style={{
                     border: "none",
                     background: "transparent",

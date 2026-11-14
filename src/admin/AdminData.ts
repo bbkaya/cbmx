@@ -1,5 +1,13 @@
 import { supabase } from "../supabaseClient";
 import type { AdminBlueprint, AdminStatistics, AdminUser, BlueprintSearchParams, PaginatedResult, UserSearchParams } from "./adminTypes";
+import type { CBMXRow, BlueprintAccessRole } from "../cbmx/CBMXData";
+import type { PCBRow, PCBLinkContext } from "../pcb/PCBData";
+import type { ProcessCanvasLinkSummary } from "../components/cbmx/cbmxDomain";
+
+export type AdminCBMXArtifact = { blueprint_type: "CBMX"; row: CBMXRow; role: BlueprintAccessRole | null; process_links: ProcessCanvasLinkSummary[] };
+export type AdminPCBArtifact = { blueprint_type: "PC"; row: PCBRow; role: BlueprintAccessRole | null; link_context: PCBLinkContext | null };
+export type AdminArtifact = AdminCBMXArtifact | AdminPCBArtifact;
+export type AdminViewSession<T extends AdminArtifact> = { initial: T; reload: () => Promise<T>; linkedArtifactState: unknown };
 
 export class AdminRpcError extends Error {
   code: string;
@@ -59,6 +67,7 @@ async function rpc(name: string, params?: Record<string, unknown>, signal?: Abor
         ? "Administrator access is no longer available for this account."
         : status === 401 ? "Your session could not be authorized. Please sign in again."
           : error.code === "PGRST202" ? "The administrator service is unavailable. Please contact the application maintainer."
+            : error.code === "P0002" ? "The artifact could not be found. It may have been deleted."
             : "Unable to load administrator data. Please try again.";
       throw new AdminRpcError(message, error.code, status);
     }
@@ -71,6 +80,38 @@ async function rpc(name: string, params?: Record<string, unknown>, signal?: Abor
 
 export async function getAdminAccess(signal?: AbortSignal): Promise<boolean> {
   return boolean(await rpc("admin_get_access", undefined, signal));
+}
+
+function artifactRole(value: unknown): BlueprintAccessRole | null {
+  if (value === null || value === "owner" || value === "editor" || value === "viewer") return value;
+  return contractError();
+}
+
+export async function loadAdminArtifact(type: "CBMX" | "PC", id: string, signal?: AbortSignal): Promise<AdminArtifact> {
+  const result = record(await rpc("admin_load_artifact", { p_blueprint_type: type, p_blueprint_id: id }, signal));
+  const row = record(result.row);
+  if (result.blueprint_type !== type || row.id !== id) return contractError();
+  const base = {
+    id: text(row.id), name: nullableText(row.name) || "Untitled", owner_user_id: text(row.owner_user_id),
+    created_at: nullableText(row.created_at) ?? undefined, updated_at: text(row.updated_at),
+    version_no: count(row.version_no), updated_by_user_id: nullableText(row.updated_by_user_id),
+  };
+  const role = artifactRole(result.role);
+  const blueprint = record(row.blueprint_json);
+  if (type === "CBMX") {
+    if (!Array.isArray(result.process_links)) return contractError();
+    const process_links = result.process_links.map((item): ProcessCanvasLinkSummary => {
+      const link = record(item);
+      return { cbmx_process_id: text(link.cbmx_process_id), link_exists: boolean(link.link_exists),
+        process_canvas_blueprint_id: text(link.process_canvas_blueprint_id), process_canvas_blueprint_name: nullableText(link.process_canvas_blueprint_name),
+        pcb_access_role: artifactRole(link.pcb_access_role), has_pcb_access: boolean(link.has_pcb_access) };
+    });
+    return { blueprint_type: "CBMX", row: { ...base, blueprint_json: blueprint as CBMXRow["blueprint_json"] }, role, process_links };
+  }
+  const context = result.link_context === null ? null : record(result.link_context);
+  return { blueprint_type: "PC", row: { ...base, blueprint_json: blueprint as unknown as PCBRow["blueprint_json"] }, role,
+    link_context: context ? { link_id: text(context.link_id), cbmx_blueprint_id: text(context.cbmx_blueprint_id),
+      cbmx_process_id: text(context.cbmx_process_id), cbmx_blueprint_name: text(context.cbmx_blueprint_name), cbmx_process_name: text(context.cbmx_process_name) } : null };
 }
 export async function getAdminStatistics(signal?: AbortSignal): Promise<AdminStatistics> {
   const value = record(await rpc("admin_get_statistics", undefined, signal));
