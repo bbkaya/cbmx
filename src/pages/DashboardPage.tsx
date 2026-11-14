@@ -1,6 +1,7 @@
 // src/pages/DashboardPage.tsx
 import { useEffect, useState, type CSSProperties } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import "./dashboard.css";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../auth";
 import { listAccessibleBlueprints, type AccessibleBlueprintRow } from "../cbmx/CBMXData";
@@ -352,7 +353,11 @@ export default function DashboardPage() {
 
                 return (
                   <tr key={r.id} style={{ borderTop: "1px solid #eee" }}>
-                    <td style={td}>{r.name}</td>
+                    <td style={td}>
+                      <Link to={`/app/b/${r.id}`} className="blueprint-name-link">
+                        {r.name}
+                      </Link>
+                    </td>
                     <td style={td}>{r.role}</td>
                     <td style={td}>{ownerLabel(r)}</td>
                     <td style={td}>{new Date(r.updated_at).toLocaleString()}</td>

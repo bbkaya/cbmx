@@ -1,0 +1,9 @@
+a.blueprint-name-link {
+  color: #0d4678;
+  text-decoration: none;
+}
+
+a.blueprint-name-link:hover,
+a.blueprint-name-link:focus-visible {
+  text-decoration: underline;
+}
