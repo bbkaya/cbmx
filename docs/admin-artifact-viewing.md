@@ -1,11 +1,12 @@
 # Administrative artifact viewing
 
-Implemented for review. Migration
-`20261114151932_admin_artifact_viewing.sql` is **not deployed**. Live opening from
-the Admin inventory needs that migration approved and installed first; regular
-dashboard/editor routes continue to use their existing access checks. No real
-artifact data, memberships, administrator assignments, or policies were changed.
-Publishing the application source does not apply this database migration.
+Migration `20261114155453_admin_artifact_viewing.sql` was deployed to **cbmx1**
+with explicit approval on 2026-11-14. The local filename matches the server-assigned
+migration version; its SQL bytes are unchanged and pinned by SHA-256 in the test
+runner. Do not replay it. The API schema cache reload was requested after deployment.
+Regular dashboard/editor routes continue to use their existing access checks.
+Before/after fingerprints confirmed no changes to artifact data, memberships,
+administrator assignments, links, policies, table grants, or existing functions.
 
 ## Routes and UI
 
@@ -113,9 +114,19 @@ verify denial of direct writes, owner changes, membership inserts, association
 changes, and actual versioned saves by non-member/viewer admins. Registry
 revocation and banned/anonymous/deleted admin checks use the actual registry helper.
 
-Tests use mocked frontend boundaries and disposable PostgreSQL 17 PGlite; no real
-accounts log in and no hosted data is written. Positive authenticated HTTP/browser
-validation and database advisors remain deployment checks after explicit approval.
+Tests use mocked frontend boundaries and disposable PostgreSQL 17 PGlite. Hosted
+verification additionally used a read-only transaction with the existing admin
+registry identity and the authenticated database role to exercise both artifact
+types, validate actual roles, and reject unauthorized/anonymous callers. No real
+accounts logged in and no artifact data was written. End-to-end authenticated
+browser validation remains a user testing step.
+
+Security advisors were checked before and after deployment. The new endpoint adds
+the expected [authenticated SECURITY DEFINER advisory](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable):
+it is intentionally callable by authenticated users, checks the live private admin
+registry before reading, and is denied to anonymous callers. The pre-existing
+private-registry no-policy information and leaked-password-protection warning are
+unchanged. No unrelated security settings were changed.
 The existing full-project lint errors remain outside this scope; new modules and
 tests pass targeted lint, and both changed viewers retain their existing lint
 diagnostics.

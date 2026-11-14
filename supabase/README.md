@@ -1,8 +1,10 @@
 # Supabase database changes
 
-The pending [administrative artifact viewing migration](../docs/admin-artifact-viewing.md),
-`20261114151932_admin_artifact_viewing.sql`, adds a registry-authorized read-only
-content RPC. It requires explicit approval before deployment.
+The [administrative artifact viewing migration](../docs/admin-artifact-viewing.md),
+`20261114155453_admin_artifact_viewing.sql`, adds a registry-authorized read-only
+content RPC. It was deployed to cbmx1 with explicit approval on 2026-11-14; the
+local filename matches the deployed version without changing its SQL bytes.
+The isolated test runner pins the deployed SQL digest. Do not replay it.
 Existing RLS, mutation RPCs, administrator assignments, and memberships are unchanged.
 
 The link/relink dropdown migration is documented in

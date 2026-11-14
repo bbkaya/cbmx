@@ -1,8 +1,8 @@
 # Administrator Dashboard frontend
 
-The pending local [administrative artifact viewing enhancement](admin-artifact-viewing.md)
+The [administrative artifact viewing enhancement](admin-artifact-viewing.md)
 adds inventory name links and a separate, server-authorized content-read endpoint.
-Its migration has not been deployed. The original reporting endpoints below
+Its migration was deployed to cbmx1 with explicit approval. The original reporting endpoints below
 remain metadata-only and do not grant artifact mutation rights.
 
 Route: `/#/app/admin`. The existing HashRouter, authenticated Supabase client, and
@@ -106,8 +106,8 @@ a profile; this feature itself calls only read-only reporting RPCs.
 2. Search each table; filter All/CBMX/Process Canvas; toggle column sorting; change
    pages and page size. Confirm totals, page resets, empty results, and zero counts.
 3. Confirm banned users are listed as Banned even if confirmed, unconfirmed users
-   are labeled, and no edit/delete inventory buttons appear. After the new migration
-   is approved/deployed, verify that blueprint names open in the correct access mode.
+   are labeled, and no edit/delete inventory buttons appear. Verify that blueprint
+   names open in the correct access mode.
 4. Check keyboard navigation and narrow mobile widths. Verify that tables scroll
    within their regions and overview cards stack.
 5. Sign out: previous rows disappear and direct admin access goes to login. Sign

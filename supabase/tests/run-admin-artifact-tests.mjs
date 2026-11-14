@@ -1,5 +1,6 @@
 // Isolated in-memory PostgreSQL only. No connection URLs or env-file loading.
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 const moduleFlag = process.argv.find(value => value.startsWith("--pglite-module="));
@@ -50,7 +51,8 @@ try {
     union all select 'function',oid::regprocedure::text,pg_get_functiondef(oid)||coalesce(proacl::text,'') from pg_proc where pronamespace in ('public'::regnamespace,'private'::regnamespace) and proname<>'admin_load_artifact'
     union all select 'table',n.nspname||'.'||c.relname,jsonb_build_object('acl',c.relacl,'rls',c.relrowsecurity)::text from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','private') and c.relkind='r' order by 1,2`);
   const schemaBefore = await existing(); const dataBefore = await snapshot();
-  const migration = await read("../migrations/20261114151932_admin_artifact_viewing.sql");
+  const migration = await read("../migrations/20261114155453_admin_artifact_viewing.sql");
+  assert.equal(createHash("sha256").update(migration).digest("hex"), "fddf24667c3b4fffaf2509b3f692fbc57b98ef1a430d3221a7dc6bba84810639", "Deployed admin artifact migration must remain byte-for-byte unchanged");
   await db.exec(migration);
   assert.deepEqual(await existing(), schemaBefore); assert.deepEqual(await snapshot(), dataBefore);
   pass("migration changes no existing policy, table grant, function, content, version, link, or membership");
