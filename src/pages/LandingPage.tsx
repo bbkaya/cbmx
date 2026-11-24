@@ -111,7 +111,7 @@ export default function LandingPage() {
   const startNewHref = user ? "/app?new=1" : "/login";
 
   return (
-    <div style={{ display: "grid", gap: 26 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 26, overflowWrap: "anywhere" }}>
       <style>{`
         .cbmx-card {
           perspective: 1000px;
@@ -263,7 +263,7 @@ export default function LandingPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
               gap: 12,
             }}
           >
@@ -609,7 +609,8 @@ const calloutElement: React.CSSProperties = {
   borderRadius: 10,
   background: "#f0f9ff",
   padding: 8,
-  width: 800,
+  width: "min(800px, 100%)",
+  boxSizing: "border-box",
 };
 
 const miniCard: React.CSSProperties = {

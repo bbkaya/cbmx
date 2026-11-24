@@ -1,0 +1,27 @@
+.site-shell .site-nav-link {
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.site-shell .site-nav-link:hover,
+.site-shell .site-nav-link:focus-visible {
+  background-color: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.site-shell .site-nav-link[aria-current="page"],
+.site-shell .site-nav-link[data-active="true"],
+.site-shell .site-nav-link[aria-expanded="true"] {
+  border-color: #0d4678 !important;
+  background-color: #eff6ff !important;
+}
+
+.site-shell .site-nav-link:focus-visible {
+  outline: 3px solid #0d4678;
+  outline-offset: 3px;
+}
+
+.site-shell .site-account-link {
+  text-align: left;
+}

@@ -1,0 +1,41 @@
+.process-canvas-page {
+  min-width: 0;
+  text-align: left;
+}
+
+.process-canvas-hero {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.95fr);
+}
+
+.process-canvas-how {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
+}
+
+.process-canvas-page a:focus-visible,
+.process-canvas-page button:focus-visible {
+  outline: 3px solid #0d4678;
+  outline-offset: 3px;
+}
+
+.process-canvas-image-dialog {
+  max-width: min(1200px, 96vw);
+  max-height: 90vh;
+  box-sizing: border-box;
+  background: #fff;
+  color: #0f172a;
+  border: 0;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.process-canvas-image-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.82);
+}
+
+@media (max-width: 760px) {
+  .process-canvas-hero,
+  .process-canvas-how {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

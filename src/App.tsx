@@ -7,6 +7,7 @@ import PublicLayout from "./layouts/PublicLayout";
 import AppLayout from "./layouts/AppLayout";
 
 import LandingPage from "./pages/LandingPage";
+import ProcessCanvasPage from "./pages/ProcessCanvasPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -30,6 +31,7 @@ export default function App() {
       <Routes>
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/process-canvas" element={<ProcessCanvasPage />} />
           <Route
             path="/login"
             element={
