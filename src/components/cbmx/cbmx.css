@@ -1,4 +1,193 @@
-/* CBMX-only presentation. The Process Canvas and application shell are unaffected. */
+/* CBMX-only presentation. Other routes, including Process Canvas, are unaffected. */
+#root:has(.cbmx-editor) {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  min-width: 0;
+}
+
+.site-shell:has(.cbmx-editor) > main {
+  max-width: none !important;
+  padding-top: 12px !important;
+}
+
+.cbmx-editor {
+  min-width: 0;
+  color: #172b43;
+  color-scheme: light;
+}
+
+.cbmx-editor .cbmx-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 9px 12px;
+  border: 1px solid #dce5ee;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.cbmx-editor .cbmx-toolbar-identity {
+  display: flex;
+  align-items: center;
+  flex: 1 1 420px;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.cbmx-editor .cbmx-back-link {
+  font-size: 12px;
+  color: #526b84;
+  white-space: nowrap;
+}
+
+.cbmx-editor .cbmx-blueprint-heading {
+  display: grid;
+  flex: 1 1 240px;
+  min-width: 0;
+  gap: 1px;
+}
+
+.cbmx-editor .cbmx-editor-title {
+  color: #58708a;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+.cbmx-editor .cbmx-blueprint-name {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #0d4678;
+  padding: 3px 4px;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.cbmx-editor input.cbmx-blueprint-name:hover { border-color: #dce5ee; }
+.cbmx-editor input.cbmx-blueprint-name:focus { outline: 2px solid #a6c6e5; border-color: #0d4678; }
+
+.cbmx-editor .cbmx-mode,
+.cbmx-editor .cbmx-save-status,
+.cbmx-editor .cbmx-toolbar-actions,
+.cbmx-editor .cbmx-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cbmx-editor .cbmx-mode {
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #eaf3fc;
+  color: #0d4678;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.cbmx-editor .cbmx-mode--readonly { background: #f0f3f7; color: #526b84; }
+.cbmx-editor .cbmx-toolbar-actions { gap: 12px; flex-wrap: wrap; }
+.cbmx-editor .cbmx-action-icon { flex: 0 0 15px; }
+.cbmx-editor .cbmx-save-status { font-size: 11px; font-weight: 600; color: #276242; }
+.cbmx-editor .cbmx-save-status[data-state="readonly"] { color: #617187; }
+.cbmx-editor .cbmx-save-status[data-state="dirty"] { color: #8a5b16; }
+.cbmx-editor .cbmx-save-status[data-state="saving"] { color: #0d4678; }
+.cbmx-editor .cbmx-toolbar-menu-anchor { position: relative; }
+
+.cbmx-editor .cbmx-toolbar-button {
+  min-height: 32px;
+  border: 1px solid #b8cada;
+  border-radius: 7px;
+  background: #fff;
+  color: #0d4678;
+  padding: 6px 9px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.cbmx-editor .cbmx-toolbar-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 5px);
+  min-width: 220px;
+  padding: 5px;
+  border: 1px solid #dce5ee;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 5px 18px #172b431a;
+  z-index: 50;
+}
+
+.cbmx-editor .cbmx-menu-item {
+  width: 100%;
+  padding: 7px 9px;
+  text-align: left;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #274561;
+  font: inherit;
+  font-size: 12px;
+}
+
+.cbmx-editor .cbmx-menu-item:hover,
+.cbmx-editor .cbmx-toolbar-button:hover { background: #edf4fc; }
+.cbmx-editor button:disabled { opacity: .55; cursor: default; }
+.cbmx-editor button:focus-visible,
+.cbmx-editor a:focus-visible { outline: 2px solid #0d4678; outline-offset: 2px; }
+
+.cbmx-editor .cbmx-validation {
+  margin-top: 8px;
+  border: 1px solid #d4e6d9;
+  border-radius: 8px;
+  background: #f3faf5;
+  color: #276242;
+  overflow: hidden;
+}
+
+.cbmx-editor .cbmx-validation[data-state="warning"] { border-color: #eadcb9; background: #fffbf0; color: #805719; }
+.cbmx-editor .cbmx-validation[data-state="error"] { border-color: #e8acb7; background: #fff1f3; color: #9b2941; }
+
+.cbmx-editor .cbmx-validation-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.cbmx-editor .cbmx-validation-summary { flex: 1; min-width: 0; }
+.cbmx-editor .cbmx-disclosure { flex: 0 0 auto; }
+.cbmx-editor .cbmx-validation-messages { border-top: 1px solid #dce5ee; padding: 8px 12px; background: #fff; }
+.cbmx-editor .cbmx-validation-messages ul { margin: 0; padding-left: 18px; }
+.cbmx-editor .cbmx-validation-messages p { margin: 0; }
+.cbmx-editor .cbmx-validation-messages li { font-size: 12px; line-height: 1.4; margin: 3px 0; }
+.cbmx-editor .cbmx-validation-messages [data-level="error"] { color: #9b2941; }
+.cbmx-editor .cbmx-validation-messages [data-level="warning"] { color: #805719; }
+
 .cbmx-matrix {
   --cbmx-blue: #0d4678;
   --cbmx-text: #172b43;
@@ -414,6 +603,10 @@
   scrollbar-width: none;
 }
 
+.cbmx-matrix--export .cbmx-row > td:first-child {
+  width: 190px !important;
+}
+
 .cbmx-matrix--export ::-webkit-scrollbar {
   display: none;
 }
@@ -428,3 +621,86 @@
   max-width: 100%;
   margin-left: auto;
 }
+
+/* Editing styles apply to CBMX only, including dark actor headers. */
+.cbmx-matrix .cbmx-editable-trigger {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  padding: 2px;
+  margin: 0;
+  font: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+
+.cbmx-matrix .cbmx-process-trigger { text-align: left; }
+.cbmx-matrix .cbmx-editable-trigger:hover { box-shadow: 0 0 0 1px #91aec9; }
+.cbmx-matrix .cbmx-editable-trigger:focus-visible { outline: 2px solid #0d4678; outline-offset: 1px; }
+.cbmx-matrix .cbmx-actor-header .cbmx-editable-trigger:focus-visible { outline-color: #d8ecff; }
+.cbmx-matrix .cbmx-editable-trigger::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 11px;
+  height: 11px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m4 16-1 5 5-1L20 8l-4-4L4 16Zm10-10 4 4M4 16l4 4' fill='none' stroke='black' stroke-width='2'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cbmx-matrix .cbmx-editable-trigger:hover::after,
+.cbmx-matrix .cbmx-editable-trigger:focus-visible::after { opacity: .65; }
+.cbmx-matrix--export .cbmx-editable-trigger::after { display: none; }
+
+.cbmx-matrix .cbmx-inline-editor { min-width: 0; color: inherit; }
+.cbmx-matrix .cbmx-inline-input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #aebfd0;
+  border-radius: 5px;
+  background: #fff;
+  color: #172b43;
+  padding: 4px 5px;
+  font: inherit;
+  line-height: 1.3;
+}
+
+.cbmx-matrix textarea.cbmx-inline-input { resize: vertical; min-height: 54px; overflow-wrap: anywhere; }
+.cbmx-matrix .cbmx-inline-input:focus { outline: 2px solid #bed7ed; border-color: #0d4678; }
+.cbmx-matrix .cbmx-inline-input[aria-invalid="true"] { border-color: #b84a60; }
+.cbmx-matrix .cbmx-editor-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.cbmx-matrix .cbmx-editor-actions button {
+  min-height: 23px;
+  border: 1px solid #b4c5d5;
+  border-radius: 4px;
+  background: #fff;
+  color: #365672;
+  padding: 3px 7px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.cbmx-matrix .cbmx-editor-actions .cbmx-inline-save { background: #0d4678; color: #fff; border-color: #0d4678; }
+.cbmx-matrix .cbmx-editor-actions .cbmx-inline-delete { color: #9b2941; border-color: #e0b9c1; }
+.cbmx-matrix .cbmx-editor-actions button:hover { filter: brightness(.95); }
+.cbmx-matrix .cbmx-editor-actions button:focus-visible { outline: 2px solid #0d4678; outline-offset: 2px; }
+.cbmx-matrix .cbmx-editor-actions button:disabled { opacity: .55; cursor: default; }
+.cbmx-matrix .cbmx-actor-header .cbmx-inline-save { background: #fff; color: #0d4678; border-color: #fff; }
+.cbmx-matrix .cbmx-actor-header .cbmx-inline-cancel { background: transparent; color: #fff; border-color: #b4ccdf; }
+.cbmx-matrix .cbmx-actor-header .cbmx-editor-actions button:focus-visible { outline-color: #d8ecff; }
+.cbmx-matrix .cbmx-inline-error { color: #9b2941; font-size: 11px; margin-top: 3px; }

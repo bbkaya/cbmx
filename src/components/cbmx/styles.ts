@@ -14,7 +14,7 @@ export const thCell: CSSProperties = {
 
 export const rowLabelCell: CSSProperties = {
   ...baseCell,
-  width: 190,
+  width: 174,
   fontWeight: 700,
 };
 

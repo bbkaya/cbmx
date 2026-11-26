@@ -1,7 +1,7 @@
 // src/pages/EditorPage.tsx
 import { captureBlueprintPng, createBlueprintPdf } from "../components/cbmx/cbmxExport";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import CBMXTable, { type CBMXBlueprint, type ProcessCanvasLinkSummary, validateCBMXBlueprint } from "../components/cbmx/CBMXTable";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../auth";
@@ -17,6 +17,8 @@ import {
 import { canEditPCB, linkAvailableProcessCanvas } from "../pcb/PCBData";
 import { makeBlankProcessCanvasBlueprint } from "../pcb/processCanvasDomain";
 import { assignNewImportedProcessIds, prepareCBMXJsonExport } from "../components/cbmx/cbmxDomain";
+import CBMXEditorToolbar from "../components/cbmx/ui/CBMXEditorToolbar";
+import CBMXValidationPanel from "../components/cbmx/ui/CBMXValidationPanel";
 import DeleteProcessDialog from "../components/cbmx/ui/DeleteProcessDialog";
 import LinkProcessCanvasDialog from "../components/cbmx/ui/LinkProcessCanvasDialog";
 import type { AdminCBMXArtifact, AdminViewSession } from "../admin/AdminData";
@@ -885,7 +887,7 @@ function handleBlueprintSaveFailure(
   if (!draft) return <div style={{ padding: 16 }}>No blueprint loaded.</div>;
 
   return (
-    <div>
+    <div className="cbmx-editor">
       <fieldset disabled={deleting} inert={deleting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       {deletionStale && <p role="alert" style={{ color: "#b91c1c" }}>
         This blueprint changed elsewhere. Your draft is preserved and autosave is paused. {" "}
@@ -893,83 +895,12 @@ function handleBlueprintSaveFailure(
           Reload latest (discard local edits)
         </button>
       </p>}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <Link to="/app" style={{ fontSize: 13 }}>
-            ← Back to My Blueprints
-          </Link>
-
-          {isReadOnly ? (
-            <div
-              style={{
-                display: "grid",
-                gap: 2,
-                minWidth: 280,
-              }}
-            >
-              <div style={{ fontWeight: 800, fontSize: 16 }}>{draft.meta?.name ?? ""}</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>{adminView ? "Admin View — Read Only" : "View only"}</div>
-            </div>
-          ) : (
-            <input
-              value={draft.meta?.name ?? ""}
-              onChange={(e) => setDraftName(e.target.value)}
-              placeholder="Blueprint name"
-              aria-label="Blueprint name"
-              style={{
-                fontWeight: 800,
-                fontSize: 16,
-                padding: "6px 10px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                minWidth: 280,
-                height: 34,
-              }}
-            />
-          )}
-        </div>
-
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-
-
-          <span style={{ color: isReadOnly ? "#64748b" : isAutoSaving ? "#1d4ed8" : isDirty ? "#b45309" : "#15803d", fontSize: 11, fontWeight: 700 }}>
-            {isReadOnly ? "Read-only access" : isAutoSaving ? "Saving automatically..." : isDirty ? "Unsaved changes" : "All changes saved"}
-          </span>
-
-          <div ref={menuRef} style={{ position: "relative" }}>
-            <button
-              type="button"
-              onClick={() => setMenuOpen((v) => !v)}
-              disabled={isAutoSaving}
-              title={isReadOnly ? "Export options" : "Import/Export (auto-saves first when needed)"}
-              style={{ width: 140, height: 40, borderRadius: 5, fontSize: 14 }}
-            >
-              {isReadOnly ? "Export ▾" : "Export/Import ▾"}
-            </button>
-
+      <CBMXEditorToolbar name={draft.meta?.name ?? ""} readOnly={isReadOnly} administrative={Boolean(adminView)}
+        autoSaving={isAutoSaving} dirty={isDirty} onNameChange={setDraftName}
+        menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((current) => !current)} menuRef={menuRef}>
             {menuOpen ? (
               <div
-                role="menu"
-                style={{
-                  position: "absolute",
-                  right: 0,
-                  top: 44,
-                  minWidth: 220,
-                  background: "white",
-                  border: "1px solid #ddd",
-                  borderRadius: 12,
-                  boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-                  padding: 6,
-                  zIndex: 50,
-                }}
+                role="menu" className="cbmx-toolbar-menu"
               >
                 <MenuItem label="Export CBMX to JSON" onClick={() => runMenuAction(exportJson)} disabled={isAutoSaving} />
                 <MenuItem label="Export CBMX to PNG" onClick={() => runMenuAction(exportPng)} disabled={isAutoSaving} />
@@ -989,11 +920,9 @@ function handleBlueprintSaveFailure(
                 ) : null}
               </div>
             ) : null}
-          </div>
-        </div>
-      </div>
+      </CBMXEditorToolbar>
 
-      <ValidationPanel issues={issues} />
+      <CBMXValidationPanel issues={issues} />
 
       <input
         ref={importInputRef}
@@ -1007,7 +936,7 @@ function handleBlueprintSaveFailure(
         }}
       />
 
-      <div id="cbmx-canvas" style={{ marginTop: 16, width: "100%", minWidth: 0, background: "white" }}>
+      <div id="cbmx-canvas" style={{ marginTop: 10, width: "100%", minWidth: 0, background: "white" }}>
         <CBMXTable
           blueprint={draft}
           onChange={isReadOnly ? undefined : setDraft}
@@ -1038,64 +967,10 @@ function MenuItem({ label, onClick, disabled }: { label: string; onClick: () => 
       role="menuitem"
       onClick={onClick}
       disabled={disabled}
-      style={{
-        width: "100%",
-        textAlign: "left",
-        padding: "8px 10px",
-        borderRadius: 10,
-        border: "none",
-        background: "transparent",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.5 : 1,
-      }}
-      onMouseEnter={(e) => {
-        if (disabled) return;
-        (e.currentTarget as HTMLButtonElement).style.background = "#f3f4f6";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-      }}
+      className="cbmx-menu-item"
     >
       {label}
     </button>
-  );
-}
-
-function ValidationPanel({ issues }: { issues: ValidationIssue[] }) {
-  if (!issues || issues.length === 0) return null;
-
-  const errors = issues.filter((x) => x.level === "error");
-  const warnings = issues.filter((x) => x.level === "warning");
-
-  return (
-    <div
-      style={{
-        marginTop: 12,
-        border: "1px solid #ddd",
-        borderRadius: 12,
-        padding: 12,
-        maxWidth: 1100,
-        background: "#fff",
-      }}
-    >
-      <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}>
-        <div style={{ fontWeight: 800 }}>Validation</div>
-        {errors.length > 0 ? (
-          <div style={{ color: "#b91c1c", fontSize: 12 }}>{errors.length} error(s) — Save disabled</div>
-        ) : (
-          <div style={{ color: "#15803d", fontSize: 12 }}>No blocking errors</div>
-        )}
-        {warnings.length > 0 ? <div style={{ color: "#b45309", fontSize: 12 }}>{warnings.length} warning(s)</div> : null}
-      </div>
-
-      <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
-        {issues.map((it, idx) => (
-          <div key={idx} style={{ fontSize: 12, color: it.level === "error" ? "#b91c1c" : "#b45309" }}>
-            {it.level === "error" ? "⛔" : "⚠️"} {it.message}
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 

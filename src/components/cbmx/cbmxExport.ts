@@ -6,9 +6,8 @@ export async function captureBlueprintPng(node: HTMLElement): Promise<string> {
   const table = node.querySelector<HTMLTableElement>(".cbmx-table");
   if (!table) throw new Error("CBMX matrix not found.");
 
-  // CBMXTable derives this width from its label column and actor count. Using
-  // it instead of viewport bounds also keeps wrapping identical across exports.
-  const matrixWidth = Number.parseFloat(table.style.minWidth);
+  // Preserve the approved export geometry independently of responsive editing.
+  const matrixWidth = Number.parseFloat(table.dataset.exportWidth ?? table.style.minWidth);
   if (!Number.isFinite(matrixWidth) || matrixWidth <= 0) {
     throw new Error("CBMX matrix export width is unavailable.");
   }
@@ -26,7 +25,11 @@ export async function captureBlueprintPng(node: HTMLElement): Promise<string> {
   capture.inert = true;
   // No workspace ancestor is copied: scrolling containers, help, toolbar and
   // validation cannot constrain the capture or appear in the generated image.
-  capture.appendChild(table.cloneNode(true));
+  const exportTable = table.cloneNode(true) as HTMLTableElement;
+  exportTable.style.minWidth = `${matrixWidth}px`;
+  const labelColumn = exportTable.querySelector<HTMLTableColElement>("col");
+  if (labelColumn) labelColumn.style.width = "190px";
+  capture.appendChild(exportTable);
   document.body.appendChild(capture);
   try {
     await document.fonts.ready;

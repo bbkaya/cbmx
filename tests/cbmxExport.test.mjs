@@ -87,6 +87,20 @@ test("a missing matrix is rejected without leaving a capture node", async () => 
   assert.equal(document.querySelector(".cbmx-matrix--export"), null);
 });
 
+test("responsive editor widths never change the approved export table geometry", async () => {
+  const node = document.createElement("div");
+  node.innerHTML = '<table class="cbmx-table" data-export-width="1240" style="min-width:1190px"><colgroup><col style="width:174px"></colgroup></table>';
+  rasterize = async (capture) => {
+    assert.equal(capture.style.width, "1256px");
+    assert.equal(capture.querySelector("table").style.minWidth, "1240px");
+    assert.equal(capture.querySelector("col").style.width, "190px");
+    return "data:image/png;base64,synthetic";
+  };
+  await captureBlueprintPng(node);
+  assert.equal(node.querySelector("table").style.minWidth, "1190px");
+  assert.equal(node.querySelector("col").style.width, "174px");
+});
+
 for (const dimensions of [{ width: 1252, height: 4200 }, { width: 2512, height: 2300 }, { width: 4612, height: 2300 }]) {
   test(`single-page PDF proportionally fits ${dimensions.width}×${dimensions.height} without cropping`, async () => {
     imageDimensions = dimensions;

@@ -11,6 +11,7 @@ export default function SlotStack({
   prefixLabel,
   onAdd,
   renderValue,
+  label,
 }: {
   slots: number;
   getValue: (slotIndex: number) => string;
@@ -20,6 +21,7 @@ export default function SlotStack({
   prefixLabel?: (slotIndex: number) => string;
   onAdd?: () => void;
   renderValue?: (slotIndex: number) => ReactNode;
+  label?: string;
 }) {
   const FONT_SIZE = 12;
   const LINE_HEIGHT = 1.25;
@@ -74,6 +76,7 @@ export default function SlotStack({
             <div style={{ flex: 1 }}>
               <EditableText
                 value={getValue(i) ?? ""}
+                label={label ? `${label}, item ${i + 1}` : undefined}
                 displayValue={renderValue?.(i)}
                 placeholder={placeholder ?? "…"}
                 readOnly={readOnly}

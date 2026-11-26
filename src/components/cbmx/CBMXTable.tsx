@@ -371,9 +371,10 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
   return (
     <div className="cbmx-matrix">
       <div className="cbmx-matrix-scroll">
-        <table className="cbmx-table" style={{ minWidth: 190 + N * 210 }}>
+        <table className="cbmx-table" data-export-width={190 + N * 210}
+          style={{ minWidth: 174 + N * 196 + (N * 2 + 2) * 3 }}>
           <colgroup>
-            <col style={{ width: 190 }} />
+            <col style={{ width: 174 }} />
             {actors.map((actor) => <Fragment key={actor.id}><col /><col /></Fragment>)}
           </colgroup>
           <tbody>
@@ -383,6 +384,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               </td>
               <td colSpan={colspanNetwork} style={networkCell}>
                 <EditableText
+                  label="Network Value Proposition"
                   value={blueprint.networkValueProposition?.statement ?? ""}
                   readOnly={!onChange}
                   placeholder={onChange ? "Click to edit" : ""}
@@ -431,6 +433,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                       <div className="cbmx-actor-header">
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <EditableText
+                            label={`Actor name: ${a.name || a.id}`}
                             value={a.name ?? ""}
                             readOnly={!onChange}
                             placeholder={onChange ? "Click to edit" : ""}
@@ -472,6 +475,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                   <td colSpan={2} style={cellLeft}>
                     {a.id.startsWith("EMPTY-") ? null : (
                       <EditableText
+                        label={`Actor Value Proposition: ${a.name || a.id}`}
                         value={a.actorValueProposition?.statement ?? ""}
                         readOnly={!onChange}
                         placeholder={onChange ? "Click to edit" : ""}
@@ -525,6 +529,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                     <Fragment key={a.id}>
                       <td style={cellLeft}>
                         <SlotStack
+                          label={`${label} cost for ${a.name || a.id}`}
                           slots={costSlots}
                           readOnly={!onChange || a.id.startsWith("EMPTY-")}
                           getValue={(i: number) => getNthValueItemDescription(a, "costs", key, i)}
@@ -537,6 +542,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
 
                       <td style={cellLeft}>
                         <SlotStack
+                          label={`${label} benefit for ${a.name || a.id}`}
                           slots={benefitSlots}
                           readOnly={!onChange || a.id.startsWith("EMPTY-")}
                           getValue={(i: number) => getNthValueItemDescription(a, "benefits", key, i)}
@@ -559,6 +565,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               {actors.map((a) => (
                 <td key={a.id} colSpan={2} style={cellLeft}>
                   <SlotStack
+                    label={`KPI for ${a.name || a.id}`}
                     slots={kpiSlots}
                     readOnly={!onChange || a.id.startsWith("EMPTY-")}
                     getValue={(i: number) => getKpiSlotNameFlexible(a, i)}
@@ -577,6 +584,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               {actors.map((a) => (
                 <td key={a.id} colSpan={2} style={cellLeft}>
                   <SlotStack
+                    label={`Service for ${a.name || a.id}`}
                     slots={serviceSlots}
                     readOnly={!onChange || a.id.startsWith("EMPTY-")}
                     getValue={(i: number) => getServiceSlotLine(a, i)}
@@ -929,6 +937,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               </td>
               <td colSpan={colspanNetwork} style={cellLeft}>
                 <EditableText
+                  label="Service Scenario"
                   value={serviceScenario}
                   multiline
                   readOnly={!onChange}
