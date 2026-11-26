@@ -92,8 +92,8 @@ export default function ItemList({ items, revision, label, addLabel, readOnly, n
         {renderAddition ? renderAddition(add, cancelAddition) : <EditableText value="" initiallyEditing
           label={`New ${label}`} onCommit={add} onCancel={cancelAddition} />}
       </div>}
-      <button ref={addRef} type="button" className="cbmx-add-item" aria-label={`${addLabel}: ${label}`}
-        disabled={view.adding} onClick={() => setView(current => ({ ...current, adding: true, notice: "" }))}>{addLabel}</button>
+      <button ref={addRef} type="button" className="cbmx-add-item" title={addLabel} aria-label={`${addLabel}: ${label}`}
+        disabled={view.adding} onClick={() => setView(current => ({ ...current, adding: true, notice: "" }))}><span aria-hidden="true">+</span></button>
     </>}
   </div>;
 }

@@ -841,12 +841,12 @@ function handleBlueprintSaveFailure(
   // ---------------- PNG/PDF Export ----------------
   async function exportPng() {
     const ok = await ensureSavedBeforeIO();
-    if (!ok) return;
+    if (!ok || !draft) return;
 
     const node = document.getElementById("cbmx-canvas");
     if (!node) return alert("Canvas not found.");
 
-    const dataUrl = await captureBlueprintPng(node);
+    const dataUrl = await captureBlueprintPng(node, { blueprint: draft, processLinks });
     const link = document.createElement("a");
     link.download = "cbmx-blueprint.png";
     link.href = dataUrl;
@@ -855,12 +855,12 @@ function handleBlueprintSaveFailure(
 
   async function exportPdf() {
     const ok = await ensureSavedBeforeIO();
-    if (!ok) return;
+    if (!ok || !draft) return;
 
     const node = document.getElementById("cbmx-canvas");
     if (!node) return alert("Canvas not found.");
 
-    const dataUrl = await captureBlueprintPng(node);
+    const dataUrl = await captureBlueprintPng(node, { blueprint: draft, processLinks });
 
     const pdf = await createBlueprintPdf(dataUrl);
     pdf.save("cbmx-blueprint.pdf");

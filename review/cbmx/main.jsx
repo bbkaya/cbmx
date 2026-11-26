@@ -34,7 +34,7 @@ function App() {
   async function captureFiles() {
     setStatus('Capturing'); setCapture(''); setPdf('');
     try {
-      const png = await captureBlueprintPng(document.getElementById('cbmx-canvas'));
+      const png = await captureBlueprintPng(document.getElementById('cbmx-canvas'), { blueprint, processLinks });
       const pdfDocument = await createBlueprintPdf(png);
       setCapture(png); setPdf(pdfDocument.output('datauristring')); setStatus('Capture complete');
     } catch (error) { setStatus(`Capture failed: ${error.message}`); }

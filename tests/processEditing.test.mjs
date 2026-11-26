@@ -162,7 +162,7 @@ test("linked confirmation deletes only via atomic RPC and new Add uses an unused
   assert.deepEqual(links, []); assert.deepEqual(row.blueprint_json.coCreationProcesses, []);
   assert.equal(writes().length, 1); assert.equal(writes()[0].name, "delete_cbmx_process_with_version");
   assert.equal(writes()[0].args.p_expected_pcb_id, "canvas-id");
-  await click(button("+ Add process"));
+  await click(container.querySelector('.cbmx-add-item[title="Add process"]'));
   assert.ok(button("Add")); assert.equal(button("Delete"), undefined); assert.equal(button("Rename"), undefined);
   await click(button("Add")); assert.ok(input()); assert.ok(container.querySelector('[role="alert"]'));
   await change(input(), "New (Actor 1)"); await click(button("Add")); await waitForAutosave();

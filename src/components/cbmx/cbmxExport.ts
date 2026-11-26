@@ -1,10 +1,31 @@
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
+import { createElement } from "react";
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
+import CBMXTable from "./CBMXTable";
+import { deepClone, type CBMXBlueprint, type ProcessCanvasLinkSummary } from "./cbmxDomain";
+
+type ExportSnapshot = { blueprint: CBMXBlueprint; processLinks?: ProcessCanvasLinkSummary[] };
+
+/** Reuse the matrix renderer, with no editor state, callbacks, or local field drafts. */
+function renderExportTable(snapshot: ExportSnapshot): HTMLTableElement {
+  const staging = document.createElement("div");
+  const root = createRoot(staging);
+  try {
+    flushSync(() => root.render(createElement(CBMXTable, { ...deepClone(snapshot), presentation: "export" })));
+    const table = staging.querySelector<HTMLTableElement>(".cbmx-table");
+    if (!table) throw new Error("CBMX matrix not found.");
+    return table.cloneNode(true) as HTMLTableElement;
+  } finally {
+    root.unmount();
+  }
+}
 
 /** Capture the modelling table, independently of the editor viewport and help. */
-export async function captureBlueprintPng(node: HTMLElement): Promise<string> {
-  const table = node.querySelector<HTMLTableElement>(".cbmx-table");
-  if (!table) throw new Error("CBMX matrix not found.");
+export async function captureBlueprintPng(node: HTMLElement, snapshot: ExportSnapshot): Promise<string> {
+  if (!snapshot?.blueprint) throw new Error("Committed CBMX blueprint is required for export.");
+  const table = renderExportTable(snapshot);
 
   // Preserve the approved export geometry independently of responsive editing.
   const matrixWidth = Number.parseFloat(table.dataset.exportWidth ?? table.style.minWidth);
@@ -19,13 +40,13 @@ export async function captureBlueprintPng(node: HTMLElement): Promise<string> {
     position: "fixed",
     left: "-100000px",
     top: "0",
-    fontFamily: getComputedStyle(table).fontFamily,
+    fontFamily: getComputedStyle(node).fontFamily,
   });
   capture.setAttribute("aria-hidden", "true");
   capture.inert = true;
-  // No workspace ancestor is copied: scrolling containers, help, toolbar and
-  // validation cannot constrain the capture or appear in the generated image.
-  const exportTable = table.cloneNode(true) as HTMLTableElement;
+  // Only the independent read-only table enters the capture environment. The
+  // original editor DOM, focus, open menus, and local drafts are never changed.
+  const exportTable = table;
   exportTable.style.minWidth = `${matrixWidth}px`;
   const labelColumn = exportTable.querySelector<HTMLTableColElement>("col");
   if (labelColumn) labelColumn.style.width = "190px";

@@ -189,10 +189,12 @@ function RowLabel({
   text,
   helpKey,
   indent = false,
+  exportMode = false,
 }: {
   text: string;
   helpKey?: HelpKey;
   indent?: boolean;
+  exportMode?: boolean;
 }) {
   const tip = helpKey ? CBMX_HELP[helpKey] : undefined;
 
@@ -200,7 +202,7 @@ function RowLabel({
     <div className={`cbmx-row-label${indent ? " cbmx-row-label--category" : ""}`}>
       {helpKey && <CBMXRowIcon kind={helpKey} />}
       <span>{text}</span>
-      {tip ? (
+      {tip && !exportMode ? (
         <span
           role="button"
           tabIndex={0}
@@ -228,7 +230,8 @@ function rowHelpProps(helpKey: HelpKey, setActiveHelpKey: (key: HelpKey) => void
 
 export default function CBMXTable({
   blueprint,
-  onChange,
+  onChange: requestedOnChange,
+  presentation = "editor",
   processLinks,
   onCreatePCBForProcess,
   onLinkExistingPCBToProcess,
@@ -237,6 +240,7 @@ export default function CBMXTable({
   onDeleteProcess,
 }: {
   blueprint: CBMXBlueprint;
+  presentation?: "editor" | "export";
   onChange?: (next: CBMXBlueprint) => void;
   processLinks?: ProcessCanvasLinkSummary[];
   onCreatePCBForProcess?: (processId: string) => void;
@@ -245,6 +249,8 @@ export default function CBMXTable({
   onUnlinkPCBFromProcess?: (processId: string) => void;
   onDeleteProcess?: (processId: string) => Promise<boolean>;
 }) {
+  const exportMode = presentation === "export";
+  const onChange = exportMode ? undefined : requestedOnChange;
   const { actors, N } = useMemo(() => normalizeActors(blueprint.actors), [blueprint.actors]);
   const colspanNetwork = N * 2;
   // A display fallback must not add defaults to legacy JSON and trigger autosave.
@@ -312,7 +318,8 @@ export default function CBMXTable({
     return ops.length ? `${s.name} (${ops.join(", ")})` : (s.name ?? "");
   }
 
-  const processes = blueprint.coCreationProcesses ?? [];
+  const processes = (blueprint.coCreationProcesses ?? []).filter(process => !exportMode ||
+    process.name?.trim() || process.participantActorIds?.length || getExportPCBName(process.id));
   const processRevision = processListRevision(blueprint);
 
   function getProcessSlotLine(slotIndex: number) {
@@ -328,6 +335,12 @@ export default function CBMXTable({
 
 function getProcessLink(processId: string) {
   return (processLinks ?? []).find((x) => x.cbmx_process_id === processId) ?? null;
+}
+
+function getExportPCBName(processId: string) {
+  const link = getProcessLink(processId);
+  return link?.link_exists && link.has_pcb_access && canRoleViewPCB(link.pcb_access_role)
+    ? link.process_canvas_blueprint_name?.trim() ?? "" : "";
 }
 
 function canRoleViewPCB(role: "owner" | "editor" | "viewer" | null | undefined) {
@@ -359,7 +372,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
           <tbody>
             <tr className="cbmx-row cbmx-row--networkVP" {...rowHelpProps("networkValueProposition", setActiveHelpKey)}>
               <td style={rowLabelCell}>
-                <RowLabel text="Network Value Proposition" helpKey="networkValueProposition" />
+                <RowLabel exportMode={exportMode} text="Network Value Proposition" helpKey="networkValueProposition" />
               </td>
               <td colSpan={colspanNetwork} style={networkCell}>
                 <EditableText
@@ -374,7 +387,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
 
             <tr className="cbmx-row cbmx-row--actorType" {...rowHelpProps("actorType", setActiveHelpKey)}>
               <td style={rowLabelCell}>
-                <RowLabel text="Actor Type" helpKey="actorType" />
+                <RowLabel exportMode={exportMode} text="Actor Type" helpKey="actorType" />
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
@@ -392,7 +405,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
             <tr className="cbmx-row cbmx-row--actor" {...rowHelpProps("actor", setActiveHelpKey)}>
               <td style={rowLabelCell}>
                 <div className="cbmx-actor-label">
-                  <RowLabel text="Actor" helpKey="actor" />
+                  <RowLabel exportMode={exportMode} text="Actor" helpKey="actor" />
                   {onChange ? (
                     <button
                       type="button"
@@ -447,7 +460,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
 
             <tr className="cbmx-row cbmx-row--actorVP" {...rowHelpProps("actorValueProposition", setActiveHelpKey)}>
               <td style={rowLabelCell}>
-                <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
+                <RowLabel exportMode={exportMode} text="Actor Value Proposition" helpKey="actorValueProposition" />
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
@@ -468,7 +481,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
 
             <tr className="cbmx-row cbmx-row--costsBenefitsHeader" {...rowHelpProps("costsBenefits", setActiveHelpKey)}>
               <td style={rowLabelCell}>
-                <RowLabel text="Outcomes (Costs & Benefits)" helpKey="costsBenefits" />
+                <RowLabel exportMode={exportMode} text="Outcomes (Costs & Benefits)" helpKey="costsBenefits" />
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
@@ -499,15 +512,15 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                   {...rowHelpProps(helpKey, setActiveHelpKey)}
                 >
                   <td style={rowLabelIndentCell}>
-                    <RowLabel text={label} helpKey={helpKey} indent />
+                    <RowLabel exportMode={exportMode} text={label} helpKey={helpKey} indent />
                   </td>
                   {actors.map((a) => (
                     <Fragment key={a.id}>
                       <td style={cellLeft}>
-                        {renderActorItems(a, "costs", `${label} cost`, "+ Add cost", key)}
+                        {renderActorItems(a, "costs", `${label} cost`, `Add ${label.toLowerCase()} cost`, key)}
                       </td>
                       <td style={cellLeft}>
-                        {renderActorItems(a, "benefits", `${label} benefit`, "+ Add benefit", key)}
+                        {renderActorItems(a, "benefits", `${label} benefit`, `Add ${label.toLowerCase()} benefit`, key)}
                       </td>
                     </Fragment>
                   ))}
@@ -517,33 +530,33 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
 
             <tr className="cbmx-row cbmx-row--kpis" {...rowHelpProps("kpis", setActiveHelpKey)}>
               <td style={rowLabelCell}>
-                <RowLabel text="KPIs (Success Criteria)" helpKey="kpis" />
+                <RowLabel exportMode={exportMode} text="KPIs (Success Criteria)" helpKey="kpis" />
               </td>
               {actors.map((a) => (
                 <td key={a.id} colSpan={2} style={cellLeft}>
-                  {renderActorItems(a, "kpis", "KPI", "+ Add KPI")}
+                  {renderActorItems(a, "kpis", "KPI", "Add KPI")}
                 </td>
               ))}
             </tr>
 
             <tr className="cbmx-row cbmx-row--services" {...rowHelpProps("actorServices", setActiveHelpKey)}>
               <td style={rowLabelCell}>
-                <RowLabel text="Actor Services" helpKey="actorServices" />
+                <RowLabel exportMode={exportMode} text="Actor Services" helpKey="actorServices" />
               </td>
               {actors.map((a) => (
                 <td key={a.id} colSpan={2} style={cellLeft}>
-                  {renderActorItems(a, "services", "Service", "+ Add service")}
+                  {renderActorItems(a, "services", "Service", "Add service")}
                 </td>
               ))}
             </tr>
 
             <tr className="cbmx-row cbmx-row--processes" {...rowHelpProps("coCreationProcesses", setActiveHelpKey)}>
               <td style={rowLabelCell}>
-                <RowLabel text="Co-Creation Processes" helpKey="coCreationProcesses" />
+                <RowLabel exportMode={exportMode} text="Co-Creation Processes" helpKey="coCreationProcesses" />
               </td>
               <td colSpan={colspanNetwork} style={cellLeft}>
                 <ItemList className="cbmx-process-list" items={processes.map((p, i) => ({ key: p.id, value: getProcessSlotLine(i) }))}
-                  revision={processRevision} label="Co-creation processes" addLabel="+ Add process" readOnly={!onChange}
+                  revision={processRevision} label="Co-creation processes" addLabel="Add process" readOnly={!onChange}
                   onCommit={(id, value) => updateBlueprint(next => commitProcessItem(next, processRevision, id, value))}
                   onAdd={value => updateBlueprint(next => commitProcessItem(next, processRevision, null, value))}
                   renderAddition={(commit, cancel) => <EditableProcess value="" initiallyEditing onCommit={commit} onCancel={cancel} />}
@@ -558,7 +571,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                         <div style={{ flex: "1 1 auto", minWidth: 0 }}>
                           <EditableProcess
                             value={item.value}
-                            displayValue={<><strong>{p.name?.trim() || `Unnamed process (${p.id})`}</strong><span className="cbmx-process-participants">
+                            displayValue={<><strong>{p.name?.trim() || (exportMode ? "" : `Unnamed process (${p.id})`)}</strong><span className="cbmx-process-participants">
                               {item.value.slice((p.name ?? "").length)}
                             </span></>}
                             existing
@@ -569,7 +582,9 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                           />
                         </div>
 
-                        <div
+                        {exportMode ? (getExportPCBName(p.id) && <div className="cbmx-process-link">
+                          <span className="cbmx-link-status cbmx-link-status--linked">PCB: {getExportPCBName(p.id)}</span>
+                        </div>) : <div
                           className="cbmx-process-link"
                         >
                           <span className={`cbmx-link-status${link?.link_exists ? " cbmx-link-status--linked" : ""}`}>
@@ -850,7 +865,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                               ) : null}
                             </div>
                           ) : null}
-                        </div>
+                        </div>}
                       </div>
                     );
                   }} />
@@ -858,7 +873,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
             </tr>
             <tr className="cbmx-row cbmx-row--serviceScenario" {...rowHelpProps("serviceScenario", setActiveHelpKey)}>
               <td style={rowLabelCell}>
-                <RowLabel text="Service Scenario" helpKey="serviceScenario" />
+                <RowLabel exportMode={exportMode} text="Service Scenario" helpKey="serviceScenario" />
               </td>
               <td colSpan={colspanNetwork} style={cellLeft}>
                 <EditableText
@@ -879,7 +894,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
         </table>
       </div>
 
-      <div className={`cbmx-help${helpOpen ? " cbmx-help--open" : ""}`}>
+      {!exportMode && <div className={`cbmx-help${helpOpen ? " cbmx-help--open" : ""}`}>
         {helpOpen ? (
           <aside aria-live="polite" className="cbmx-help-panel">
             <button type="button" onClick={() => setHelpOpen(false)}
@@ -897,7 +912,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
             ›› Help ‹‹
           </button>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

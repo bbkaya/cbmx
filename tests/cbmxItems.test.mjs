@@ -30,7 +30,8 @@ function Harness({ readOnly = false, onDeleteProcess, processLinks }) {
 }
 const mount = async props => act(async () => root.render(createElement(Harness, props)));
 const list = label => [...container.querySelectorAll(".cbmx-item-list")].find(element => element.getAttribute("aria-label") === label);
-const button = (parent, text) => [...parent.querySelectorAll("button")].find(element => element.textContent === text);
+const button = (parent, text) => text.startsWith("+ Add ") ? parent.querySelector(".cbmx-add-item")
+  : [...parent.querySelectorAll("button")].find(element => element.textContent === text);
 const click = async element => { assert.ok(element, "control exists"); await act(async () => element.click()); };
 const key = async (element, key, options = {}) => act(async () => element.dispatchEvent(new window.KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...options })));
 const change = async (input, value) => act(async () => {
@@ -52,7 +53,7 @@ for (const [kind, label, addLabel, value] of [
   if (populated) mutators.appendActorItem(bp, "A1", kind, mutators.actorListRevision(bp.actors[0], kind), "Existing", "Financial");
   await mount(); const parent = list(`${label} for Actor 1`); const original = JSON.stringify(bp);
   await click(button(parent, addLabel)); assert.equal(input(parent).value, ""); assert.equal(JSON.stringify(bp), original); assert.equal(notifications.length, 0);
-  assert.equal(parent.lastElementChild.textContent, addLabel); assert.ok(parent.lastElementChild.disabled);
+  assert.equal(parent.lastElementChild.textContent, "+"); assert.ok(parent.lastElementChild.disabled);
   await change(input(parent), value); assert.equal(JSON.stringify(bp), original); assert.equal(notifications.length, 0);
   const field = input(parent);
   await act(async () => { for (let n = 0; n < 2; n++) field.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })); });
@@ -235,4 +236,22 @@ test("focus restoration runs once and does not steal focus after a later change 
   assert.equal(document.activeElement.textContent, "Changed fee");
   await edit(other, 0); await change(input(other), "Latest effort"); await key(input(other), "Enter");
   assert.equal(document.activeElement.textContent, "Latest effort");
+});
+
+test("all item Add controls show only a compact plus with contextual labels and tooltips", async () => {
+  await mount();
+  const buttons = [...container.querySelectorAll('.cbmx-add-item')];
+  assert.equal(buttons.length, 21);
+  for (const button of buttons) {
+    assert.equal(button.textContent, '+');
+    assert.match(button.title, /^Add /);
+    assert.ok(button.getAttribute('aria-label').includes(button.title));
+    assert.equal(button.type, 'button');
+  }
+  assert.equal(cost().querySelector('.cbmx-add-item').title, 'Add financial cost');
+  assert.equal(list('Environmental benefit for Actor 1').querySelector('.cbmx-add-item').title, 'Add environmental benefit');
+  assert.equal(list('KPI for Actor 1').querySelector('.cbmx-add-item').title, 'Add KPI');
+  assert.equal(list('Service for Actor 1').querySelector('.cbmx-add-item').title, 'Add service');
+  assert.equal(list('Co-creation processes').querySelector('.cbmx-add-item').title, 'Add process');
+  assert.equal(container.querySelector('.cbmx-add-actor').textContent.trim(), '+ Add Actor');
 });
