@@ -1,7 +1,9 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import EditableText from "./ui/EditableText";
 import EditableProcess from "./ui/EditableProcess";
 import SlotStack from "./ui/SlotStack";
+import CBMXRowIcon from "./ui/CBMXRowIcon";
+import "./cbmx.css";
 
 import {
   type Actor,
@@ -183,76 +185,11 @@ const HELP_LABELS: Record<HelpKey, string> = {
   environmental: "Environmental",
   social: "Social",
   otherNonFinancial: "Other Non-Financial",
-  kpis: "KPIs",
+  kpis: "KPIs (Success Criteria)",
   actorServices: "Actor Services",
   coCreationProcesses: "Co-Creation Processes",
   serviceScenario: "Service Scenario",
 };
-
-/** --- TIGHT SPACING OVERRIDES (local, no global CSS needed) --- */
-const PAD_TD = "1px 1px";
-const PAD_TH = "1px 1px";
-const PAD_LABEL = "1px 1px";
-const LINE = 1.1;
-
-const cellTight = { ...cell, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
-const cellLeftTight = { ...cellLeft, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
-const thCellTight = { ...thCell, padding: PAD_TH, lineHeight: LINE, backgroundColor: "transparent" } as const;
-const rowLabelCellTight = { ...rowLabelCell, padding: PAD_LABEL, lineHeight: LINE, backgroundColor: "transparent" } as const;
-const rowLabelIndentCellTight = { ...rowLabelIndentCell, padding: PAD_LABEL, lineHeight: LINE, backgroundColor: "transparent" } as const;
-const networkCellTight = { ...networkCell, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
-
-
-
-type RowKind =
-  | "networkVP"
-  | "actorType"
-  | "actor"
-  | "actorVP"
-  | "costsBenefitsHeader"
-  | "valueFinancial"
-  | "valueEnvironmental"
-  | "valueSocial"
-  | "valueOther"
-  | "kpis"
-  | "services"
-  | "processes"
-  | "serviceScenario";
-
-function rowStyle(kind: RowKind): CSSProperties {
-  // light, print/export friendly pastels
-  switch (kind) {
-    case "networkVP":
-      return { backgroundColor: "#E5F4FF" };
-    case "actorType":
-      return { backgroundColor: "#f1f5f9" };
-    case "actor":
-      return { backgroundColor: "#F2F9FF" };
-    case "actorVP":
-      return { backgroundColor: "#ffffff" };
-    case "costsBenefitsHeader":
-      return { backgroundColor: "#f1f5f9" };
-
-    case "valueFinancial":
-      return { backgroundColor: "#faf5ff" };
-    case "valueEnvironmental":
-      return { backgroundColor: "#f0fdf4" };
-    case "valueSocial":
-      return { backgroundColor: "#f0f9ff" };
-    case "valueOther":
-      return { backgroundColor: "#EAF2FF" };
-
-    case "kpis":
-    case "serviceScenario":
-      return { backgroundColor: "#ffffff" };
-    case "services":
-      return { backgroundColor: "#F2F9FF" };
-    case "processes":
-      return { backgroundColor: "#E5F4FF" };
-    default:
-      return {};
-  }
-}
 
 /** Reusable label renderer (Option B): label + ⓘ icon with native tooltip */
 function RowLabel({
@@ -267,28 +204,16 @@ function RowLabel({
   const tip = helpKey ? CBMX_HELP[helpKey] : undefined;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 8, width: "100%" }}>
-      <span style={indent ? { paddingLeft: 15 } : undefined}>{text}</span>
+    <div className={`cbmx-row-label${indent ? " cbmx-row-label--category" : ""}`}>
+      {helpKey && <CBMXRowIcon kind={helpKey} />}
+      <span>{text}</span>
       {tip ? (
         <span
           role="button"
           tabIndex={0}
           aria-label={`Info: ${text}`}
           title={tip}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 16,
-            height: 16,
-            borderRadius: 999,
-            fontSize: 12,
-            lineHeight: "16px",
-            cursor: "help",
-            border: "1px solid #bbb",
-            userSelect: "none",
-            flex: "0 0 auto",
-          }}
+          className="cbmx-info"
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") e.preventDefault();
           }}
@@ -444,15 +369,19 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
-      <div style={{ flex: "1 1 auto", minWidth: 0, overflowX: "auto" }}>
-        <table style={{ borderCollapse: "collapse", width: "100%", tableLayout: "fixed" }}>
+    <div className="cbmx-matrix">
+      <div className="cbmx-matrix-scroll">
+        <table className="cbmx-table" style={{ minWidth: 190 + N * 210 }}>
+          <colgroup>
+            <col style={{ width: 190 }} />
+            {actors.map((actor) => <Fragment key={actor.id}><col /><col /></Fragment>)}
+          </colgroup>
           <tbody>
-            <tr style={rowStyle("networkVP")} {...rowHelpProps("networkValueProposition", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#D2EAFF" }}>
+            <tr className="cbmx-row cbmx-row--networkVP" {...rowHelpProps("networkValueProposition", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
                 <RowLabel text="Network Value Proposition" helpKey="networkValueProposition" />
               </td>
-              <td colSpan={colspanNetwork} style={networkCellTight}>
+              <td colSpan={colspanNetwork} style={networkCell}>
                 <EditableText
                   value={blueprint.networkValueProposition?.statement ?? ""}
                   readOnly={!onChange}
@@ -462,52 +391,45 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               </td>
             </tr>
 
-            <tr style={rowStyle("actorType")} {...rowHelpProps("actorType", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#DFE3E7" }}>
+            <tr className="cbmx-row cbmx-row--actorType" {...rowHelpProps("actorType", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
                 <RowLabel text="Actor Type" helpKey="actorType" />
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
-                  <td colSpan={2} style={cellTight}>
+                  <td colSpan={2} style={cell}>
                     {a.id.startsWith("EMPTY-") ? "" : a.type === "Other" ? "" : (
-                      <span style={{ fontStyle: "italic", fontWeight: 400 }}>{a.type}</span>
+                      <span className={`cbmx-role cbmx-role--${a.type.toLowerCase()}`}>
+                        <CBMXRowIcon kind={a.type === "Customer" ? "actor" : "coCreationProcesses"} />{a.type}
+                      </span>
                     )}
                   </td>
                 </Fragment>
               ))}
             </tr>
 
-            <tr style={rowStyle("actor")} {...rowHelpProps("actor", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#DCE2E9" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+            <tr className="cbmx-row cbmx-row--actor" {...rowHelpProps("actor", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
+                <div className="cbmx-actor-label">
                   <RowLabel text="Actor" helpKey="actor" />
                   {onChange ? (
                     <button
                       type="button"
                       onClick={() => updateBlueprint((next) => addActor(next))}
                       title="Add actor"
-                      style={{
-                        border: "1px solid #bbb",
-                        background: "white",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        padding: "2px 8px",
-                        fontSize: 12,
-                        lineHeight: "14px",
-                        whiteSpace: "nowrap",
-                      }}
+                      className="cbmx-add-actor"
                     >
-                      +Actor
+                      + Add Actor
                     </button>
                   ) : null}
                 </div>
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
-                  <td colSpan={2} style={{ ...cellLeftTight, textAlign: "center" }}>
+                  <td colSpan={2} style={{ ...cellLeft, textAlign: "center" }}>
                     {a.id.startsWith("EMPTY-") ? null : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ flex: 1, minWidth: 0, fontWeight: 800 }}>
+                      <div className="cbmx-actor-header">
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <EditableText
                             value={a.name ?? ""}
                             readOnly={!onChange}
@@ -528,16 +450,8 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                               if (!ok) return;
                               updateBlueprint((next) => removeActor(next, a.id));
                             }}
-                            style={{
-                              border: "1px solid #bbb",
-                              background: "white",
-                              borderRadius: 4,
-                              cursor: "pointer",
-                              padding: "1px 3px",
-                              fontSize: 14,
-                              lineHeight: "14px",
-                              flex: "0 0 auto",
-                            }}
+                            className="cbmx-remove-actor"
+                            aria-label={`Remove actor ${a.name?.trim() || a.id}`}
                           >
                             −
                           </button>
@@ -549,13 +463,13 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               ))}
             </tr>
 
-            <tr style={rowStyle("actorVP")} {...rowHelpProps("actorValueProposition", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
+            <tr className="cbmx-row cbmx-row--actorVP" {...rowHelpProps("actorValueProposition", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
                 <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
-                  <td colSpan={2} style={cellLeftTight}>
+                  <td colSpan={2} style={cellLeft}>
                     {a.id.startsWith("EMPTY-") ? null : (
                       <EditableText
                         value={a.actorValueProposition?.statement ?? ""}
@@ -569,17 +483,17 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               ))}
             </tr>
 
-            <tr style={rowStyle("costsBenefitsHeader")} {...rowHelpProps("costsBenefits", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#D7DBDF" }}>
+            <tr className="cbmx-row cbmx-row--costsBenefitsHeader" {...rowHelpProps("costsBenefits", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
                 <RowLabel text="Outcomes (Costs & Benefits)" helpKey="costsBenefits" />
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
-                  <th style={thCellTight}>
-                    <span style={{ fontStyle: "italic", fontWeight: 400 }}>Costs (Negative)</span>
+                  <th style={thCell}>
+                    <div className="cbmx-outcome-heading cbmx-outcome-heading--cost">Costs (Negative)</div>
                   </th>
-                  <th style={thCellTight}>
-                    <span style={{ fontStyle: "italic", fontWeight: 400 }}>Benefits (Positive)</span>
+                  <th style={thCell}>
+                    <div className="cbmx-outcome-heading cbmx-outcome-heading--benefit">Benefits (Positive)</div>
                   </th>
                 </Fragment>
               ))}
@@ -601,23 +515,15 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               return (
                 <tr
                   key={`row-${key}`}
-                  style={rowStyle(
-                    key === "Financial"
-                      ? "valueFinancial"
-                      : key === "Environmental"
-                      ? "valueEnvironmental"
-                      : key === "Social"
-                      ? "valueSocial"
-                      : "valueOther"
-                  )}
+                  className={`cbmx-row cbmx-row--${key}`}
                   {...rowHelpProps(helpKey, setActiveHelpKey)}
                 >
-                  <td style={rowLabelIndentCellTight}>
+                  <td style={rowLabelIndentCell}>
                     <RowLabel text={label} helpKey={helpKey} indent />
                   </td>
                   {actors.map((a) => (
                     <Fragment key={a.id}>
-                      <td style={cellLeftTight}>
+                      <td style={cellLeft}>
                         <SlotStack
                           slots={costSlots}
                           readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -629,7 +535,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                         />
                       </td>
 
-                      <td style={cellLeftTight}>
+                      <td style={cellLeft}>
                         <SlotStack
                           slots={benefitSlots}
                           readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -646,12 +552,12 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               );
             })}
 
-            <tr style={rowStyle("kpis")} {...rowHelpProps("kpis", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
-                <RowLabel text="KPIs" helpKey="kpis" />
+            <tr className="cbmx-row cbmx-row--kpis" {...rowHelpProps("kpis", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
+                <RowLabel text="KPIs (Success Criteria)" helpKey="kpis" />
               </td>
               {actors.map((a) => (
-                <td key={a.id} colSpan={2} style={cellLeftTight}>
+                <td key={a.id} colSpan={2} style={cellLeft}>
                   <SlotStack
                     slots={kpiSlots}
                     readOnly={!onChange || a.id.startsWith("EMPTY-")}
@@ -664,16 +570,20 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               ))}
             </tr>
 
-            <tr style={rowStyle("services")} {...rowHelpProps("actorServices", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#DCE2E9" }}>
+            <tr className="cbmx-row cbmx-row--services" {...rowHelpProps("actorServices", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
                 <RowLabel text="Actor Services" helpKey="actorServices" />
               </td>
               {actors.map((a) => (
-                <td key={a.id} colSpan={2} style={cellLeftTight}>
+                <td key={a.id} colSpan={2} style={cellLeft}>
                   <SlotStack
                     slots={serviceSlots}
                     readOnly={!onChange || a.id.startsWith("EMPTY-")}
                     getValue={(i: number) => getServiceSlotLine(a, i)}
+                    renderValue={(i) => a.services?.[i] ? <>
+                      <strong className="cbmx-service-name">{a.services[i].name}</strong>
+                      <span className="cbmx-service-operations">{getServiceSlotLine(a, i).slice((a.services[i].name ?? "").length)}</span>
+                    </> : undefined}
                     placeholder={onChange ? "Service (op1, op2)" : ""}
                     onCommit={(i: number, v: string) => updateBlueprint((next) => setServiceSlot(next, a.id, i, v))}
                   />
@@ -681,24 +591,19 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               ))}
             </tr>
 
-            <tr style={rowStyle("processes")} {...rowHelpProps("coCreationProcesses", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#D5E3EF" }}>
+            <tr className="cbmx-row cbmx-row--processes" {...rowHelpProps("coCreationProcesses", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
                 <RowLabel text="Co-Creation Processes" helpKey="coCreationProcesses" />
               </td>
-              <td colSpan={colspanNetwork} style={cellLeftTight}>
-                <div style={{ display: "grid", gap: 6 }}>
+              <td colSpan={colspanNetwork} style={cellLeft}>
+                <div className="cbmx-process-list">
                   {Array.from({ length: processSlots }).map((_, i) => {
                     const p = processes[i];
                     if (!p) {
                       return (
                         <div
                           key={`process-edit-${i}`}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            minHeight: 32,
-                          }}
+                          className="cbmx-process-row cbmx-process-row--empty"
                         >
                           <div style={{ flex: "1 1 auto", minWidth: 0 }}>
                             <EditableProcess
@@ -715,16 +620,14 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                     return (
                       <div
                         key={p.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          minHeight: 20,
-                        }}
+                        className="cbmx-process-row"
                       >
                         <div style={{ flex: "1 1 auto", minWidth: 0 }}>
                           <EditableProcess
                             value={getProcessSlotLine(i)}
+                            displayValue={<><strong>{p.name}</strong><span className="cbmx-process-participants">
+                              {getProcessSlotLine(i).slice((p.name ?? "").length)}
+                            </span></>}
                             existing
                             readOnly={!onChange}
                             onCommit={(v) => updateBlueprint((next) => renameProcessById(next, p.id, v))}
@@ -733,16 +636,9 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                         </div>
 
                         <div
-                          style={{
-                            flex: "0 0 auto",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            whiteSpace: "nowrap",
-                            fontSize: 12,
-                          }}
+                          className="cbmx-process-link"
                         >
-                          <span style={{ color: "#64748b" }}>
+                          <span className={`cbmx-link-status${link?.link_exists ? " cbmx-link-status--linked" : ""}`}>
                             {!link?.link_exists
                               ? "No PCB linked"
                               : link.has_pcb_access
@@ -759,16 +655,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                                 }
                                 aria-haspopup="menu"
                                 aria-expanded={openPCBMenuProcessId === p.id}
-                                style={{
-                                  border: "1px solid #bbb",
-                                  background: "white",
-                                  borderRadius: 6,
-                                  cursor: "pointer",
-                                  padding: "2px 8px",
-                                  fontSize: 12,
-                                  lineHeight: "14px",
-                                  whiteSpace: "nowrap",
-                                }}
+                                className="cbmx-pcb-button"
                               >
                                 Process Canvas ▾
                               </button>
@@ -1036,11 +923,11 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                 </div>
               </td>
             </tr>
-            <tr style={rowStyle("serviceScenario")} {...rowHelpProps("serviceScenario", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
+            <tr className="cbmx-row cbmx-row--serviceScenario" {...rowHelpProps("serviceScenario", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
                 <RowLabel text="Service Scenario" helpKey="serviceScenario" />
               </td>
-              <td colSpan={colspanNetwork} style={cellLeftTight}>
+              <td colSpan={colspanNetwork} style={cellLeft}>
                 <EditableText
                   value={serviceScenario}
                   multiline
@@ -1058,77 +945,21 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
         </table>
       </div>
 
-      <div
-        style={{
-          flex: helpOpen ? "0 0 220px" : "0 0 34px",
-          width: helpOpen ? 220 : 34,
-          maxWidth: helpOpen ? 220 : 34,
-          display: "flex",
-          alignSelf: "stretch",
-          transition: "width 180ms ease, max-width 180ms ease, flex-basis 180ms ease",
-        }}
-      >
+      <div className={`cbmx-help${helpOpen ? " cbmx-help--open" : ""}`}>
         {helpOpen ? (
-          <aside
-            aria-live="polite"
-            style={{
-              width: "100%",
-              border: "1px solid #d7dde5",
-              borderRadius: 8,
-              background: "#f8fafc",
-              color: "#475569",
-              fontSize: 12,
-              lineHeight: 1.45,
-              textAlign: "left",
-              display: "flex",
-              minHeight: "100%",
-              overflow: "hidden",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setHelpOpen(false)}
-              aria-label="Collapse tips panel"
-              title="Collapse tips"
-              style={{
-                border: "none",
-                borderRight: "1px solid #d7dde5",
-                background: "#FFFBEF",
-                cursor: "pointer",
-                padding: "3px 4px",
-                fontSize: 14,
-                color: "#475569",
-                flex: "0 0 28px",
-              }}
-            >
+          <aside aria-live="polite" className="cbmx-help-panel">
+            <button type="button" onClick={() => setHelpOpen(false)}
+              aria-label="Collapse tips panel" title="Collapse tips" className="cbmx-help-toggle">
               ››
             </button>
-            <div style={{ padding: "8px 8px", minWidth: 0 }}>
-              <div style={{ fontWeight: 700, color: "#1f2937", marginBottom: 3 }}>{HELP_LABELS[activeHelpKey]}</div>
+            <div className="cbmx-help-content">
+              <div className="cbmx-help-title">{HELP_LABELS[activeHelpKey]}</div>
               <div>{CBMX_HELP[activeHelpKey]}</div>
             </div>
           </aside>
         ) : (
-          <button
-            type="button"
-            onClick={() => setHelpOpen(true)}
-            aria-label="Open help panel"
-            title="Open help"
-            style={{
-              width: "100%",
-              border: "1px solid #d7dde5",
-              borderRadius: 4,
-              background: "#FFFBEF",
-              color: "#475569",
-              cursor: "pointer",
-              padding: "4px 4px",
-              fontSize: 12,
-              lineHeight: 1,
-              writingMode: "vertical-rl",
-              textOrientation: "mixed",
-              letterSpacing: 0.5,
-            }}
-          >
+          <button type="button" onClick={() => setHelpOpen(true)}
+            aria-label="Open help panel" title="Open help" className="cbmx-help-toggle cbmx-help-toggle--closed">
             ›› Help ‹‹
           </button>
         )}

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 // Process actions are explicit; the shared editor keeps its existing behavior.
-export default function EditableProcess({ value, readOnly, existing, onCommit, onDelete }: {
+export default function EditableProcess({ value, displayValue, readOnly, existing, onCommit, onDelete }: {
   value: string;
+  displayValue?: ReactNode;
   readOnly?: boolean;
   existing?: boolean;
   onCommit: (line: string) => void;
@@ -12,12 +13,12 @@ export default function EditableProcess({ value, readOnly, existing, onCommit, o
   const [draft, setDraft] = useState(value);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  if (readOnly) return <div>{value}</div>;
+  if (readOnly) return <div>{displayValue ?? value}</div>;
   if (!editing) return (
     <button type="button" title="Click to edit" onClick={() => {
       setDraft(value); setError(""); setEditing(true);
     }} style={{ textAlign: "left", font: "inherit", width: "100%", border: 0, background: "transparent", cursor: "pointer", padding: 2 }}>
-      {value || <span style={{ color: "#888" }}>Process (Actor 1, Actor 2)</span>}
+      {value ? (displayValue ?? value) : <span style={{ color: "#888" }}>Process (Actor 1, Actor 2)</span>}
     </button>
   );
   return (

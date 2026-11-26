@@ -1,4 +1,5 @@
 import EditableText from "./EditableText";
+import type { ReactNode } from "react";
 
 
 export default function SlotStack({
@@ -9,6 +10,7 @@ export default function SlotStack({
   placeholder,
   prefixLabel,
   onAdd,
+  renderValue,
 }: {
   slots: number;
   getValue: (slotIndex: number) => string;
@@ -17,13 +19,14 @@ export default function SlotStack({
   placeholder?: string;
   prefixLabel?: (slotIndex: number) => string;
   onAdd?: () => void;
+  renderValue?: (slotIndex: number) => ReactNode;
 }) {
   const FONT_SIZE = 12;
   const LINE_HEIGHT = 1.25;
   const LINE_PX = FONT_SIZE * LINE_HEIGHT;
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="cbmx-slot-stack" style={{ position: "relative" }}>
       {onAdd && !readOnly ? (
         <button
           type="button"
@@ -49,7 +52,8 @@ export default function SlotStack({
 
       <div style={{ display: "flex", flexDirection: "column", gap: 3, paddingRight: onAdd && !readOnly ? 26 : 0 }}>
         {Array.from({ length: slots }).map((_, i) => (
-          <div key={i} style={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
+          <div key={i} className="cbmx-slot" data-populated={Boolean(getValue(i)?.trim())}
+            style={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
             <div
               style={{
                 width: 18,
@@ -70,6 +74,7 @@ export default function SlotStack({
             <div style={{ flex: 1 }}>
               <EditableText
                 value={getValue(i) ?? ""}
+                displayValue={renderValue?.(i)}
                 placeholder={placeholder ?? "…"}
                 readOnly={readOnly}
                 onCommit={(v) => onCommit(i, v)}

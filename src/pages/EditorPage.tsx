@@ -1,6 +1,5 @@
 // src/pages/EditorPage.tsx
-import { toPng } from "html-to-image";
-import jsPDF from "jspdf";
+import { captureBlueprintPng, createBlueprintPdf } from "../components/cbmx/cbmxExport";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import CBMXTable, { type CBMXBlueprint, type ProcessCanvasLinkSummary, validateCBMXBlueprint } from "../components/cbmx/CBMXTable";
@@ -861,30 +860,7 @@ function handleBlueprintSaveFailure(
 
     const dataUrl = await captureBlueprintPng(node);
 
-    const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-
-    const img = new Image();
-    img.src = dataUrl;
-
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Failed to load image for PDF export."));
-    });
-
-    const imgWidth = img.width;
-    const imgHeight = img.height;
-
-    const scale = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
-    const renderWidth = imgWidth * scale;
-    const renderHeight = imgHeight * scale;
-
-    const x = (pageWidth - renderWidth) / 2;
-    const y = (pageHeight - renderHeight) / 2;
-
-    pdf.addImage(dataUrl, "PNG", x, y, renderWidth, renderHeight);
+    const pdf = await createBlueprintPdf(dataUrl);
     pdf.save("cbmx-blueprint.pdf");
   }
 
@@ -1031,7 +1007,7 @@ function handleBlueprintSaveFailure(
         }}
       />
 
-      <div id="cbmx-canvas" style={{ marginTop: 16, display: "inline-block", background: "white" }}>
+      <div id="cbmx-canvas" style={{ marginTop: 16, width: "100%", minWidth: 0, background: "white" }}>
         <CBMXTable
           blueprint={draft}
           onChange={isReadOnly ? undefined : setDraft}
@@ -1053,26 +1029,6 @@ function handleBlueprintSaveFailure(
         initiallyLinked={pcbSelection.initiallyLinked} onCancel={() => setPCBSelection(null)} onConfirm={confirmPCBSelection} />}
     </div>
   );
-}
-
-function captureBlueprintPng(node: HTMLElement) {
-  const bounds = node.getBoundingClientRect();
-  const padding = 8;
-
-  // Round up fractional bounds and leave room for the table's outer borders.
-  // Apply spacing only to the export clone, keeping the live matrix unchanged.
-  return toPng(node, {
-    pixelRatio: 2,
-    backgroundColor: "#ffffff",
-    width: Math.ceil(Math.max(bounds.width, node.scrollWidth)) + padding * 2,
-    height: Math.ceil(Math.max(bounds.height, node.scrollHeight)) + padding * 2,
-    style: {
-      boxSizing: "border-box",
-      padding: `${padding}px`,
-      margin: "0",
-      overflow: "visible",
-    },
-  });
 }
 
 function MenuItem({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {

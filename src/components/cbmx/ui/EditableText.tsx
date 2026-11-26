@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 export default function EditableText({
   value,
@@ -6,12 +6,14 @@ export default function EditableText({
   placeholder,
   readOnly,
   multiline,
+  displayValue,
 }: {
   value: string;
   onCommit: (next: string) => void;
   placeholder?: string;
   readOnly?: boolean;
   multiline?: boolean;
+  displayValue?: ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
@@ -26,7 +28,7 @@ export default function EditableText({
     : undefined;
 
   if (readOnly) {
-    return shown ? <div style={multilineStyle}>{shown}</div> : <div style={{ color: "#888" }}>{placeholder ?? ""}</div>;
+    return shown ? <div style={multilineStyle}>{displayValue ?? shown}</div> : <div style={{ color: "#888" }}>{placeholder ?? ""}</div>;
   }
 
   if (!editing) {
@@ -44,7 +46,7 @@ export default function EditableText({
         onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.outline = "2px solid #bbb")}
         onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.outline = "none")}
       >
-        {shown ? shown : <span style={{ color: "#888" }}>{placeholder ?? "Click to edit…"}</span>}
+        {shown ? (displayValue ?? shown) : <span style={{ color: "#888" }}>{placeholder ?? "Click to edit…"}</span>}
       </div>
     );
   }
