@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
-export default function EditableText({ value, onCommit, placeholder, readOnly, multiline, displayValue, label }: {
+export default function EditableText({ value, onCommit, placeholder, readOnly, multiline, displayValue, label, initiallyEditing, onCancel, onEditingChange }: {
   value: string;
   onCommit: (next: string) => void;
   placeholder?: string;
@@ -8,8 +8,11 @@ export default function EditableText({ value, onCommit, placeholder, readOnly, m
   multiline?: boolean;
   displayValue?: ReactNode;
   label?: string;
+  initiallyEditing?: boolean;
+  onCancel?: () => void;
+  onEditingChange?: (editing: boolean) => void;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(Boolean(initiallyEditing));
   const [draft, setDraft] = useState(value ?? "");
   const [error, setError] = useState("");
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -38,6 +41,7 @@ export default function EditableText({ value, onCommit, placeholder, readOnly, m
     setError("");
     committed.current = false;
     setEditing(true);
+    onEditingChange?.(true);
   }
 
   function cancel() {
@@ -45,6 +49,8 @@ export default function EditableText({ value, onCommit, placeholder, readOnly, m
     setDraft(value ?? "");
     setError("");
     setEditing(false);
+    onEditingChange?.(false);
+    onCancel?.();
   }
 
   function save() {
@@ -54,6 +60,7 @@ export default function EditableText({ value, onCommit, placeholder, readOnly, m
       onCommit(draft);
       restoreFocus.current = true;
       setEditing(false);
+      onEditingChange?.(false);
     } catch (error) {
       committed.current = false;
       setError(error instanceof Error ? error.message : "Could not save this edit.");

@@ -1,14 +1,17 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
-export default function EditableProcess({ value, displayValue, readOnly, existing, onCommit, onDelete }: {
+export default function EditableProcess({ value, displayValue, readOnly, existing, onCommit, onDelete, initiallyEditing, onCancel, onEditingChange }: {
   value: string;
   displayValue?: ReactNode;
   readOnly?: boolean;
   existing?: boolean;
   onCommit: (line: string) => void;
   onDelete?: () => Promise<boolean>;
+  initiallyEditing?: boolean;
+  onCancel?: () => void;
+  onEditingChange?: (editing: boolean) => void;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(Boolean(initiallyEditing));
   const [draft, setDraft] = useState(value);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,12 +28,12 @@ export default function EditableProcess({ value, displayValue, readOnly, existin
     }
   }, [editing]);
 
-  function start() { setDraft(value); setError(""); committed.current = false; setEditing(true); }
-  function cancel() { restoreFocus.current = true; setDraft(value); setError(""); setEditing(false); }
+  function start() { setDraft(value); setError(""); committed.current = false; setEditing(true); onEditingChange?.(true); }
+  function cancel() { restoreFocus.current = true; setDraft(value); setError(""); setEditing(false); onEditingChange?.(false); onCancel?.(); }
   function save() {
     if (committed.current || deleting.current) return;
     committed.current = true;
-    try { onCommit(draft); restoreFocus.current = true; setEditing(false); setError(""); }
+    try { onCommit(draft); restoreFocus.current = true; setEditing(false); setError(""); onEditingChange?.(false); }
     catch (error) { committed.current = false; setError(error instanceof Error ? error.message : "Could not save process."); }
   }
 
@@ -42,7 +45,7 @@ export default function EditableProcess({ value, displayValue, readOnly, existin
         if (!event.repeat && !event.nativeEvent.isComposing) start();
       }
     }}>
-    {value ? (displayValue ?? value) : <span style={{ color: "#888" }}>Process (Actor 1, Actor 2)</span>}
+    {displayValue ?? (value || <span style={{ color: "#888" }}>Process (Actor 1, Actor 2)</span>)}
   </button>;
 
   return <div className="cbmx-inline-editor" onKeyDown={(event) => {
@@ -63,7 +66,7 @@ export default function EditableProcess({ value, displayValue, readOnly, existin
       {existing && onDelete && <button type="button" disabled={busy} className="cbmx-inline-delete" onClick={async () => {
         if (deleting.current) return;
         deleting.current = true; setBusy(true); setError("");
-        try { if (await onDelete()) setEditing(false); }
+        try { if (await onDelete()) { setEditing(false); onEditingChange?.(false); } }
         catch (error) { setError(error instanceof Error ? error.message : "Could not delete process."); }
         finally { deleting.current = false; setBusy(false); }
       }}>Delete</button>}

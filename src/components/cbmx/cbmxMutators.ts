@@ -246,3 +246,68 @@ export function removeActor(next: CBMXBlueprint, actorId: string) {
     }
   }
 }
+
+/* Item-list operations retain source positions and reject drafts from an older list. */
+export type ActorItemKind = "costs" | "benefits" | "kpis" | "services";
+export function actorListRevision(actor: Actor | undefined, kind: ActorItemKind): string {
+  return JSON.stringify(actor?.[kind] ?? []);
+}
+
+function guardedActorList(next: CBMXBlueprint, actorId: string, kind: ActorItemKind, revision: string, index?: number) {
+  const actor = next.actors.find(item => item.id === actorId);
+  if (!actor || actorListRevision(actor, kind) !== revision)
+    throw new Error("This list changed. Cancel this edit and try again.");
+  const list = actor[kind] ?? [];
+  if (index !== undefined && (!Number.isInteger(index) || index < 0 || index >= list.length))
+    throw new Error("This item no longer exists. Cancel this edit and try again.");
+  return actor;
+}
+
+export function editActorItem(next: CBMXBlueprint, actorId: string, kind: ActorItemKind, revision: string, index: number, value: string) {
+  const actor = guardedActorList(next, actorId, kind, revision, index);
+  const cleaned = value.trim();
+  if (!cleaned) { removeActorItem(next, actorId, kind, revision, index); return; }
+  if (kind === "costs" || kind === "benefits") {
+    actor[kind][index] = { ...actor[kind][index], description: cleaned };
+    ensureMinCostBenefit(actor);
+  } else if (kind === "kpis") actor.kpis[index] = { ...actor.kpis[index], name: cleaned };
+  else {
+    const service = parseServiceLine(cleaned);
+    if (!service.name) { removeActorItem(next, actorId, kind, revision, index); return; }
+    actor.services[index] = { ...actor.services[index], ...service };
+  }
+}
+
+export function appendActorItem(next: CBMXBlueprint, actorId: string, kind: ActorItemKind, revision: string, value: string, type?: CostBenefitType) {
+  const actor = guardedActorList(next, actorId, kind, revision);
+  const cleaned = value.trim();
+  if (!cleaned) throw new Error("Enter an item before adding it.");
+  if (kind === "costs" || kind === "benefits") {
+    if (!type) throw new Error("Select an outcome category.");
+    actor[kind] = [...(actor[kind] ?? []), { type, description: cleaned }];
+    ensureMinCostBenefit(actor);
+  } else if (kind === "kpis") {
+    const rank = (actor.kpis ?? []).reduce((max, item) => Math.max(max, item.rank ?? 0), 0) + 1;
+    actor.kpis = [...(actor.kpis ?? []), { name: cleaned, rank }];
+  } else {
+    const service = parseServiceLine(cleaned);
+    if (!service.name) throw new Error("Enter a service name.");
+    actor.services = [...(actor.services ?? []), service];
+  }
+}
+
+export function removeActorItem(next: CBMXBlueprint, actorId: string, kind: ActorItemKind, revision: string, index: number) {
+  const actor = guardedActorList(next, actorId, kind, revision, index);
+  actor[kind].splice(index, 1);
+  if (kind === "costs" || kind === "benefits") ensureMinCostBenefit(actor);
+}
+
+export function processListRevision(next: CBMXBlueprint): string {
+  // Participant parsing uses actor names as well as IDs. An actor rename invalidates that draft too.
+  return JSON.stringify([next.coCreationProcesses ?? [], next.actors.map(({ id, name }) => ({ id, name }))]);
+}
+export function commitProcessItem(next: CBMXBlueprint, revision: string, processId: string | null, value: string) {
+  if (processListRevision(next) !== revision) throw new Error("This process list changed. Cancel this edit and try again.");
+  if (processId === null) setProcessSlot(next, (next.coCreationProcesses ?? []).length, value);
+  else renameProcessById(next, processId, value);
+}
