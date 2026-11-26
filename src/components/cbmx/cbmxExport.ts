@@ -54,12 +54,40 @@ export async function captureBlueprintPng(node: HTMLElement, snapshot: ExportSna
   document.body.appendChild(capture);
   try {
     await document.fonts.ready;
+    // Pin the laid-out table before sizing the image. Otherwise its 100% width
+    // can grow again when the capture is enlarged to include an overflowing edge.
+    const tableBounds = exportTable.getBoundingClientRect();
+    exportTable.style.width = `${tableBounds.width || matrixWidth}px`;
     const bounds = capture.getBoundingClientRect();
+    const styles = getComputedStyle(capture);
+    let right = Math.max(bounds.width, matrixWidth + 16);
+    let bottom = bounds.height;
+    // Table layout and fractional column widths can extend beyond the wrapper's
+    // integer scroll dimensions. Include actual cells and their wrapped content,
+    // retaining the existing padding at the far edges rather than adding a fudge.
+    const paddingRight = Number.parseFloat(styles.paddingRight) || 0;
+    const paddingBottom = Number.parseFloat(styles.paddingBottom) || 0;
+    for (const element of exportTable.querySelectorAll("*")) {
+      const rect = element.getBoundingClientRect();
+      if (!rect.width && !rect.height) continue;
+      right = Math.max(right, rect.right - bounds.left + paddingRight);
+      bottom = Math.max(bottom, rect.bottom - bounds.top + paddingBottom);
+    }
+    if (tableBounds.width || tableBounds.height) {
+      right = Math.max(right, tableBounds.right - bounds.left + paddingRight);
+      bottom = Math.max(bottom, tableBounds.bottom - bounds.top + paddingBottom);
+    }
+    right = Math.max(right, capture.scrollWidth);
+    bottom = Math.max(bottom, capture.scrollHeight);
+    const width = Math.ceil(right);
+    const height = Math.ceil(bottom);
+    capture.style.width = `${width}px`;
+    capture.style.height = `${height}px`;
     return await toPng(capture, {
       pixelRatio: 2,
       backgroundColor: "#ffffff",
-      width: Math.ceil(Math.max(bounds.width, capture.scrollWidth)),
-      height: Math.ceil(Math.max(bounds.height, capture.scrollHeight)),
+      width,
+      height,
       style: { position: "static", margin: "0", overflow: "visible" },
     });
   } finally {

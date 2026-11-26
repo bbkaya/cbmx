@@ -85,3 +85,5 @@ Removed:
 - `src/components/cbmx/ui/SlotStack.tsx` — obsolete empty-slot component, with no remaining callers.
 
 Generated review files are listed in `output/cbmx-phase3-review/artifact-manifest.txt`.
+
+Post-Phase 4 export boundary investigation, correction and review artifacts: [EXPORT_EDGES.md](EXPORT_EDGES.md).

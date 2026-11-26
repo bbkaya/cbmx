@@ -95,6 +95,60 @@ for (const count of [2, 5, 10]) test(`${count}-actor capture is clean, canonical
   } finally { node.remove(); }
 });
 
+for (const count of Array.from({ length: 9 }, (_, index) => index + 2)) {
+  test(`${count} actors: capture encloses fractional last-cell and bottom-content bounds beyond wrapper scroll dimensions`, async () => {
+    const original = window.HTMLElement.prototype.getBoundingClientRect;
+    const canonical = 190 + count * 210 + 16;
+    const origin = -100000;
+    window.HTMLElement.prototype.getBoundingClientRect = function () {
+      const rect = (left, top, width, height) => ({ left, top, width, height, right: left + width, bottom: top + height });
+      if (this.matches('.cbmx-matrix--export')) return rect(origin, 0, canonical, 800);
+      if (this.matches('table.cbmx-table')) return rect(origin + 8, 8, canonical - 16 + 0.125, 784.25);
+      if (this.matches('.cbmx-row--Financial td:last-child')) return rect(origin + canonical - 100, 300, 103.375, 55);
+      if (this.matches('.cbmx-row--serviceScenario td:last-child div')) return rect(origin + 204, 750, 300, 58.625);
+      return original.call(this);
+    };
+    // scrollWidth/scrollHeight are zero in happy-dom: a wrapper-only measurement
+    // cannot see either overflow. This explicitly fails the old capture code.
+    rasterize = async (node, options) => {
+      assert.equal(options.width, canonical + 4);
+      assert.equal(options.height, 809);
+      assert.equal(node.style.width, `${options.width}px`);
+      assert.equal(node.style.height, `${options.height}px`);
+      assert.equal(node.querySelector('table').style.width, `${canonical - 16 + 0.125}px`);
+      for (const element of [node.querySelector('table'), ...node.querySelectorAll('table *')]) {
+        const r = element.getBoundingClientRect();
+        if (!r.width && !r.height) continue;
+        assert.ok(r.right - origin <= options.width, element.tagName + ' right edge');
+        assert.ok(r.bottom <= options.height, element.tagName + ' bottom edge');
+      }
+      assert.equal(options.pixelRatio, 2);
+      return 'data:image/png;base64,synthetic';
+    };
+    try { await capture(document.createElement('div'), snapshot(count)); }
+    finally { window.HTMLElement.prototype.getBoundingClientRect = original; }
+  });
+}
+
+test('export retains computed right and bottom padding when the table exceeds its wrapper', async () => {
+  const original = window.HTMLElement.prototype.getBoundingClientRect;
+  window.HTMLElement.prototype.getBoundingClientRect = function () {
+    const left = -100000;
+    if (this.matches('.cbmx-matrix--export')) {
+      this.style.padding = '8px';
+      return { left, top: 0, width: 626, height: 800, right: left + 626, bottom: 800 };
+    }
+    if (this.matches('table.cbmx-table')) return { left: left + 8, top: 8, width: 622.25, height: 799.125, right: left + 630.25, bottom: 807.125 };
+    return original.call(this);
+  };
+  rasterize = async (node, options) => {
+    assert.equal(options.width, 639); assert.equal(options.height, 816);
+    return 'data:image/png;base64,synthetic';
+  };
+  try { await capture(document.createElement('div'), snapshot()); }
+  finally { window.HTMLElement.prototype.getBoundingClientRect = original; }
+});
+
 test("failed rasterization always removes its offscreen copy", async () => {
   const node = document.createElement("div");
   rasterize = async () => { throw new Error("Synthetic capture failure"); };

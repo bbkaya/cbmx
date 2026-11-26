@@ -1,3 +1,4 @@
+import { observeExportCapture } from './exportDiagnostics.js';
 import { useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
@@ -16,6 +17,7 @@ function App() {
   const [density, setDensity] = useState('sparse');
   const [changes, setChanges] = useState(0);
   const [capture, setCapture] = useState('');
+  const [metrics, setMetrics] = useState(null);
   const [pdf, setPdf] = useState('');
   const [status, setStatus] = useState('');
   const [validationExample, setValidationExample] = useState('actual');
@@ -33,16 +35,17 @@ function App() {
 
   function reset(nextCount, nextDensity) {
     setCount(nextCount); setDensity(nextDensity); setBlueprint(fixture(nextCount, nextDensity));
-    setChanges(0); setCapture(''); setPdf(''); setStatus('');
+    setChanges(0); setCapture(''); setPdf(''); setStatus(''); setMetrics(null);
   }
   function commit(next) { setBlueprint(next); setChanges(value => value + 1); }
   async function captureFiles() {
     setStatus('Capturing'); setCapture(''); setPdf('');
+    const observer = observeExportCapture(setMetrics);
     try {
       const png = await captureBlueprintPng(document.getElementById('cbmx-canvas'), { blueprint, processLinks });
       const pdfDocument = await createBlueprintPdf(png);
       setCapture(png); setPdf(pdfDocument.output('datauristring')); setStatus('Capture complete');
-    } catch (error) { setStatus(`Capture failed: ${error.message}`); }
+    } catch (error) { setStatus(`Capture failed: ${error.message}`); } finally { observer.disconnect(); }
   }
   async function deleteSyntheticProcess(id) {
     // Production deletion remains in EditorPage and is verified separately using mocked services.
@@ -56,7 +59,7 @@ function App() {
   return <>
     <div className="preview-controls">
       <strong>Synthetic Phase 4 preview · no database</strong><span role="status">{status}</span>
-      {[2, 5, 10].map(value => <button key={value} onClick={() => reset(value, density)}>{value} actors</button>)}
+      {Array.from({ length: 9 }, (_, index) => index + 2).map(value => <button key={value} onClick={() => reset(value, density)}>{value} actors</button>)}
       {['empty', 'sparse', 'dense'].map(value => <button key={value} onClick={() => reset(count, value)}>{value} blueprint</button>)}
       <span>Committed changes: {changes}</span>
       <button onClick={() => window.scrollTo({ top: 0 })}>Scroll to top</button>
@@ -103,6 +106,7 @@ function App() {
         </div>
       </main>
     </div>
+    {metrics && <pre id="export-metrics">{JSON.stringify(metrics)}</pre>}
     {capture && <div>
       <img id="capture-result" alt="Synthetic full matrix capture" src={capture} style={{ maxWidth: '100%' }} />
       <a href={capture} download={`synthetic-${count}-${density}.png`}>Download PNG</a>{' · '}

@@ -19,7 +19,7 @@ export function fixture(count, density = 'sparse') {
         ? ['Lower operating costs', 'Reduced resource use', 'Improved accessibility', 'Knowledge sharing']
         : ['Participation fees', 'Resource consumption', 'Additional workload', 'Coordination effort'])[category];
       const items = Array.from({ length: dense && !benefits && index === 2 ? 3 : 1 }, (_, item) => ({ type,
-        description: description + (dense && !benefits
+        description: description + (benefits && index === count - 1 && !empty ? ' — Last actor edge verification: coordinated service delivery improves reliability, accessibility and long-term viability across organizational boundaries. Complete benefit content must wrap inside this column without truncation. END BENEFITS A' + count : '') + (dense && !benefits
           ? ' associated with supporting a geographically distributed network and responding to changing requirements' : '')
           + (item ? ` — item ${item + 1}` : '') }));
       return dense ? items.flatMap(item => [item, { ...item, description: item.description + (benefits
@@ -59,6 +59,6 @@ export function fixture(count, density = 'sparse') {
       statement: 'Make essential services reliable, accessible and sustainable through a collaborative network of organizations.',
     },
     actors, coCreationProcesses: empty ? [] : dense ? processes : processes.slice(0, 2),
-    serviceScenario: 'A customer requests a service. The coordinator brings together the participating organizations and shares the information needed to deliver it.\n\nThe network reviews outcomes and improves its services.',
+    serviceScenario: (empty ? '' : Array.from({ length: 8 }, (_, index) => `Scenario stage ${index + 1}: The customer and participating organizations coordinate changing requirements, resolve exceptions and evaluate outcomes across multiple service interactions. Each step remains visible in the exported blueprint.\n\n`).join('')) + 'A customer requests a service. The coordinator brings together the participating organizations and shares the information needed to deliver it.\n\nThe network reviews outcomes and improves its services. END SERVICE SCENARIO.',
   };
 }
