@@ -10,4 +10,4 @@ const server = await createServer({ root, configFile: false, envFile: false,
   server: { host: "127.0.0.1", port: 5176, strictPort: true, fs: { allow: [repo] } },
   optimizeDeps: { include: ["react", "react-dom/client", "react-router-dom"] } });
 await server.listen();
-console.log("Synthetic Phase 3 review: http://127.0.0.1:5176 — memory only; Ctrl+C stops the server.");
+console.log("Synthetic Phase 4 review: http://127.0.0.1:5176 — memory only; Ctrl+C stops the server.");

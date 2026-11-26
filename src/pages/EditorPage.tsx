@@ -939,6 +939,7 @@ function handleBlueprintSaveFailure(
       <div id="cbmx-canvas" style={{ marginTop: 10, width: "100%", minWidth: 0, background: "white" }}>
         <CBMXTable
           blueprint={draft}
+          presentation={isReadOnly ? "readonly" : "editor"}
           onChange={isReadOnly ? undefined : setDraft}
           processLinks={processLinks}
           onCreatePCBForProcess={isReadOnly ? undefined : (processId) => void createPCBForProcess(processId)}

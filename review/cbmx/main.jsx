@@ -5,7 +5,7 @@ import CBMXTable, { validateCBMXBlueprint } from '@cbmx/CBMXTable.tsx';
 import CBMXEditorToolbar from '@cbmx/ui/CBMXEditorToolbar.tsx';
 import CBMXValidationPanel from '@cbmx/ui/CBMXValidationPanel.tsx';
 import { captureBlueprintPng, createBlueprintPdf } from '@cbmx/cbmxExport.ts';
-import { fixture, processLinks } from './fixtures.js';
+import { fixture, processLinks as defaultProcessLinks } from './fixtures.js';
 import '@app/index.css';
 import '@app/App.css';
 import './preview.css';
@@ -20,6 +20,11 @@ function App() {
   const [status, setStatus] = useState('');
   const [validationExample, setValidationExample] = useState('actual');
   const [readOnly, setReadOnly] = useState(false);
+  const [administrative, setAdministrative] = useState(false);
+  const [pcbAccess, setPCBAccess] = useState('owner');
+  const processLinks = defaultProcessLinks.map(link => link.cbmx_process_id !== 'P1' ? link : {
+    ...link, has_pcb_access: pcbAccess !== 'none', pcb_access_role: pcbAccess === 'none' ? null : pcbAccess,
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const issues = validationExample === 'warning' ? [{ level: 'warning', message: 'Actor "A1" has no costs.' }]
@@ -50,7 +55,7 @@ function App() {
 
   return <>
     <div className="preview-controls">
-      <strong>Synthetic Phase 3 preview · no database</strong><span role="status">{status}</span>
+      <strong>Synthetic Phase 4 preview · no database</strong><span role="status">{status}</span>
       {[2, 5, 10].map(value => <button key={value} onClick={() => reset(value, density)}>{value} actors</button>)}
       {['empty', 'sparse', 'dense'].map(value => <button key={value} onClick={() => reset(count, value)}>{value} blueprint</button>)}
       <span>Committed changes: {changes}</span>
@@ -64,6 +69,11 @@ function App() {
         Cycle validation example
       </button>
       <button onClick={() => setReadOnly(value => !value)}>Toggle read-only</button>
+      <button onClick={() => { setAdministrative(value => !value); setReadOnly(true); }}>Toggle administrative view</button>
+      <label>PCB access <select aria-label="PCB access" value={pcbAccess} onChange={event => setPCBAccess(event.target.value)}>
+        <option value="owner">Owner</option><option value="editor">Editor</option><option value="viewer">Viewer</option>
+        <option value="none">No access</option>
+      </select></label>
       <button disabled={status === 'Capturing'} onClick={captureFiles}>Capture PNG and PDF</button>
     </div>
     <div className="site-shell preview-shell">
@@ -71,7 +81,7 @@ function App() {
         <div className="cbmx-editor">
           <CBMXEditorToolbar name={blueprint.meta.name}
             onNameChange={name => commit({ ...blueprint, meta: { ...blueprint.meta, name } })}
-            readOnly={readOnly} autoSaving={false} dirty={false} menuOpen={menuOpen}
+            readOnly={readOnly} administrative={administrative} autoSaving={false} dirty={false} menuOpen={menuOpen}
             onToggleMenu={() => setMenuOpen(value => !value)} menuRef={menuRef}>
             {menuOpen && <div role="menu" className="cbmx-toolbar-menu">
               {['Export CBMX to JSON', 'Export CBMX to PNG', 'Export CBMX to PDF',
@@ -81,7 +91,13 @@ function App() {
           </CBMXEditorToolbar>
           <CBMXValidationPanel issues={issues} />
           <div id="cbmx-canvas" style={{ marginTop: 10, width: '100%', minWidth: 0, background: 'white' }}>
-            <CBMXTable blueprint={blueprint} onChange={readOnly ? undefined : commit} processLinks={processLinks}
+            <CBMXTable blueprint={blueprint} presentation={readOnly ? 'readonly' : 'editor'}
+              onChange={readOnly ? undefined : commit} processLinks={processLinks}
+              onOpenLinkedPCB={id => {
+                const link = processLinks.find(value => value.process_canvas_blueprint_id === id);
+                if (!link?.has_pcb_access || !['owner', 'editor', 'viewer'].includes(link.pcb_access_role)) return;
+                setStatus(`Synthetic PCB open: ${link.pcb_access_role === 'viewer' ? 'read-only' : 'editing'} (${link.pcb_access_role}${administrative ? ', administrative route' : ''}). No database or navigation performed.`);
+              }}
               onDeleteProcess={readOnly ? undefined : deleteSyntheticProcess} />
           </div>
         </div>

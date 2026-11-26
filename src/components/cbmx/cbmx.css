@@ -716,11 +716,15 @@
 .cbmx-matrix .cbmx-addition { min-width: 0; margin-top: 4px; }
 .cbmx-matrix .cbmx-add-item {
   display: flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; margin: 3px 0 0; padding: 0;
-  border: 1px solid #bfd3e3; border-radius: 4px; background: #f3f8fc; color: #19578c;
-  font: inherit; font-size: 16px; font-weight: 500; line-height: 1; cursor: pointer;
+  width: 24px; height: 24px; margin: 0; padding: 0;
+  border: 0; border-radius: 4px; background: transparent; color: #32638e;
+  font: inherit; font-weight: 400; line-height: 1; cursor: pointer;
 }
-.cbmx-matrix .cbmx-add-item:hover { background: #e5eff8; }
+.cbmx-matrix .cbmx-add-item > span {
+  display: flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 3px;
+}
+.cbmx-matrix .cbmx-add-item:hover { color: #0d4678; }
+.cbmx-matrix .cbmx-add-item:hover > span { background: #e5eff8; }
 .cbmx-matrix .cbmx-add-item:disabled { color: #617b93; cursor: default; }
 .cbmx-matrix .cbmx-add-item:focus-visible,
 .cbmx-matrix .cbmx-remove-item:focus-visible { outline: 2px solid #0d4678; outline-offset: 1px; }
@@ -739,3 +743,13 @@
   .cbmx-matrix .cbmx-row--services .cbmx-item--removable { padding-right: 26px; }
   .cbmx-matrix .cbmx-remove-item { opacity: 1; width: 24px; min-height: 28px; }
 }
+
+/* Navigation remains available without granting CBMX or PCB mutation permissions. */
+.cbmx-matrix .cbmx-pcb-open {
+  min-width: 0; max-width: 100%; padding: 2px 0; margin: 0; border: 0; border-radius: 3px;
+  background: transparent; font: inherit; font-weight: 600; line-height: 1.3;
+  text-align: right; white-space: normal; overflow-wrap: anywhere; cursor: pointer;
+  text-decoration: underline; text-decoration-color: #bbc6dc; text-underline-offset: 2px;
+}
+.cbmx-matrix .cbmx-pcb-open:hover { color: #0d4678; text-decoration-color: currentColor; }
+.cbmx-matrix .cbmx-pcb-open:focus-visible { outline: 2px solid #0d4678; outline-offset: 2px; }

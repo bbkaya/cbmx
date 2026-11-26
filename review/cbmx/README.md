@@ -1,6 +1,6 @@
 # Phase 3 CBMX review
 
-> This is the historical Phase 3 checkpoint report. See [the refinement report](REFINEMENTS.md) for the current compact plus controls, clean exports and verification results.
+> This is the historical Phase 3 checkpoint report. See [the Phase 4 report](PHASE4.md) for the current presentations, navigation, compact controls and verification. The earlier [Phase 3 refinements](REFINEMENTS.md) document clean export implementation.
 
 Phase 3 replaces empty modelling slots with populated item lists and explicit Add controls. Work stays on `codex/cbmx-matrix-visual-redesign`. The approved Phase 2 source is recoverable at local commit `d0a0c03` (`Checkpoint approved CBMX Phase 2 controls and responsive editing`). Existing untracked review artifacts were preserved.
 

@@ -240,7 +240,7 @@ export default function CBMXTable({
   onDeleteProcess,
 }: {
   blueprint: CBMXBlueprint;
-  presentation?: "editor" | "export";
+  presentation?: "editor" | "readonly" | "export";
   onChange?: (next: CBMXBlueprint) => void;
   processLinks?: ProcessCanvasLinkSummary[];
   onCreatePCBForProcess?: (processId: string) => void;
@@ -250,7 +250,7 @@ export default function CBMXTable({
   onDeleteProcess?: (processId: string) => Promise<boolean>;
 }) {
   const exportMode = presentation === "export";
-  const onChange = exportMode ? undefined : requestedOnChange;
+  const onChange = presentation === "editor" ? requestedOnChange : undefined;
   const { actors, N } = useMemo(() => normalizeActors(blueprint.actors), [blueprint.actors]);
   const colspanNetwork = N * 2;
   // A display fallback must not add defaults to legacy JSON and trigger autosave.
@@ -318,8 +318,11 @@ export default function CBMXTable({
     return ops.length ? `${s.name} (${ops.join(", ")})` : (s.name ?? "");
   }
 
-  const processes = (blueprint.coCreationProcesses ?? []).filter(process => !exportMode ||
-    process.name?.trim() || process.participantActorIds?.length || getExportPCBName(process.id));
+  const processes = (blueprint.coCreationProcesses ?? []).filter(process => {
+    const link = getProcessLink(process.id);
+    return onChange || process.name?.trim() || process.participantActorIds?.length || getAuthorizedPCBName(process.id) ||
+      (!exportMode && canViewLinkedPCB(link) && link?.process_canvas_blueprint_id);
+  });
   const processRevision = processListRevision(blueprint);
 
   function getProcessSlotLine(slotIndex: number) {
@@ -337,10 +340,13 @@ function getProcessLink(processId: string) {
   return (processLinks ?? []).find((x) => x.cbmx_process_id === processId) ?? null;
 }
 
-function getExportPCBName(processId: string) {
+function getAuthorizedPCBName(processId: string) {
   const link = getProcessLink(processId);
-  return link?.link_exists && link.has_pcb_access && canRoleViewPCB(link.pcb_access_role)
-    ? link.process_canvas_blueprint_name?.trim() ?? "" : "";
+  return canViewLinkedPCB(link) ? link?.process_canvas_blueprint_name?.trim() ?? "" : "";
+}
+
+function canViewLinkedPCB(link: ProcessCanvasLinkSummary | null | undefined) {
+  return Boolean(link?.link_exists && link.has_pcb_access && canRoleViewPCB(link.pcb_access_role));
 }
 
 function canRoleViewPCB(role: "owner" | "editor" | "viewer" | null | undefined) {
@@ -563,6 +569,8 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                   renderItem={(item, actions) => {
                     const p = processes.find(process => process.id === item.key)!;
                     const link = getProcessLink(p.id);
+                    const canViewPCB = canViewLinkedPCB(link);
+                    const pcbName = getAuthorizedPCBName(p.id);
                     return (
                       <div
                         key={p.id}
@@ -571,7 +579,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                         <div style={{ flex: "1 1 auto", minWidth: 0 }}>
                           <EditableProcess
                             value={item.value}
-                            displayValue={<><strong>{p.name?.trim() || (exportMode ? "" : `Unnamed process (${p.id})`)}</strong><span className="cbmx-process-participants">
+                            displayValue={<><strong>{p.name?.trim() || (onChange ? `Unnamed process (${p.id})` : "")}</strong><span className="cbmx-process-participants">
                               {item.value.slice((p.name ?? "").length)}
                             </span></>}
                             existing
@@ -582,18 +590,25 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                           />
                         </div>
 
-                        {exportMode ? (getExportPCBName(p.id) && <div className="cbmx-process-link">
-                          <span className="cbmx-link-status cbmx-link-status--linked">PCB: {getExportPCBName(p.id)}</span>
+                        {exportMode ? (getAuthorizedPCBName(p.id) && <div className="cbmx-process-link">
+                          <span className="cbmx-link-status cbmx-link-status--linked">PCB: {getAuthorizedPCBName(p.id)}</span>
                         </div>) : <div
                           className="cbmx-process-link"
                         >
-                          <span className={`cbmx-link-status${link?.link_exists ? " cbmx-link-status--linked" : ""}`}>
+                          {!onChange && canViewPCB && link?.process_canvas_blueprint_id && onOpenLinkedPCB ? (
+                            <button type="button" className="cbmx-pcb-open cbmx-link-status cbmx-link-status--linked"
+                              title="Open linked Process Canvas"
+                              aria-label={`Open linked Process Canvas: ${pcbName || "Linked Process Canvas"}`}
+                              onClick={() => { if (link.process_canvas_blueprint_id) onOpenLinkedPCB(link.process_canvas_blueprint_id); }}>
+                              PCB: {pcbName || "Linked Process Canvas"}
+                            </button>
+                          ) : <span className={`cbmx-link-status${link?.link_exists ? " cbmx-link-status--linked" : ""}`}>
                             {!link?.link_exists
                               ? "No PCB linked"
-                              : link.has_pcb_access
-                                ? `PCB: ${link.process_canvas_blueprint_name ?? link.process_canvas_blueprint_id ?? "Unnamed PCB"}`
+                              : canViewPCB
+                                ? `PCB: ${pcbName || "Linked Process Canvas"}`
                                 : "Linked PCB (no access)"}
-                          </span>
+                          </span>}
 
                           {onChange ? (
                             <div ref={openPCBMenuProcessId === p.id ? pcbMenuRef : null} style={{ position: "relative" }}>
@@ -668,7 +683,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                                         Link existing Canvas
                                       </button>
                                     </>
-                                  ) : link.has_pcb_access ? (
+                                  ) : canViewPCB ? (
                                     <>
                                       <button
                                         type="button"

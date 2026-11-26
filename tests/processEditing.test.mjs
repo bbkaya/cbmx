@@ -113,7 +113,7 @@ const writes = () => calls.filter(c => !["list_cbmx_process_links_with_access", 
 async function mount() {
   await act(async () => root.render(createElement(MemoryRouter, { initialEntries: ["/app/editor/test-id"] },
     createElement(Routes, null, createElement(Route, { path: "/app/editor/:blueprintId", element: createElement(EditorPage) }),
-      createElement(Route, { path: "/app/pcb/:pcbId", element: createElement("div", null, "Process Canvas editor") })))));
+      createElement(Route, { path: "/app/pcb/:pcbId", element: createElement("div", null, "Process Canvas destination") })))));
   await flush();
 }
 const edit = async () => click([...container.querySelectorAll("button[title='Click to edit']")].find(b => b.textContent.startsWith("Delivery")));
@@ -384,7 +384,7 @@ test("CBMX viewers still cannot link and PCB viewers cannot relink through the m
 });
 test("Open linked Canvas and Unlink retain their existing actions", async () => {
   links = linked(); await mount(); await click(button("Process Canvas ▾")); await click(button("Open linked Canvas"));
-  assert.match(container.textContent, /Process Canvas editor/); assert.equal(writes().length, 0);
+  assert.match(container.textContent, /Process Canvas destination/); assert.equal(writes().length, 0);
   await act(async () => root.unmount()); root = createRoot(container); await mount();
   window.confirm = () => true; await click(button("Process Canvas ▾")); await click(button("Remove link"));
   assert.deepEqual(links, []); assert.equal(writes()[0].name, "unlink_cbmx_process_link");
@@ -392,7 +392,7 @@ test("Open linked Canvas and Unlink retain their existing actions", async () => 
 test("Create Process Canvas keeps the existing creation and upsert workflow", async () => {
   await mount(); window.prompt = () => "New Canvas"; await click(button("Process Canvas ▾")); await click(button("Create Process Canvas"));
   assert.equal(createdCanvas.name, "New Canvas"); assert.equal(writes()[0].name, "upsert_cbmx_process_link");
-  assert.equal(writes()[0].args.p_process_canvas_blueprint_id, "created-canvas"); assert.match(container.textContent, /Process Canvas editor/);
+  assert.equal(writes()[0].args.p_process_canvas_blueprint_id, "created-canvas"); assert.match(container.textContent, /Process Canvas destination/);
 });
 test("a failed link-status refresh preserves cached links and explains how to reload the committed association", async () => {
   links = linked(); await mount(); await openCanvasSelection(); await change(selection(), "canvas-z");
@@ -403,3 +403,20 @@ test("a failed link-status refresh preserves cached links and explains how to re
   assert.ok(alerts.some(message => message.includes("Reload the blueprint to see the current association")));
   assert.equal(writes().length, 1);
 });
+
+for (const access of ['owner', 'editor', 'viewer']) test(`CBMX viewer opens linked PCB with ${access} access through existing guarded navigation`, async () => {
+  row.owner_user_id = 'another-owner'; blueprintRole = 'viewer'; links = linked(access); await mount();
+  assert.match(container.textContent, /Read-only access/); assert.equal(button('Process Canvas ▾'), undefined);
+  assert.equal(container.querySelector('.cbmx-add-item,.cbmx-remove-item,[title="Click to edit"]'), null);
+  const open = container.querySelector('.cbmx-pcb-open'); assert.ok(open);
+  assert.equal(open.getAttribute('aria-label'), 'Open linked Process Canvas: Delivery Canvas');
+  await click(open); assert.match(container.textContent, /Process Canvas destination/); assert.equal(writes().length, 0);
+});
+
+for (const flags of [{ has_pcb_access: false, pcb_access_role: 'owner' }, { has_pcb_access: true, pcb_access_role: null }])
+  test(`CBMX viewer cannot navigate or disclose inaccessible/inconsistent PCB summaries ${JSON.stringify(flags)}`, async () => {
+    row.owner_user_id = 'another-owner'; blueprintRole = 'viewer'; links = linked();
+    Object.assign(links[0], flags, { process_canvas_blueprint_id: 'SECRET-ID', process_canvas_blueprint_name: 'SECRET-NAME' });
+    await mount(); assert.equal(container.querySelector('.cbmx-pcb-open,.cbmx-pcb-button'), null);
+    assert.ok(!container.outerHTML.includes('SECRET')); assert.match(container.textContent, /Linked PCB \(no access\)/); assert.equal(writes().length, 0);
+  });
