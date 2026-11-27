@@ -1,31 +1,32 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import EditableText from "./ui/EditableText";
 import EditableProcess from "./ui/EditableProcess";
-import SlotStack from "./ui/SlotStack";
+import ItemList, { type ListItem } from "./ui/ItemList";
+import CBMXRowIcon from "./ui/CBMXRowIcon";
+import "./cbmx.css";
 
 import {
   type Actor,
   type CBMXBlueprint,
   type CostBenefitType,
   type ProcessCanvasLinkSummary,
-  countOfType,
   deepClone,
-  indicesOfType,
   normalizeActors,
   validateServiceScenario,
 } from "./cbmxDomain";
 
 import {
-  getKpiSlotNameFlexible,
+  actorListRevision,
+  appendActorItem,
+  editActorItem,
+  removeActorItem,
+  processListRevision,
+  commitProcessItem,
+  type ActorItemKind,
   setActorName,
   setActorVP,
-  setKpiSlotFlexible,
   setNetworkVP,
   setServiceScenario,
-  setNthValueItem,
-  setProcessSlot,
-  renameProcessById,
-  setServiceSlot,
   addActor,
   removeActor,
 } from "./cbmxMutators";
@@ -129,12 +130,6 @@ export function validateCBMXBlueprint(bp: CBMXBlueprint): ValidationIssue[] {
   return issues;
 }
 
-/** Default slots (can be made configurable later) */
-const DEFAULT_PER_VALUE_TYPE_SLOTS = 2;
-const DEFAULT_KPI_SLOTS = 3;
-const DEFAULT_SERVICE_SLOTS = 3;
-const DEFAULT_PROCESS_SLOTS = 3;
-
 const VALUE_TYPES: { label: string; key: CostBenefitType }[] = [
   { label: "Financial", key: "Financial" },
   { label: "Environmental", key: "Environmental" },
@@ -183,112 +178,37 @@ const HELP_LABELS: Record<HelpKey, string> = {
   environmental: "Environmental",
   social: "Social",
   otherNonFinancial: "Other Non-Financial",
-  kpis: "KPIs",
+  kpis: "KPIs (Success Criteria)",
   actorServices: "Actor Services",
   coCreationProcesses: "Co-Creation Processes",
   serviceScenario: "Service Scenario",
 };
-
-/** --- TIGHT SPACING OVERRIDES (local, no global CSS needed) --- */
-const PAD_TD = "1px 1px";
-const PAD_TH = "1px 1px";
-const PAD_LABEL = "1px 1px";
-const LINE = 1.1;
-
-const cellTight = { ...cell, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
-const cellLeftTight = { ...cellLeft, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
-const thCellTight = { ...thCell, padding: PAD_TH, lineHeight: LINE, backgroundColor: "transparent" } as const;
-const rowLabelCellTight = { ...rowLabelCell, padding: PAD_LABEL, lineHeight: LINE, backgroundColor: "transparent" } as const;
-const rowLabelIndentCellTight = { ...rowLabelIndentCell, padding: PAD_LABEL, lineHeight: LINE, backgroundColor: "transparent" } as const;
-const networkCellTight = { ...networkCell, padding: PAD_TD, lineHeight: LINE, backgroundColor: "transparent" } as const;
-
-
-
-type RowKind =
-  | "networkVP"
-  | "actorType"
-  | "actor"
-  | "actorVP"
-  | "costsBenefitsHeader"
-  | "valueFinancial"
-  | "valueEnvironmental"
-  | "valueSocial"
-  | "valueOther"
-  | "kpis"
-  | "services"
-  | "processes"
-  | "serviceScenario";
-
-function rowStyle(kind: RowKind): CSSProperties {
-  // light, print/export friendly pastels
-  switch (kind) {
-    case "networkVP":
-      return { backgroundColor: "#E5F4FF" };
-    case "actorType":
-      return { backgroundColor: "#f1f5f9" };
-    case "actor":
-      return { backgroundColor: "#F2F9FF" };
-    case "actorVP":
-      return { backgroundColor: "#ffffff" };
-    case "costsBenefitsHeader":
-      return { backgroundColor: "#f1f5f9" };
-
-    case "valueFinancial":
-      return { backgroundColor: "#faf5ff" };
-    case "valueEnvironmental":
-      return { backgroundColor: "#f0fdf4" };
-    case "valueSocial":
-      return { backgroundColor: "#f0f9ff" };
-    case "valueOther":
-      return { backgroundColor: "#EAF2FF" };
-
-    case "kpis":
-    case "serviceScenario":
-      return { backgroundColor: "#ffffff" };
-    case "services":
-      return { backgroundColor: "#F2F9FF" };
-    case "processes":
-      return { backgroundColor: "#E5F4FF" };
-    default:
-      return {};
-  }
-}
 
 /** Reusable label renderer (Option B): label + ⓘ icon with native tooltip */
 function RowLabel({
   text,
   helpKey,
   indent = false,
+  exportMode = false,
 }: {
   text: string;
   helpKey?: HelpKey;
   indent?: boolean;
+  exportMode?: boolean;
 }) {
   const tip = helpKey ? CBMX_HELP[helpKey] : undefined;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 8, width: "100%" }}>
-      <span style={indent ? { paddingLeft: 15 } : undefined}>{text}</span>
-      {tip ? (
+    <div className={`cbmx-row-label${indent ? " cbmx-row-label--category" : ""}`}>
+      {helpKey && <CBMXRowIcon kind={helpKey} />}
+      <span>{text}</span>
+      {tip && !exportMode ? (
         <span
           role="button"
           tabIndex={0}
           aria-label={`Info: ${text}`}
           title={tip}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 16,
-            height: 16,
-            borderRadius: 999,
-            fontSize: 12,
-            lineHeight: "16px",
-            cursor: "help",
-            border: "1px solid #bbb",
-            userSelect: "none",
-            flex: "0 0 auto",
-          }}
+          className="cbmx-info"
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") e.preventDefault();
           }}
@@ -310,7 +230,8 @@ function rowHelpProps(helpKey: HelpKey, setActiveHelpKey: (key: HelpKey) => void
 
 export default function CBMXTable({
   blueprint,
-  onChange,
+  onChange: requestedOnChange,
+  presentation = "editor",
   processLinks,
   onCreatePCBForProcess,
   onLinkExistingPCBToProcess,
@@ -319,6 +240,7 @@ export default function CBMXTable({
   onDeleteProcess,
 }: {
   blueprint: CBMXBlueprint;
+  presentation?: "editor" | "readonly" | "export";
   onChange?: (next: CBMXBlueprint) => void;
   processLinks?: ProcessCanvasLinkSummary[];
   onCreatePCBForProcess?: (processId: string) => void;
@@ -327,6 +249,8 @@ export default function CBMXTable({
   onUnlinkPCBFromProcess?: (processId: string) => void;
   onDeleteProcess?: (processId: string) => Promise<boolean>;
 }) {
+  const exportMode = presentation === "export";
+  const onChange = presentation === "editor" ? requestedOnChange : undefined;
   const { actors, N } = useMemo(() => normalizeActors(blueprint.actors), [blueprint.actors]);
   const colspanNetwork = N * 2;
   // A display fallback must not add defaults to legacy JSON and trigger autosave.
@@ -349,57 +273,42 @@ export default function CBMXTable({
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
-  // Slot sizing (aligned across actors)
-  const costSlotsByType = useMemo(() => {
-    const extra = onChange ? 1 : 0; // Always show one additional empty slot when editable
-    const map = new Map<CostBenefitType, number>();
-    for (const { key } of VALUE_TYPES) {
-      const maxCount = Math.max(0, ...actors.map((a) => countOfType(a.costs, key)));
-      map.set(key, Math.max(DEFAULT_PER_VALUE_TYPE_SLOTS, maxCount + extra));
-    }
-    return map;
-  }, [actors, onChange]);
-
-  const benefitSlotsByType = useMemo(() => {
-    const extra = onChange ? 1 : 0; // Always show one additional empty slot when editable
-    const map = new Map<CostBenefitType, number>();
-    for (const { key } of VALUE_TYPES) {
-      const maxCount = Math.max(0, ...actors.map((a) => countOfType(a.benefits, key)));
-      map.set(key, Math.max(DEFAULT_PER_VALUE_TYPE_SLOTS, maxCount + extra));
-    }
-    return map;
-  }, [actors, onChange]);
-
-const kpiSlots = useMemo(() => {
-  const maxLen = Math.max(0, ...actors.map((a) => (a.kpis ?? []).length));
-  const base = Math.max(DEFAULT_KPI_SLOTS, maxLen);
-  return onChange ? Math.max(DEFAULT_KPI_SLOTS, maxLen + 1) : base;
-}, [actors, onChange]);
-
-const serviceSlots = useMemo(() => {
-  const maxLen = Math.max(0, ...actors.map((a) => (a.services ?? []).length));
-  const base = Math.max(DEFAULT_SERVICE_SLOTS, maxLen);
-  return onChange ? Math.max(DEFAULT_SERVICE_SLOTS, maxLen + 1) : base;
-}, [actors, onChange]);
-
-const processSlots = useMemo(() => {
-  const maxLen = Math.max(0, (blueprint.coCreationProcesses ?? []).length);
-  const base = Math.max(DEFAULT_PROCESS_SLOTS, maxLen);
-  return onChange ? Math.max(DEFAULT_PROCESS_SLOTS, maxLen + 1) : base;
-}, [blueprint.coCreationProcesses, onChange]);
+  // Serialize mutations even when two UI events arrive before controlled props rerender.
+  const latestBlueprint = useRef(blueprint);
+  useLayoutEffect(() => { latestBlueprint.current = blueprint; }, [blueprint]);
 
   function updateBlueprint(mutator: (draft: CBMXBlueprint) => void) {
     if (!onChange) return;
-    const next = deepClone(blueprint);
+    const next = deepClone(latestBlueprint.current);
     mutator(next);
+    if (JSON.stringify(next) === JSON.stringify(latestBlueprint.current)) return;
+    latestBlueprint.current = next;
     onChange(next);
   }
 
-  function getNthValueItemDescription(a: Actor, kind: "costs" | "benefits", type: CostBenefitType, slotIndex: number) {
-    const arr = (a[kind] ?? []) as { type: CostBenefitType; description: string }[];
-    const idxs = indicesOfType(arr, type);
-    const realIndex = idxs[slotIndex];
-    return realIndex == null ? "" : (arr[realIndex]?.description ?? "");
+  function actorItems(a: Actor, kind: ActorItemKind, type?: CostBenefitType): ListItem[] {
+    const raw = blueprint.actors.find(actor => actor.id === a.id);
+    if (!raw) return [];
+    if (kind === "costs" || kind === "benefits") return (raw[kind] ?? [])
+      .map((item, index) => ({ ...item, key: String(index), value: item.description ?? "" }))
+      .filter(item => item.type === type && item.value.trim());
+    if (kind === "kpis") return (raw.kpis ?? [])
+      .map((item, index) => ({ key: String(index), value: item.name ?? "", rank: item.rank ?? 999 }))
+      .sort((a, b) => a.rank - b.rank)
+      .filter(item => item.value.trim());
+    return (raw.services ?? []).map((service, index) => ({ key: String(index), value: getServiceSlotLine(raw, index),
+      displayValue: <><strong className="cbmx-service-name">{service.name}</strong>
+        <span className="cbmx-service-operations">{getServiceSlotLine(raw, index).slice((service.name ?? "").length)}</span></> }))
+      .filter(item => item.value.trim());
+  }
+
+  function renderActorItems(a: Actor, kind: ActorItemKind, label: string, addLabel: string, type?: CostBenefitType) {
+    const revision = actorListRevision(blueprint.actors.find(actor => actor.id === a.id), kind);
+    return <ItemList items={actorItems(a, kind, type)} revision={revision} label={`${label} for ${a.name || a.id}`}
+      addLabel={addLabel} numbered={kind === "kpis"} readOnly={!onChange || a.id.startsWith("EMPTY-")}
+      onCommit={(index, value) => updateBlueprint(next => editActorItem(next, a.id, kind, revision, Number(index), value))}
+      onAdd={value => updateBlueprint(next => appendActorItem(next, a.id, kind, revision, value, type))}
+      onRemove={index => updateBlueprint(next => removeActorItem(next, a.id, kind, revision, Number(index)))} />;
   }
 
   function getServiceSlotLine(a: Actor, slotIndex: number) {
@@ -409,7 +318,12 @@ const processSlots = useMemo(() => {
     return ops.length ? `${s.name} (${ops.join(", ")})` : (s.name ?? "");
   }
 
-  const processes = blueprint.coCreationProcesses ?? [];
+  const processes = (blueprint.coCreationProcesses ?? []).filter(process => {
+    const link = getProcessLink(process.id);
+    return onChange || process.name?.trim() || process.participantActorIds?.length || getAuthorizedPCBName(process.id) ||
+      (!exportMode && canViewLinkedPCB(link) && link?.process_canvas_blueprint_id);
+  });
+  const processRevision = processListRevision(blueprint);
 
   function getProcessSlotLine(slotIndex: number) {
     const p = processes[slotIndex];
@@ -424,6 +338,15 @@ const processSlots = useMemo(() => {
 
 function getProcessLink(processId: string) {
   return (processLinks ?? []).find((x) => x.cbmx_process_id === processId) ?? null;
+}
+
+function getAuthorizedPCBName(processId: string) {
+  const link = getProcessLink(processId);
+  return canViewLinkedPCB(link) ? link?.process_canvas_blueprint_name?.trim() ?? "" : "";
+}
+
+function canViewLinkedPCB(link: ProcessCanvasLinkSummary | null | undefined) {
+  return Boolean(link?.link_exists && link.has_pcb_access && canRoleViewPCB(link.pcb_access_role));
 }
 
 function canRoleViewPCB(role: "owner" | "editor" | "viewer" | null | undefined) {
@@ -444,16 +367,22 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
-      <div style={{ flex: "1 1 auto", minWidth: 0, overflowX: "auto" }}>
-        <table style={{ borderCollapse: "collapse", width: "100%", tableLayout: "fixed" }}>
+    <div className="cbmx-matrix">
+      <div className="cbmx-matrix-scroll">
+        <table className="cbmx-table" data-export-width={190 + N * 210}
+          style={{ minWidth: 174 + N * 196 + (N * 2 + 2) * 3 }}>
+          <colgroup>
+            <col style={{ width: 174 }} />
+            {actors.map((actor) => <Fragment key={actor.id}><col /><col /></Fragment>)}
+          </colgroup>
           <tbody>
-            <tr style={rowStyle("networkVP")} {...rowHelpProps("networkValueProposition", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#D2EAFF" }}>
-                <RowLabel text="Network Value Proposition" helpKey="networkValueProposition" />
+            <tr className="cbmx-row cbmx-row--networkVP" {...rowHelpProps("networkValueProposition", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
+                <RowLabel exportMode={exportMode} text="Network Value Proposition" helpKey="networkValueProposition" />
               </td>
-              <td colSpan={colspanNetwork} style={networkCellTight}>
+              <td colSpan={colspanNetwork} style={networkCell}>
                 <EditableText
+                  label="Network Value Proposition"
                   value={blueprint.networkValueProposition?.statement ?? ""}
                   readOnly={!onChange}
                   placeholder={onChange ? "Click to edit" : ""}
@@ -462,53 +391,47 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               </td>
             </tr>
 
-            <tr style={rowStyle("actorType")} {...rowHelpProps("actorType", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#DFE3E7" }}>
-                <RowLabel text="Actor Type" helpKey="actorType" />
+            <tr className="cbmx-row cbmx-row--actorType" {...rowHelpProps("actorType", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
+                <RowLabel exportMode={exportMode} text="Actor Type" helpKey="actorType" />
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
-                  <td colSpan={2} style={cellTight}>
+                  <td colSpan={2} style={cell}>
                     {a.id.startsWith("EMPTY-") ? "" : a.type === "Other" ? "" : (
-                      <span style={{ fontStyle: "italic", fontWeight: 400 }}>{a.type}</span>
+                      <span className={`cbmx-role cbmx-role--${a.type.toLowerCase()}`}>
+                        <CBMXRowIcon kind={a.type === "Customer" ? "actor" : "coCreationProcesses"} />{a.type}
+                      </span>
                     )}
                   </td>
                 </Fragment>
               ))}
             </tr>
 
-            <tr style={rowStyle("actor")} {...rowHelpProps("actor", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#DCE2E9" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-                  <RowLabel text="Actor" helpKey="actor" />
+            <tr className="cbmx-row cbmx-row--actor" {...rowHelpProps("actor", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
+                <div className="cbmx-actor-label">
+                  <RowLabel exportMode={exportMode} text="Actor" helpKey="actor" />
                   {onChange ? (
                     <button
                       type="button"
                       onClick={() => updateBlueprint((next) => addActor(next))}
                       title="Add actor"
-                      style={{
-                        border: "1px solid #bbb",
-                        background: "white",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        padding: "2px 8px",
-                        fontSize: 12,
-                        lineHeight: "14px",
-                        whiteSpace: "nowrap",
-                      }}
+                      className="cbmx-add-actor"
                     >
-                      +Actor
+                      + Add Actor
                     </button>
                   ) : null}
                 </div>
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
-                  <td colSpan={2} style={{ ...cellLeftTight, textAlign: "center" }}>
+                  <td colSpan={2} style={{ ...cellLeft, textAlign: "center" }}>
                     {a.id.startsWith("EMPTY-") ? null : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ flex: 1, minWidth: 0, fontWeight: 800 }}>
+                      <div className="cbmx-actor-header">
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <EditableText
+                            label={`Actor name: ${a.name || a.id}`}
                             value={a.name ?? ""}
                             readOnly={!onChange}
                             placeholder={onChange ? "Click to edit" : ""}
@@ -528,16 +451,8 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                               if (!ok) return;
                               updateBlueprint((next) => removeActor(next, a.id));
                             }}
-                            style={{
-                              border: "1px solid #bbb",
-                              background: "white",
-                              borderRadius: 4,
-                              cursor: "pointer",
-                              padding: "1px 3px",
-                              fontSize: 14,
-                              lineHeight: "14px",
-                              flex: "0 0 auto",
-                            }}
+                            className="cbmx-remove-actor"
+                            aria-label={`Remove actor ${a.name?.trim() || a.id}`}
                           >
                             −
                           </button>
@@ -549,15 +464,16 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               ))}
             </tr>
 
-            <tr style={rowStyle("actorVP")} {...rowHelpProps("actorValueProposition", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
-                <RowLabel text="Actor Value Proposition" helpKey="actorValueProposition" />
+            <tr className="cbmx-row cbmx-row--actorVP" {...rowHelpProps("actorValueProposition", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
+                <RowLabel exportMode={exportMode} text="Actor Value Proposition" helpKey="actorValueProposition" />
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
-                  <td colSpan={2} style={cellLeftTight}>
+                  <td colSpan={2} style={cellLeft}>
                     {a.id.startsWith("EMPTY-") ? null : (
                       <EditableText
+                        label={`Actor Value Proposition: ${a.name || a.id}`}
                         value={a.actorValueProposition?.statement ?? ""}
                         readOnly={!onChange}
                         placeholder={onChange ? "Click to edit" : ""}
@@ -569,26 +485,23 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               ))}
             </tr>
 
-            <tr style={rowStyle("costsBenefitsHeader")} {...rowHelpProps("costsBenefits", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#D7DBDF" }}>
-                <RowLabel text="Outcomes (Costs & Benefits)" helpKey="costsBenefits" />
+            <tr className="cbmx-row cbmx-row--costsBenefitsHeader" {...rowHelpProps("costsBenefits", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
+                <RowLabel exportMode={exportMode} text="Outcomes (Costs & Benefits)" helpKey="costsBenefits" />
               </td>
               {actors.map((a) => (
                 <Fragment key={a.id}>
-                  <th style={thCellTight}>
-                    <span style={{ fontStyle: "italic", fontWeight: 400 }}>Costs (Negative)</span>
+                  <th style={thCell}>
+                    <div className="cbmx-outcome-heading cbmx-outcome-heading--cost">Costs (Negative)</div>
                   </th>
-                  <th style={thCellTight}>
-                    <span style={{ fontStyle: "italic", fontWeight: 400 }}>Benefits (Positive)</span>
+                  <th style={thCell}>
+                    <div className="cbmx-outcome-heading cbmx-outcome-heading--benefit">Benefits (Positive)</div>
                   </th>
                 </Fragment>
               ))}
             </tr>
 
             {VALUE_TYPES.map(({ label, key }) => {
-              const costSlots = costSlotsByType.get(key) ?? DEFAULT_PER_VALUE_TYPE_SLOTS;
-              const benefitSlots = benefitSlotsByType.get(key) ?? DEFAULT_PER_VALUE_TYPE_SLOTS;
-
               const helpKey: HelpKey =
                 key === "Financial"
                   ? "financial"
@@ -601,44 +514,19 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               return (
                 <tr
                   key={`row-${key}`}
-                  style={rowStyle(
-                    key === "Financial"
-                      ? "valueFinancial"
-                      : key === "Environmental"
-                      ? "valueEnvironmental"
-                      : key === "Social"
-                      ? "valueSocial"
-                      : "valueOther"
-                  )}
+                  className={`cbmx-row cbmx-row--${key}`}
                   {...rowHelpProps(helpKey, setActiveHelpKey)}
                 >
-                  <td style={rowLabelIndentCellTight}>
-                    <RowLabel text={label} helpKey={helpKey} indent />
+                  <td style={rowLabelIndentCell}>
+                    <RowLabel exportMode={exportMode} text={label} helpKey={helpKey} indent />
                   </td>
                   {actors.map((a) => (
                     <Fragment key={a.id}>
-                      <td style={cellLeftTight}>
-                        <SlotStack
-                          slots={costSlots}
-                          readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                          getValue={(i: number) => getNthValueItemDescription(a, "costs", key, i)}
-                          placeholder={onChange ? "…" : ""}
-                          onCommit={(i: number, v: string) =>
-                            updateBlueprint((next) => setNthValueItem(next, a.id, "costs", key, i, v))
-                          }
-                        />
+                      <td style={cellLeft}>
+                        {renderActorItems(a, "costs", `${label} cost`, `Add ${label.toLowerCase()} cost`, key)}
                       </td>
-
-                      <td style={cellLeftTight}>
-                        <SlotStack
-                          slots={benefitSlots}
-                          readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                          getValue={(i: number) => getNthValueItemDescription(a, "benefits", key, i)}
-                          placeholder={onChange ? "…" : ""}
-                          onCommit={(i: number, v: string) =>
-                            updateBlueprint((next) => setNthValueItem(next, a.id, "benefits", key, i, v))
-                          }
-                        />
+                      <td style={cellLeft}>
+                        {renderActorItems(a, "benefits", `${label} benefit`, `Add ${label.toLowerCase()} benefit`, key)}
                       </td>
                     </Fragment>
                   ))}
@@ -646,109 +534,81 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               );
             })}
 
-            <tr style={rowStyle("kpis")} {...rowHelpProps("kpis", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
-                <RowLabel text="KPIs" helpKey="kpis" />
+            <tr className="cbmx-row cbmx-row--kpis" {...rowHelpProps("kpis", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
+                <RowLabel exportMode={exportMode} text="KPIs (Success Criteria)" helpKey="kpis" />
               </td>
               {actors.map((a) => (
-                <td key={a.id} colSpan={2} style={cellLeftTight}>
-                  <SlotStack
-                    slots={kpiSlots}
-                    readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                    getValue={(i: number) => getKpiSlotNameFlexible(a, i)}
-                    placeholder={onChange ? "…" : ""}
-                    prefixLabel={(i: number) => `${i + 1}`}
-                    onCommit={(i: number, v: string) => updateBlueprint((next) => setKpiSlotFlexible(next, a.id, i, v))}
-                  />
+                <td key={a.id} colSpan={2} style={cellLeft}>
+                  {renderActorItems(a, "kpis", "KPI", "Add KPI")}
                 </td>
               ))}
             </tr>
 
-            <tr style={rowStyle("services")} {...rowHelpProps("actorServices", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#DCE2E9" }}>
-                <RowLabel text="Actor Services" helpKey="actorServices" />
+            <tr className="cbmx-row cbmx-row--services" {...rowHelpProps("actorServices", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
+                <RowLabel exportMode={exportMode} text="Actor Services" helpKey="actorServices" />
               </td>
               {actors.map((a) => (
-                <td key={a.id} colSpan={2} style={cellLeftTight}>
-                  <SlotStack
-                    slots={serviceSlots}
-                    readOnly={!onChange || a.id.startsWith("EMPTY-")}
-                    getValue={(i: number) => getServiceSlotLine(a, i)}
-                    placeholder={onChange ? "Service (op1, op2)" : ""}
-                    onCommit={(i: number, v: string) => updateBlueprint((next) => setServiceSlot(next, a.id, i, v))}
-                  />
+                <td key={a.id} colSpan={2} style={cellLeft}>
+                  {renderActorItems(a, "services", "Service", "Add service")}
                 </td>
               ))}
             </tr>
 
-            <tr style={rowStyle("processes")} {...rowHelpProps("coCreationProcesses", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#D5E3EF" }}>
-                <RowLabel text="Co-Creation Processes" helpKey="coCreationProcesses" />
+            <tr className="cbmx-row cbmx-row--processes" {...rowHelpProps("coCreationProcesses", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
+                <RowLabel exportMode={exportMode} text="Co-Creation Processes" helpKey="coCreationProcesses" />
               </td>
-              <td colSpan={colspanNetwork} style={cellLeftTight}>
-                <div style={{ display: "grid", gap: 6 }}>
-                  {Array.from({ length: processSlots }).map((_, i) => {
-                    const p = processes[i];
-                    if (!p) {
-                      return (
-                        <div
-                          key={`process-edit-${i}`}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            minHeight: 32,
-                          }}
-                        >
-                          <div style={{ flex: "1 1 auto", minWidth: 0 }}>
-                            <EditableProcess
-                              value=""
-                              readOnly={!onChange}
-                              onCommit={(v) => updateBlueprint((next) => setProcessSlot(next, i, v))}
-                            />
-                          </div>
-                        </div>
-                      );
-                    }
-
+              <td colSpan={colspanNetwork} style={cellLeft}>
+                <ItemList className="cbmx-process-list" items={processes.map((p, i) => ({ key: p.id, value: getProcessSlotLine(i) }))}
+                  revision={processRevision} label="Co-creation processes" addLabel="Add process" readOnly={!onChange}
+                  onCommit={(id, value) => updateBlueprint(next => commitProcessItem(next, processRevision, id, value))}
+                  onAdd={value => updateBlueprint(next => commitProcessItem(next, processRevision, null, value))}
+                  renderAddition={(commit, cancel) => <EditableProcess value="" initiallyEditing onCommit={commit} onCancel={cancel} />}
+                  renderItem={(item, actions) => {
+                    const p = processes.find(process => process.id === item.key)!;
                     const link = getProcessLink(p.id);
+                    const canViewPCB = canViewLinkedPCB(link);
+                    const pcbName = getAuthorizedPCBName(p.id);
                     return (
                       <div
                         key={p.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          minHeight: 20,
-                        }}
+                        className="cbmx-process-row"
                       >
                         <div style={{ flex: "1 1 auto", minWidth: 0 }}>
                           <EditableProcess
-                            value={getProcessSlotLine(i)}
+                            value={item.value}
+                            displayValue={<><strong>{p.name?.trim() || (onChange ? `Unnamed process (${p.id})` : "")}</strong><span className="cbmx-process-participants">
+                              {item.value.slice((p.name ?? "").length)}
+                            </span></>}
                             existing
                             readOnly={!onChange}
-                            onCommit={(v) => updateBlueprint((next) => renameProcessById(next, p.id, v))}
+                            onCommit={actions.commit}
+                            onEditingChange={actions.editingChange}
                             onDelete={onDeleteProcess ? () => onDeleteProcess(p.id) : undefined}
                           />
                         </div>
 
-                        <div
-                          style={{
-                            flex: "0 0 auto",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            whiteSpace: "nowrap",
-                            fontSize: 12,
-                          }}
+                        {exportMode ? (getAuthorizedPCBName(p.id) && <div className="cbmx-process-link">
+                          <span className="cbmx-link-status cbmx-link-status--linked">PCB: {getAuthorizedPCBName(p.id)}</span>
+                        </div>) : <div
+                          className="cbmx-process-link"
                         >
-                          <span style={{ color: "#64748b" }}>
+                          {!onChange && canViewPCB && link?.process_canvas_blueprint_id && onOpenLinkedPCB ? (
+                            <button type="button" className="cbmx-pcb-open cbmx-link-status cbmx-link-status--linked"
+                              title="Open linked Process Canvas"
+                              aria-label={`Open linked Process Canvas: ${pcbName || "Linked Process Canvas"}`}
+                              onClick={() => { if (link.process_canvas_blueprint_id) onOpenLinkedPCB(link.process_canvas_blueprint_id); }}>
+                              PCB: {pcbName || "Linked Process Canvas"}
+                            </button>
+                          ) : <span className={`cbmx-link-status${link?.link_exists ? " cbmx-link-status--linked" : ""}`}>
                             {!link?.link_exists
                               ? "No PCB linked"
-                              : link.has_pcb_access
-                                ? `PCB: ${link.process_canvas_blueprint_name ?? link.process_canvas_blueprint_id ?? "Unnamed PCB"}`
+                              : canViewPCB
+                                ? `PCB: ${pcbName || "Linked Process Canvas"}`
                                 : "Linked PCB (no access)"}
-                          </span>
+                          </span>}
 
                           {onChange ? (
                             <div ref={openPCBMenuProcessId === p.id ? pcbMenuRef : null} style={{ position: "relative" }}>
@@ -759,16 +619,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                                 }
                                 aria-haspopup="menu"
                                 aria-expanded={openPCBMenuProcessId === p.id}
-                                style={{
-                                  border: "1px solid #bbb",
-                                  background: "white",
-                                  borderRadius: 6,
-                                  cursor: "pointer",
-                                  padding: "2px 8px",
-                                  fontSize: 12,
-                                  lineHeight: "14px",
-                                  whiteSpace: "nowrap",
-                                }}
+                                className="cbmx-pcb-button"
                               >
                                 Process Canvas ▾
                               </button>
@@ -832,7 +683,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                                         Link existing Canvas
                                       </button>
                                     </>
-                                  ) : link.has_pcb_access ? (
+                                  ) : canViewPCB ? (
                                     <>
                                       <button
                                         type="button"
@@ -1029,19 +880,19 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                               ) : null}
                             </div>
                           ) : null}
-                        </div>
+                        </div>}
                       </div>
                     );
-                  })}
-                </div>
+                  }} />
               </td>
             </tr>
-            <tr style={rowStyle("serviceScenario")} {...rowHelpProps("serviceScenario", setActiveHelpKey)}>
-              <td style={{ ...rowLabelCellTight, backgroundColor: "#EBEBEB" }}>
-                <RowLabel text="Service Scenario" helpKey="serviceScenario" />
+            <tr className="cbmx-row cbmx-row--serviceScenario" {...rowHelpProps("serviceScenario", setActiveHelpKey)}>
+              <td style={rowLabelCell}>
+                <RowLabel exportMode={exportMode} text="Service Scenario" helpKey="serviceScenario" />
               </td>
-              <td colSpan={colspanNetwork} style={cellLeftTight}>
+              <td colSpan={colspanNetwork} style={cellLeft}>
                 <EditableText
+                  label="Service Scenario"
                   value={serviceScenario}
                   multiline
                   readOnly={!onChange}
@@ -1058,81 +909,25 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
         </table>
       </div>
 
-      <div
-        style={{
-          flex: helpOpen ? "0 0 220px" : "0 0 34px",
-          width: helpOpen ? 220 : 34,
-          maxWidth: helpOpen ? 220 : 34,
-          display: "flex",
-          alignSelf: "stretch",
-          transition: "width 180ms ease, max-width 180ms ease, flex-basis 180ms ease",
-        }}
-      >
+      {!exportMode && <div className={`cbmx-help${helpOpen ? " cbmx-help--open" : ""}`}>
         {helpOpen ? (
-          <aside
-            aria-live="polite"
-            style={{
-              width: "100%",
-              border: "1px solid #d7dde5",
-              borderRadius: 8,
-              background: "#f8fafc",
-              color: "#475569",
-              fontSize: 12,
-              lineHeight: 1.45,
-              textAlign: "left",
-              display: "flex",
-              minHeight: "100%",
-              overflow: "hidden",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setHelpOpen(false)}
-              aria-label="Collapse tips panel"
-              title="Collapse tips"
-              style={{
-                border: "none",
-                borderRight: "1px solid #d7dde5",
-                background: "#FFFBEF",
-                cursor: "pointer",
-                padding: "3px 4px",
-                fontSize: 14,
-                color: "#475569",
-                flex: "0 0 28px",
-              }}
-            >
+          <aside aria-live="polite" className="cbmx-help-panel">
+            <button type="button" onClick={() => setHelpOpen(false)}
+              aria-label="Collapse tips panel" title="Collapse tips" className="cbmx-help-toggle">
               ››
             </button>
-            <div style={{ padding: "8px 8px", minWidth: 0 }}>
-              <div style={{ fontWeight: 700, color: "#1f2937", marginBottom: 3 }}>{HELP_LABELS[activeHelpKey]}</div>
+            <div className="cbmx-help-content">
+              <div className="cbmx-help-title">{HELP_LABELS[activeHelpKey]}</div>
               <div>{CBMX_HELP[activeHelpKey]}</div>
             </div>
           </aside>
         ) : (
-          <button
-            type="button"
-            onClick={() => setHelpOpen(true)}
-            aria-label="Open help panel"
-            title="Open help"
-            style={{
-              width: "100%",
-              border: "1px solid #d7dde5",
-              borderRadius: 4,
-              background: "#FFFBEF",
-              color: "#475569",
-              cursor: "pointer",
-              padding: "4px 4px",
-              fontSize: 12,
-              lineHeight: 1,
-              writingMode: "vertical-rl",
-              textOrientation: "mixed",
-              letterSpacing: 0.5,
-            }}
-          >
+          <button type="button" onClick={() => setHelpOpen(true)}
+            aria-label="Open help panel" title="Open help" className="cbmx-help-toggle cbmx-help-toggle--closed">
             ›› Help ‹‹
           </button>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

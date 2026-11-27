@@ -1,0 +1,91 @@
+{
+  "date": "2026-11-27",
+  "branch": "codex/cbmx-matrix-visual-redesign",
+  "reviewBase": "3282e31cc191b30432a463fd6809ca1eb51d86b3",
+  "checkpointTag": "cbmx-ui-redesign-rc-20261127",
+  "runtime": {
+    "node": "20.20.2",
+    "npm": "10.8.2",
+    "platform": "darwin arm64",
+    "deploymentRuntime": "Node 20 on ubuntu-latest; workflow unchanged; not triggered"
+  },
+  "cleanLockfileInstall": {
+    "command": "npm ci --no-audit --no-fund",
+    "exitCode": 0,
+    "isolatedCopy": true,
+    "environmentFilesLoaded": false
+  },
+  "checks": {
+    "tests": {
+      "command": "npm test",
+      "exitCode": 0,
+      "total": 232,
+      "passed": 231,
+      "ordinaryFailures": 0,
+      "todo": 1,
+      "skipped": 0
+    },
+    "typescript": {
+      "command": "tsc -b",
+      "exitCode": 0
+    },
+    "lint": {
+      "command": "npm run lint",
+      "exitCode": 1,
+      "errors": 39,
+      "warnings": 4,
+      "newFindings": 0,
+      "comparison": "Same normalized file/severity/rule counts as pre-finalization baseline; original main had 40 errors and 4 warnings"
+    },
+    "build": {
+      "command": "npm run build",
+      "exitCode": 0,
+      "existingLargeChunkAdvisory": true
+    },
+    "sqlFixtures": {
+      "runtime": "Node 20 / pinned PGlite 0.3.0 / PostgreSQL 17",
+      "liveConnection": false,
+      "administratorReportingChecks": 106,
+      "administrativeArtifactScenarios": 13,
+      "safeProcessDeletionScenarios": 15,
+      "processLinkingScenarios": 18,
+      "allExitCodes": 0
+    }
+  },
+  "sourceFingerprint": {
+    "fileCount": 100,
+    "sha256": "75bcc68356d03837c11ef964379766a3fd9a9c9ef6cb8fbcbfb0cafd7e07bd46",
+    "scope": "Tracked/release source, tests, supabase and root package/TypeScript/Vite/ESLint configuration; sorted relative path + NUL + bytes + NUL; excludes ignored metadata and generated files",
+    "snapshotMismatches": []
+  },
+  "autosaveR1": {
+    "preExisting": true,
+    "desiredAssertionStillFailsAsTodo": true,
+    "testFile": "tests/processEditing.test.mjs",
+    "testFileGitBlob": "01b5c3a71589296d0cbd1f1c6e329b751bf2e55d",
+    "unchangedDuringFinalization": true,
+    "userTemporarilyAcceptedRiskForUiRelease": true,
+    "acceptanceDate": "2026-11-27"
+  },
+  "safariSignoff": {
+    "actualSafariManuallyVerifiedBy": "user",
+    "pngAndPdfClippingResolved": true,
+    "finalUiApproved": true,
+    "date": "2026-11-27",
+    "version": "not supplied"
+  },
+  "operations": {
+    "liveDatabaseOperations": false,
+    "merged": false,
+    "pushed": false,
+    "deployed": false,
+    "remoteMainFetchedForReview": true
+  },
+  "requiredDatabaseRpcRlsEnvironmentChanges": false,
+  "remainingChecks": [
+    "Review final checkpoint and give explicit merge/push/deploy authorization",
+    "Confirm current main and record last-known-good production deployment/artifact",
+    "Confirm existing target configuration and authenticated staging smoke coverage",
+    "Observe unchanged Ubuntu Node 20 deployment workflow and post-release smoke after authorization"
+  ]
+}

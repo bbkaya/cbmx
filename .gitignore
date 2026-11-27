@@ -25,3 +25,7 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
+
+# Regenerable CBMX synthetic verification output
+/output/cbmx-*/
+/output/pdf/cbmx-*.pdf

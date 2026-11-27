@@ -83,9 +83,10 @@ before(async () => {
   globalThis.__adminTestFrom = table => {
     const filters = {};
     const type = table.startsWith("process_canvas") ? "PC" : "CBMX";
+    const memberRole = Object.hasOwn(roleOverrides, type) ? roleOverrides[type] : artifactRole;
     const request = { select() { return request; }, eq(key, value) { filters[key] = value; return request; },
       ilike() { return request; }, in() { return request; },
-      maybeSingle: async () => ok(table.endsWith("members") && artifactRole ? { role: artifactRole } : null),
+      maybeSingle: async () => ok(table.endsWith("members") && memberRole ? { role: memberRole } : null),
       single: async () => artifactRole ? ok(artifact(type, filters.id).row) : { data: null, error: { message: "Access denied" } },
       then(resolve, reject) { return Promise.resolve(ok([])).then(resolve, reject); },
     };
@@ -520,3 +521,34 @@ test("frontend tests never load the real Supabase client or authentication modul
   }
   assert.ok(calls.every((call) => ["admin_get_access", "admin_get_statistics", "admin_list_users", "admin_list_blueprints"].includes(call.name)));
 });
+
+for (const cbmxRole of ['viewer', null]) for (const pcbRole of ['owner', 'editor', 'viewer', null])
+  test(`administrative CBMX ${cbmxRole ?? 'non-member'} navigates independently to PCB ${pcbRole ?? 'administrative read-only'} permissions`, async () => {
+    linkedArtifacts = true; roleOverrides = { CBMX: cbmxRole, PC: pcbRole };
+    await mount('/app/admin/b/linked-cbmx'); await flush(5);
+    assert.match(text(), /Admin View — Read Only/); assert.equal(button('Process Canvas ▾'), undefined);
+    assert.equal(container.querySelector('.cbmx-add-item,.cbmx-remove-item,[title="Click to edit"]'), null);
+    const open = container.querySelector('.cbmx-pcb-open'); assert.ok(open);
+    await click(open); await flush(5);
+    const editable = pcbRole === 'owner' || pcbRole === 'editor';
+    assert.equal(Boolean(container.querySelector('input[placeholder="Untitled PCB"]')), editable);
+    assert.equal(text().includes('Admin View — Read Only'), !editable);
+    assert.ok(calls.some(call => call.name === 'admin_load_artifact' && call.args.p_blueprint_type === 'PC' && call.args.p_blueprint_id === 'linked-pcb'));
+    assert.equal(mutations().length, 0);
+  });
+
+for (const pcbRole of ['owner', 'editor', 'viewer'])
+  test(`normal-route CBMX viewer opens the actual PCB destination in its own ${pcbRole} mode`, async () => {
+    artifactRole = 'viewer'; roleOverrides = { CBMX: 'viewer', PC: pcbRole };
+    handler = (name, args) => name === 'list_cbmx_process_links_with_access' ? ok([{ cbmx_process_id: 'P1', link_exists: true,
+      has_pcb_access: true, pcb_access_role: pcbRole, process_canvas_blueprint_id: 'linked-pcb', process_canvas_blueprint_name: 'Linked Canvas' }])
+      : defaultHandler(name, args);
+    await mount('/app/b/linked-cbmx'); await flush(5);
+    assert.match(text(), /Read-only access/); const open = container.querySelector('.cbmx-pcb-open'); assert.ok(open);
+    await click(open); await flush(5);
+    assert.ok(text().includes('PC Private artifact') || container.querySelector('input[value="PC Private artifact"]'));
+    assert.equal(Boolean(container.querySelector('input[placeholder="Untitled PCB"]')), pcbRole !== 'viewer');
+    assert.equal(text().includes('View only'), pcbRole === 'viewer');
+    assert.equal(text().includes('Admin View — Read Only'), false);
+    assert.equal(mutations().length, 0);
+  });
