@@ -1,3 +1,4 @@
+import { useEditingLock } from "../../../editing/EditingLock";
 import { useEffect, useId, useRef, useState } from "react";
 import { loadProcessCanvasLinkOptions, type ProcessCanvasLinkOptions } from "../../../pcb/PCBData";
 
@@ -11,6 +12,7 @@ export default function LinkProcessCanvasDialog({ blueprintId, processId, proces
   onCancel: () => void;
   onConfirm: (pcbId: string, expectedCurrentPCBId: string | null) => Promise<void>;
 }) {
+  const lock = useEditingLock();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const submittingRef = useRef(false);
   const titleId = useId();
@@ -50,7 +52,7 @@ export default function LinkProcessCanvasDialog({ blueprintId, processId, proces
       style={{ width: 520, maxWidth: "calc(100vw - 48px)", boxSizing: "border-box", border: "1px solid #cbd5e1", borderRadius: 10, padding: 24 }}>
       <form onSubmit={async (event) => {
         event.preventDefault();
-        if (submittingRef.current || !options?.canvases.some((canvas) => canvas.id === selectedId)) return;
+        if (lock.blocked() || submittingRef.current || !options?.canvases.some((canvas) => canvas.id === selectedId)) return;
         submittingRef.current = true;
         setBusy(true); setError("");
         try { await onConfirm(selectedId, options.current_canvas?.id ?? null); }
@@ -66,7 +68,7 @@ export default function LinkProcessCanvasDialog({ blueprintId, processId, proces
           <label htmlFor={selectId} style={{ display: "block", marginBottom: 6 }}>
             {relinking ? "Select replacement Process Canvas" : "Select Process Canvas"}
           </label>
-          <select id={selectId} autoFocus value={selectedId} disabled={busy}
+          <select id={selectId} autoFocus value={selectedId} disabled={busy || lock.locked}
             aria-describedby={error ? errorId : undefined}
             onChange={(event) => { setSelectedId(event.target.value); setError(""); }}
             style={{ width: "100%", boxSizing: "border-box", padding: 8, font: "inherit", border: "1px solid #94a3b8", borderRadius: 6 }}>
@@ -83,7 +85,7 @@ export default function LinkProcessCanvasDialog({ blueprintId, processId, proces
         }} style={{ marginBottom: 16 }}>Reload list</button>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button type="button" disabled={busy} onClick={onCancel}>Cancel</button>
-          <button type="submit" disabled={loading || busy || !selectedId}>
+          <button type="submit" disabled={loading || busy || lock.locked || !selectedId}>
             {busy ? "Linking…" : relinking ? "Relink Canvas" : "Link Canvas"}
           </button>
         </div>

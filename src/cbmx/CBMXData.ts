@@ -301,7 +301,7 @@ export async function updateBlueprintWithVersion(args: {
     if (args.deletion && error.code === "PGRST202") {
       throw new Error("Safe process deletion is not available yet. Ask the application administrator to finish the update, then try again. Nothing was deleted.");
     }
-    throw new Error(error.message || "Could not save blueprint.");
+    throw Object.assign(new Error(error.message || "Could not save blueprint."), { code: error.code });
   }
 
   const rows = (data ?? []) as Array<{

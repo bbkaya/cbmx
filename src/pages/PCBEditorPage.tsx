@@ -1,3 +1,4 @@
+import { EditingLockContext, useSaveLock } from "../editing/EditingLock";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toPng } from "html-to-image";
@@ -24,7 +25,20 @@ function stableHash(obj: unknown): string {
   return JSON.stringify(obj);
 }
 
-export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSession<AdminPCBArtifact> } = {}) {
+type PCBEditorProps = { adminView?: AdminViewSession<AdminPCBArtifact> };
+export default function PCBEditorPage(props: PCBEditorProps = {}) {
+  const { pcbId } = useParams();
+  const { user } = useAuth();
+  const [session, setSession] = useState({ route: pcbId, key: 0, createdRoute: null as string | null });
+  if (session.route !== pcbId) {
+    // Only our own first-save navigation retains the session and its inline drafts.
+    setSession({ route: pcbId, key: session.key + (session.createdRoute === pcbId ? 0 : 1), createdRoute: null });
+  }
+  return <PCBEditorSession key={`${session.key}:${user?.id}:${Boolean(props.adminView)}`} {...props}
+    onCreated={(id) => setSession(current => ({ ...current, createdRoute: id }))} />;
+}
+
+function PCBEditorSession({ adminView, onCreated }: PCBEditorProps & { onCreated: (id: string) => void }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { pcbId } = useParams<{ pcbId: string }>();
@@ -34,8 +48,7 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
   const [menuOpen, setMenuOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const saveLock = useSaveLock();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [linkContext, setLinkContext] = useState<PCBLinkContext | null>(null);
   const [canOpenLinkedBlueprint, setCanOpenLinkedBlueprint] = useState(false);
@@ -44,6 +57,7 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
   const [loadedVersionNo, setLoadedVersionNo] = useState<number | null>(null);
   const [hasConflict, setHasConflict] = useState(false);
 
+  const createdHere = useRef<string | null>(null);
   const exportRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
@@ -52,6 +66,8 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
   const issues = useMemo<ValidationIssue[]>(() => validateProcessCanvasBlueprint(blueprint), [blueprint]);
   const hasBlocking = issues.some((x) => x.level === "error");
   const isNew = !adminView && (!pcbId || pcbId === "new");
+  const currentBlueprint = useRef(blueprint);
+  currentBlueprint.current = blueprint;
   const blueprintHash = useMemo(() => stableHash(blueprint), [blueprint]);
   const isDirty = blueprintHash !== lastSavedHash;
   const canEditCurrentPCB = isNew || canRoleEditPCB(pcbRole);
@@ -61,6 +77,8 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
     let alive = true;
 
     async function run() {
+      // The first save already supplied this row. Keep active inline drafts mounted.
+      if (createdHere.current === pcbId) return;
       setIsLoading(true);
       setLoadError(null);
 
@@ -148,11 +166,16 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
   }, [menuOpen]);
 
   function setName(name: string) {
-    if (isReadOnly) return;
+    if (isReadOnly || saveLock.blocked()) return;
     setBlueprint((prev) => ({
       ...deepClonePCB(prev),
       meta: { ...prev.meta, name, updatedAt: new Date().toISOString() },
     }));
+  }
+
+  function changeBlueprint(next: ProcessCanvasBlueprint) {
+    if (isReadOnly || saveLock.blocked()) throw new Error("Saving… Please try again when saving finishes.");
+    setBlueprint(next);
   }
 
   async function reloadPCBFromDb(options?: { alertOnError?: boolean }) {
@@ -185,6 +208,7 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
         }
       }
 
+      if (!saveLock.isCurrent()) return false;
       setBlueprint(row.blueprint_json);
       setLinkContext(ctx);
       setCanOpenLinkedBlueprint(nextCanOpenLinkedBlueprint);
@@ -206,8 +230,11 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
     options?: { silent?: boolean },
   ): Promise<boolean> {
     if (reason === "stale") {
+      saveLock.setFailed("Save conflict — reload required");
       setHasConflict(true);
-      await reloadPCBFromDb();
+      const reloaded = await reloadPCBFromDb();
+      if (!saveLock.isCurrent()) return false;
+      if (reloaded) saveLock.setFailed("Save conflict — latest version reloaded");
       if (!options?.silent) {
         window.alert("This Process Canvas was updated elsewhere. Your local changes were not saved, and the latest version has been reloaded.");
       }
@@ -245,7 +272,9 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
       return false;
     }
 
-    setIsSaving(true);
+    if (!saveLock.begin()) return false;
+    if (autoSaveTimerRef.current != null) window.clearTimeout(autoSaveTimerRef.current);
+    let success = false;
 
     try {
       const next = deepClonePCB(blueprint);
@@ -258,10 +287,15 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
           name: next.meta.name || "Untitled Process Canvas",
           blueprint: next,
         });
+        if (!saveLock.isCurrent()) return false;
+        currentBlueprint.current = row.blueprint_json;
         setBlueprint(row.blueprint_json);
+        setPcbRole("owner");
         setLoadedVersionNo(row.version_no ?? null);
         setHasConflict(false);
         setLastSavedHash(stableHash(row.blueprint_json));
+        createdHere.current = row.id;
+        onCreated(row.id);
         navigate(`/app/pcb/${row.id}`, { replace: true });
       } else {
         if (loadedVersionNo == null) {
@@ -276,42 +310,45 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
           blueprint: next,
         });
 
+        if (!saveLock.isCurrent()) return false;
         if (!result.ok) {
           return await handlePCBSaveFailure(result.reason, options);
         }
 
         const saved = result.row;
+        currentBlueprint.current = saved.blueprint_json;
         setBlueprint(saved.blueprint_json);
         setLoadedVersionNo(saved.version_no ?? null);
         setLastSavedHash(stableHash(saved.blueprint_json));
         setHasConflict(false);
       }
 
+      success = true;
       return true;
     } catch (err) {
-      if (!options?.silent) {
+      if (saveLock.isCurrent() && !options?.silent) {
         window.alert(err instanceof Error ? err.message : "Could not save Process Canvas Blueprint.");
       }
       return false;
     } finally {
-      setIsSaving(false);
+      if (saveLock.isCurrent() && !success) saveLock.setFailed(previous => previous ?? "Save failed — changes retained");
+      saveLock.end();
     }
   }
 
   async function autoSaveBlueprint(): Promise<boolean> {
     if (isReadOnly) return false;
-    if (isSaving || isAutoSaving) return false;
+    if (saveLock.blocked()) return false;
     if (!isDirty) return true;
     if (hasBlocking) return false;
     if (!user?.id) return false;
 
-    setIsAutoSaving(true);
     const ok = await saveBlueprint({ silent: true });
-    setIsAutoSaving(false);
     return ok;
   }
 
   async function ensureSavedBeforeIO(): Promise<boolean> {
+    if (saveLock.blocked()) return false;
     if (isReadOnly) return true;
 
     if (hasBlocking) {
@@ -332,20 +369,20 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
 
   async function exportJson() {
     const ok = await ensureSavedBeforeIO();
-    if (!ok) return;
+    if (!ok || !saveLock.isCurrent()) return;
 
-    const blob = new Blob([JSON.stringify(blueprint, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(currentBlueprint.current, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${safeFileName(blueprint.meta.name || "process-canvas")}.json`;
+    a.download = `${safeFileName(currentBlueprint.current.meta.name || "process-canvas")}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
   async function exportPng() {
     const ok = await ensureSavedBeforeIO();
-    if (!ok) return;
+    if (!ok || !saveLock.isCurrent()) return;
     if (!exportRef.current) return;
 
     setMenuOpen(false);
@@ -355,7 +392,7 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
       const dataUrl = await toPng(exportRef.current, { cacheBust: true, pixelRatio: 2 });
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = `${safeFileName(blueprint.meta.name || "process-canvas")}.png`;
+      a.download = `${safeFileName(currentBlueprint.current.meta.name || "process-canvas")}.png`;
       a.click();
     } finally {
       setIsExporting(false);
@@ -364,7 +401,7 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
 
   async function exportPdf() {
     const ok = await ensureSavedBeforeIO();
-    if (!ok) return;
+    if (!ok || !saveLock.isCurrent()) return;
     if (!exportRef.current) return;
 
     setMenuOpen(false);
@@ -387,13 +424,15 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
       const x = (pageWidth - renderWidth) / 2;
       const y = (pageHeight - renderHeight) / 2;
       pdf.addImage(dataUrl, "PNG", x, y, renderWidth, renderHeight);
-      pdf.save(`${safeFileName(blueprint.meta.name || "process-canvas")}.pdf`);
+      pdf.save(`${safeFileName(currentBlueprint.current.meta.name || "process-canvas")}.pdf`);
     } finally {
       setIsExporting(false);
     }
   }
 
   function importJsonFile(file: File) {
+    if (saveLock.blocked()) return;
+    const initialBlueprint = blueprint;
     if (isReadOnly) {
       window.alert("This Process Canvas is view-only. You need editor access to import changes.");
       return;
@@ -401,6 +440,7 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
 
     const reader = new FileReader();
     reader.onload = () => {
+      if (saveLock.blocked() || currentBlueprint.current !== initialBlueprint) return;
       try {
         const parsed = JSON.parse(String(reader.result ?? "{}")) as ProcessCanvasBlueprint;
         setBlueprint(parsed);
@@ -414,7 +454,7 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
 
   useEffect(() => {
     if (isReadOnly) return;
-    if (isLoading) return;
+    if (isLoading || saveLock.blocked()) return;
     if (!isDirty) return;
     if (hasBlocking) return;
     if (!user?.id) return;
@@ -459,7 +499,8 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
   }
 
   return (
-    <div style={{ display: "grid", gap: 12, width: "100%", minWidth: 1200 }}>
+    <EditingLockContext.Provider value={{ locked: saveLock.locked, blocked: saveLock.blocked }}>
+    <div data-saving={saveLock.locked} style={{ display: "grid", gap: 12, width: "100%", minWidth: 1200 }}>
       <header
         style={{
           display: "flex",
@@ -480,12 +521,12 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
         </div>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <span style={{ color: isReadOnly ? "#64748b" : isAutoSaving || isSaving ? "#1d4ed8" : isDirty ? "#b45309" : "#15803d", fontSize: 12, fontWeight: 700 }}>
-            {isReadOnly ? "Read-only access" : isAutoSaving || isSaving ? "Saving automatically..." : isDirty ? "Unsaved changes" : "All changes saved"}
+          <span role="status" aria-live="polite" style={{ color: isReadOnly ? "#64748b" : saveLock.locked ? "#1d4ed8" : isDirty ? "#b45309" : "#15803d", fontSize: 12, fontWeight: 700 }}>
+            {isReadOnly ? "Read-only access" : saveLock.locked ? "Saving…" : saveLock.failed ? saveLock.failed : hasBlocking ? "Autosave paused — validation errors" : isDirty ? "Unsaved changes" : "Saved"}
           </span>
 
           <div ref={menuRef} style={{ position: "relative" }}>
-            <button type="button" onClick={() => setMenuOpen((v) => !v)} style={toolbarButton()}>
+            <button type="button" disabled={saveLock.locked} onClick={() => setMenuOpen((v) => !v)} style={toolbarButton()}>
               {isReadOnly ? "Export ▾" : "Export/Import ▾"}
             </button>
 
@@ -505,13 +546,13 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
                   zIndex: 20,
                 }}
               >
-                <button type="button" onClick={() => void exportPng()} style={menuItemButton()}>
+                <button type="button" disabled={saveLock.locked} onClick={() => void exportPng()} style={menuItemButton()}>
                   Export Canvas to PNG
                 </button>
-                <button type="button" onClick={() => void exportPdf()} style={menuItemButton()}>
+                <button type="button" disabled={saveLock.locked} onClick={() => void exportPdf()} style={menuItemButton()}>
                   Export Canvas to PDF
                 </button>
-                <button type="button" onClick={() => void exportJson()} style={menuItemButton()}>
+                <button type="button" disabled={saveLock.locked} onClick={() => void exportJson()} style={menuItemButton()}>
                   Export Canvas to JSON
                 </button>
                 {!isReadOnly ? (
@@ -519,7 +560,9 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
                     <div style={{ height: 1, background: "#eee", margin: "6px 0" }} />
                     <button
                       type="button"
+                      disabled={saveLock.locked}
                       onClick={() => {
+                        if (saveLock.blocked()) return;
                         setMenuOpen(false);
                         fileInputRef.current?.click();
                       }}
@@ -678,6 +721,8 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
             </div>
           ) : (
             <input
+              disabled={saveLock.locked}
+              aria-label="Blueprint name"
               value={blueprint.meta.name ?? ""}
               onChange={(e) => setName(e.target.value)}
               placeholder="Untitled PCB"
@@ -699,12 +744,13 @@ export default function PCBEditorPage({ adminView }: { adminView?: AdminViewSess
 
         <ProcessCanvas
           blueprint={blueprint}
-          onChange={isReadOnly ? undefined : setBlueprint}
+          onChange={isReadOnly ? undefined : changeBlueprint}
           showHelpPanel={!isExporting}
           readOnly={isReadOnly}
         />
       </div>
     </div>
+    </EditingLockContext.Provider>
   );
 }
 

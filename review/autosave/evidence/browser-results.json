@@ -1,0 +1,34 @@
+{
+  "browser": "158.0.8127.37",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "results": [
+    {
+      "editor": "cbmx",
+      "geometry": {
+        "x": 206,
+        "y": 189.21875,
+        "width": 1167,
+        "height": 26.890625
+      },
+      "sameDraftNode": true,
+      "failureUnlock": true,
+      "subsequentCommitSaved": true
+    },
+    {
+      "editor": "pcb",
+      "geometry": {
+        "x": 537,
+        "y": 413.625,
+        "width": 154,
+        "height": 55
+      },
+      "sameDraftNode": true,
+      "failureUnlock": true,
+      "subsequentCommitSaved": true
+    }
+  ],
+  "errors": []
+}

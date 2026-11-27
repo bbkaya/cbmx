@@ -1,0 +1,30 @@
+{
+  "previousProductionSha": "7d6a560ff7973a4fa50555b3bedec0164ff62a8c",
+  "workflowRunId": 45976100515,
+  "workflowUrl": "https://github.com/bbkaya/cbmx/actions/runs/45976100515",
+  "workflowConclusion": "success",
+  "deploymentId": 8106611503,
+  "deploymentState": "success",
+  "deploymentUrl": "https://cbmx.eu/",
+  "artifactId": 15186827985,
+  "artifactName": "github-pages",
+  "artifactExpired": false,
+  "artifactExpiresAt": "2026-11-28T09:44:03Z",
+  "artifactDigest": "sha256:f78fd4d02afaa8a001cf67a22a4e508fa706d5a40db17ce492a957206c237e07",
+  "productionHttpStatus": 200,
+  "productionAssets": [
+    {
+      "path": "/assets/index-Dgs2foEU.css",
+      "status": 200,
+      "bytes": 23508,
+      "sha256": "fc2cce023fcec2f99da8a62ce339d28fd20979581071a87e69777029cce4df31"
+    },
+    {
+      "path": "/assets/index-iHJ67G4-.js",
+      "status": 200,
+      "bytes": 1013803,
+      "sha256": "9a152b31b0d54f626cd637f03354c50b21e254528154dc59e5147ccd30396ddd"
+    }
+  ],
+  "recordedAt": "2026-11-27T11:31:35.622290+00:00"
+}

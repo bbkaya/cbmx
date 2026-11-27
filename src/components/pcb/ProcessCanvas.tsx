@@ -1,3 +1,4 @@
+import { useEditingLock } from "../../editing/EditingLock";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FocusEventHandler, type KeyboardEventHandler } from "react";
 import { PROCESS_CANVAS_LAYOUT_V1 } from "../../pcb/processCanvasLayout";
 import type {
@@ -309,6 +310,7 @@ function AutoGrowTextarea({
   dark?: boolean;
   centered?: boolean;
 }) {
+  const lock = useEditingLock();
   const ref = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -320,6 +322,7 @@ function AutoGrowTextarea({
   return (
     <textarea
       ref={ref}
+      readOnly={lock.locked}
       value={value}
       autoFocus
       rows={1}
@@ -354,6 +357,7 @@ function CommitField({
   readOnly = false,
   onCommit,
 }: CommitFieldProps) {
+  const lock = useEditingLock();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
 
@@ -362,12 +366,13 @@ function CommitField({
   }, [value, editing]);
 
   function commit() {
-    setEditing(false);
-    if (readOnly || !onCommit) return;
+    if (lock.blocked() || readOnly || !onCommit) return;
     onCommit(draft.trim());
+    setEditing(false);
   }
 
   function cancel() {
+    if (lock.blocked()) return;
     setDraft(value);
     setEditing(false);
   }
@@ -393,13 +398,14 @@ function CommitField({
           border: "none",
           background: "transparent",
         }}
-        onClick={readOnly || !onCommit ? undefined : () => setEditing(true)}
+        onClick={readOnly || !onCommit ? undefined : () => { if (!lock.blocked()) setEditing(true); }}
+        aria-disabled={lock.locked}
         role={readOnly || !onCommit ? undefined : "button"}
         tabIndex={readOnly || !onCommit ? undefined : 0}
         onKeyDown={readOnly || !onCommit ? undefined : (e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            setEditing(true);
+            if (!lock.blocked()) setEditing(true);
           }
         }}
       >
@@ -425,6 +431,7 @@ function CommitField({
       ) : (
         <input
           autoFocus
+          readOnly={lock.locked}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
@@ -448,10 +455,10 @@ function CommitField({
         />
       )}
       <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={commit} style={miniButton(dark)}>
+        <button type="button" disabled={lock.locked} onMouseDown={(e) => e.preventDefault()} onClick={commit} style={miniButton(dark)}>
           Save
         </button>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={cancel} style={miniButton(dark)}>
+        <button type="button" disabled={lock.locked} onMouseDown={(e) => e.preventDefault()} onClick={cancel} style={miniButton(dark)}>
           Cancel
         </button>
       </div>
@@ -525,12 +532,14 @@ function parseNameWithOptionalDescription(value: string): { name: string; descri
 }
 
 export default function ProcessCanvas({ blueprint, onChange, showHelpPanel = true, readOnly = false }: Props) {
+  const lock = useEditingLock();
   const layout = PROCESS_CANVAS_LAYOUT_V1;
   const [helpOpen, setHelpOpen] = useState(true);
   const [activeHelpId, setActiveHelpId] = useState<string>("purposeGoals");
   const activeHelp = HELP_CONTENT[activeHelpId] ?? HELP_CONTENT.purposeGoals;
 
   const update = (mutator: (draft: ProcessCanvasBlueprint) => void) => {
+    if (lock.blocked()) throw new Error("Saving… Please try again when saving finishes.");
     if (readOnly || !onChange) return;
     const next = clone(blueprint);
     mutator(next);
