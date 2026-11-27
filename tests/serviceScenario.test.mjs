@@ -33,7 +33,7 @@ after(async () => {
   await server?.close();
 });
 
-const helpText = "A narrative description of how the network value proposition is realized from the customer's perspective and how other actors contribute to its realization through their activities, interactions, and service exchanges";
+const helpText = "A narrative description of how the Network Value Proposition is realized from the customer(s)' perspective and how participating actors contribute to its realization through their activities, interactions and service exchanges.";
 const narrative = "\n  The customer requests help.\n\nOther actors exchange services.\n<script>plain text</script>\n";
 
 function legacyBlueprint(actorCount = 2) {

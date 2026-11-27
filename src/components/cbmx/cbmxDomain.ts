@@ -81,25 +81,11 @@ export function validateCBMXBlueprint(
 
   issues.push(...validateServiceScenario(bp));
 
-  if (bp.actors.length < 2) {
-    issues.push({ level: "error", message: "At least 2 actors are required (Customer + Orchestrator)." });
-    return issues;
-  }
-
-  const customers = bp.actors.filter((a) => a.type === "Customer").length;
-  const orch = bp.actors.filter((a) => a.type === "Orchestrator").length;
-
-  if (customers !== 1) issues.push({ level: "error", message: "Constraint: exactly 1 Customer actor is required." });
-  if (orch !== 1) issues.push({ level: "error", message: "Constraint: exactly 1 Orchestrator actor is required." });
-
-  if (bp.actors[0]?.type !== "Customer") {
-    issues.push({ level: "warning", message: "By convention, actor #1 should be the Customer." });
-  }
-  if (bp.actors[1]?.type !== "Orchestrator") {
-    issues.push({ level: "warning", message: "By convention, actor #2 should be the Orchestrator." });
-  }
+  issues.push(...validateActorTypes(bp.actors));
+  if (bp.actors.length < 2) return issues;
 
   for (const a of bp.actors) {
+    if (!a) continue; // The shared actor-type check reports malformed entries.
     const name = (a?.name ?? "").trim() || a?.id || "Unknown actor";
 
     if (!Array.isArray(a.costs) || a.costs.length < 1) {
@@ -150,6 +136,28 @@ export function validateCBMXBlueprint(
   return issues;
 }
 
+/** Shared fixed-position role rules, also checked before applying imported JSON. */
+export function validateActorTypes(actors: unknown): { level: "error"; message: string }[] {
+  const issues: { level: "error"; message: string }[] = [];
+  const error = (message: string) => issues.push({ level: "error", message });
+  if (!Array.isArray(actors)) {
+    error("Blueprint is missing the actors array.");
+    return issues;
+  }
+  if (actors.length < 2) error("At least 2 actors are required (Customer + Orchestrator).");
+  if (actors.length > 10) error("A blueprint may contain at most 10 actors.");
+  if (!actors.some(actor => actor?.type === "Customer")) error("At least 1 Customer actor is required.");
+  if (actors.filter(actor => actor?.type === "Orchestrator").length !== 1)
+    error("Exactly 1 Orchestrator actor is required.");
+  if (actors[0]?.type !== "Customer") error("Actor #1 must be Customer; its type and position are fixed.");
+  if (actors[1]?.type !== "Orchestrator") error("Actor #2 must be Orchestrator; its type and position are fixed.");
+  actors.slice(2).forEach((actor, index) => {
+    if (actor?.type !== "Customer" && actor?.type !== "Other")
+      error(`Actor #${index + 3} must be Customer or Other.`);
+  });
+  return issues;
+}
+
 export function validateServiceScenario(bp: CBMXBlueprint) {
   return bp.serviceScenario !== undefined && typeof bp.serviceScenario !== "string"
     ? [{ level: "error" as const, message: "Service Scenario must be plain text." }]
@@ -173,7 +181,9 @@ export function normalizeActors(actorsIn: Actor[], actorCount?: number) {
 
   if (actors[0]) actors[0].type = "Customer";
   if (actors[1]) actors[1].type = "Orchestrator";
-  for (let i = 2; i < actors.length; i++) actors[i].type = "Other";
+  for (let i = 2; i < actors.length; i++) {
+    if (actors[i].type !== "Customer") actors[i].type = "Other";
+  }
 
   for (const a of actors) ensureMinCostBenefit(a);
 

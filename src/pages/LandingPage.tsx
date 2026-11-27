@@ -305,12 +305,12 @@ export default function LandingPage() {
       <Section id="inside" title="What are the elements of a CBMX Blueprint?">
         <div style={cardPanel}>
           <div style={calloutElement}>
-            <div style={{ marginBottom: 1 }}><b>Network value proposition</b> - the shared value the network offers to the customer</div>
+            <div style={{ marginBottom: 1 }}><b>Network value proposition</b> - the value the collaborative network collectively offers to one or more customers, addressing their problems or needs through joint value creation by the participating actors</div>
           </div>
           <div style={{ marginBottom: 5 }} />
 
           <div style={calloutElement}>
-            <div style={{ marginBottom: 1 }}><b>Actors</b> — the actors in the collaborative network: the customer, orchestrator, and other public/private actors</div>
+            <div style={{ marginBottom: 1 }}><b>Actors</b> — the actors in the collaborative network: one or more customers (problem owners), exactly one orchestrator coordinating collaborative value creation, and other public/private actors</div>
           </div>
           <div style={{ marginBottom: 5 }} />
 
@@ -345,7 +345,7 @@ export default function LandingPage() {
           <div style={{ display: "grid", gap: 10 }}>
             <Step
               title="1. Define the network value proposition"
-              text="Start with the value proposition that the collaborative network jointly delivers to the target customer."
+              text="Start with the value proposition that the collaborative network jointly delivers to one or more target customers, addressing their problems or needs."
             />
             <Step
               title="2. Map actors and contributions"

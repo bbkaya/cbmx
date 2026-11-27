@@ -17,7 +17,7 @@ import {
 } from "../cbmx/CBMXData";
 import { canEditPCB, linkAvailableProcessCanvas } from "../pcb/PCBData";
 import { makeBlankProcessCanvasBlueprint } from "../pcb/processCanvasDomain";
-import { assignNewImportedProcessIds, prepareCBMXJsonExport } from "../components/cbmx/cbmxDomain";
+import { assignNewImportedProcessIds, prepareCBMXJsonExport, validateActorTypes } from "../components/cbmx/cbmxDomain";
 import CBMXEditorToolbar from "../components/cbmx/ui/CBMXEditorToolbar";
 import CBMXValidationPanel from "../components/cbmx/ui/CBMXValidationPanel";
 import DeleteProcessDialog from "../components/cbmx/ui/DeleteProcessDialog";
@@ -833,6 +833,14 @@ function EditorSession({ adminView }: EditorProps) {
     const candidate = parsed as CBMXBlueprint;
     if (!candidate || !Array.isArray(candidate.actors)) {
       alert("Import failed: JSON does not look like a CBMX blueprint (missing actors array).");
+      return;
+    }
+
+    // Fixed roles cannot be repaired in the editor. Reject before touching the draft,
+    // process associations or persistence; retain the usual flow for other issues.
+    const actorTypeIssues = validateActorTypes(candidate.actors);
+    if (actorTypeIssues.length) {
+      alert(`Import failed: invalid actor configuration.\n${actorTypeIssues.map(issue => issue.message).join("\n")}\nCorrect the JSON file and import it again.`);
       return;
     }
 

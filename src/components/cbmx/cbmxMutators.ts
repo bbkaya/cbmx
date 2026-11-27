@@ -21,6 +21,13 @@ export function setServiceScenario(next: CBMXBlueprint, text: string) {
   next.serviceScenario = text;
 }
 
+export function setActorType(next: CBMXBlueprint, actorId: string, type: "Customer" | "Other") {
+  if (type !== "Customer" && type !== "Other") return;
+  const index = next.actors.findIndex(actor => actor.id === actorId);
+  if (index < 2 || next.actors[index].type === type) return;
+  next.actors[index].type = type;
+}
+
 export function setActorName(next: CBMXBlueprint, actorId: string, name: string) {
   const a = next.actors.find((x) => x.id === actorId);
   if (!a) return;

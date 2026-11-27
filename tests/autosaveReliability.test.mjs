@@ -202,7 +202,7 @@ for (const outcome of ['ok', 'network']) test(`cbmx: duplicate-name retry ${outc
   await finish(outcome); assert.equal(nameInput().disabled, false); assert.match(status(), outcome === 'ok' ? /^Saved$/ : /Save failed/); assert.equal(timers.size, 0);
 });
 test('cbmx: validation errors pause autosave without imposing the temporary save lock', async () => {
-  await mount('cbmx'); const invalid = structuredClone(model.rows.cbmx.blueprint_json); invalid.actors = [];
+  await mount('cbmx'); const invalid = structuredClone(model.rows.cbmx.blueprint_json); invalid.serviceScenario = 42;
   const file = { text: async () => JSON.stringify(invalid) }; const input = container.querySelector('input[type="file"]');
   Object.defineProperty(input, 'files', { value: [file] }); await act(async () => input.dispatchEvent(new window.Event('change', { bubbles: true }))); await flush();
   assert.match(status(), /Autosave paused — validation errors/); assert.equal(nameInput().disabled, false); assert.equal(writes().length, 0); assert.equal(timers.size, 0);
@@ -243,4 +243,79 @@ test('cbmx: custom process addition retains its draft and can commit after unloc
   await finish('ok'); assert.equal(field.value, 'New process draft'); assert.equal(container.contains(field), true);
   await key(field, 'Enter'); assert.equal(container.querySelector('.cbmx-process-list .cbmx-addition'), null);
   await fireAutosave(); await finish('ok'); assert.ok(model.rows.cbmx.blueprint_json.coCreationProcesses.some(process => process.name === 'New process draft'));
+});
+
+const actorTypeTrigger = () => container.querySelector('.cbmx-role-trigger');
+const selectActorType = async type => {
+  await click(actorTypeTrigger());
+  await click([...container.querySelectorAll('[role="menuitemradio"]')].find(node => node.textContent.startsWith(type)));
+};
+async function importActorBlueprint(candidate) {
+  const input = container.querySelector('input[type="file"]');
+  Object.defineProperty(input, 'files', { configurable: true, value: [{ text: async () => JSON.stringify(candidate) }] });
+  await act(async () => input.dispatchEvent(new window.Event('change', { bubbles: true })));
+  await flush();
+}
+for (const role of ['owner', 'editor']) test(`cbmx: ${role} type changes autosave and reload with version, content and PCB references intact`, async () => {
+  model.role = role;
+  if (role === 'editor') { model.user.id = 'editor-id'; }
+  const before = structuredClone(model.rows.cbmx.blueprint_json);
+  await mount('cbmx'); assert.equal(timers.size, 0); assert.equal(writes().length, 0);
+  await selectActorType('Customer'); assert.match(status(), /Unsaved changes/);
+  await fireAutosave(); assert.equal(writes().length, 1); assert.equal(writes()[0].args.p_loaded_version_no, 1);
+  const expected = structuredClone(before); expected.actors[2].type = 'Customer';
+  assert.deepEqual(writes()[0].args.p_blueprint_json, expected);
+  assert.equal(actorTypeTrigger(), null); // Save lock temporarily shows static labels.
+  await finish('ok'); assert.deepEqual(model.rows.cbmx.blueprint_json, expected); assert.equal(model.rows.cbmx.version_no, 2);
+  await act(async () => root.unmount()); root = createRoot(container); await mount('cbmx');
+  assert.equal(actorTypeTrigger().textContent, 'Customer'); assert.equal(timers.size, 0);
+  assert.equal(container.querySelectorAll('.cbmx-actor--customer.cbmx-actor-header').length, 2);
+  await selectActorType('Other'); await fireAutosave(); await finish('ok');
+  assert.deepEqual(model.rows.cbmx.blueprint_json, before); assert.equal(model.rows.cbmx.version_no, 3);
+});
+
+test('cbmx: viewer sees additional Customer labels and cannot reclassify or delete them', async () => {
+  model.role = 'viewer'; model.user.id = 'viewer-id'; model.rows.cbmx.blueprint_json.actors[2].type = 'Customer';
+  await mount('cbmx');
+  assert.equal(container.querySelector('.cbmx-role-trigger,.cbmx-role-chevron,.cbmx-remove-actor'), null);
+  assert.deepEqual([...container.querySelectorAll('.cbmx-role')].map(node => node.textContent), ['Customer', 'Orchestrator', 'Customer']);
+  assert.equal(writes().length, 0); assert.equal(timers.size, 0);
+});
+
+for (const outcome of ['stale', 'forbidden', 'network']) test(`cbmx: actor reclassification preserves existing ${outcome} handling and stored configuration`, async () => {
+  const before = structuredClone(model.rows.cbmx.blueprint_json);
+  await mount('cbmx'); await selectActorType('Customer'); await fireAutosave(); await finish(outcome);
+  assert.deepEqual(model.rows.cbmx.blueprint_json, before); assert.equal(writes().length, 1);
+  assert.match(status(), /Save failed|Conflict|conflict/);
+});
+
+for (const [label, change, message] of [
+  ['first actor type', bp => { bp.actors[0].type = 'Other'; }, /Actor #1 must be Customer/],
+  ['second actor type', bp => { bp.actors[1].type = 'Customer'; }, /Actor #2 must be Orchestrator/],
+  ['extra orchestrator', bp => { bp.actors[2].type = 'Orchestrator'; }, /Actor #3 must be Customer or Other/],
+  ['unknown role', bp => { bp.actors[2].type = 'Partner'; }, /Actor #3 must be Customer or Other/],
+  ['null actor', bp => { bp.actors[2] = null; }, /Actor #3 must be Customer or Other/],
+  ['missing role', bp => { delete bp.actors[2].type; }, /Actor #3 must be Customer or Other/],
+  ['too few actors', bp => { bp.actors = bp.actors.slice(0, 1); }, /At least 2/],
+  ['too many actors', bp => { bp.actors.push(...fixture(10).actors); }, /at most 10/],
+]) test(`cbmx: malformed import (${label}) reports the rule and leaves the correctable draft and storage untouched`, async () => {
+  await mount('cbmx'); const original = structuredClone(model.rows.cbmx.blueprint_json);
+  const candidate = structuredClone(original); change(candidate);
+  const callsBefore = model.calls.length, alerts = []; const oldAlert = globalThis.alert;
+  globalThis.alert = value => alerts.push(value);
+  try { await importActorBlueprint(candidate); } finally { globalThis.alert = oldAlert; }
+  assert.match(alerts.at(-1), message); assert.match(alerts.at(-1), /Correct the JSON file/);
+  assert.equal(status().trim(), 'Saved'); assert.equal(writes().length, 0); assert.equal(timers.size, 0);
+  assert.equal(model.calls.length, callsBefore); assert.deepEqual(model.rows.cbmx.blueprint_json, original);
+  assert.deepEqual([...container.querySelectorAll('.cbmx-role')].map(n => n.textContent), original.actors.map(a => a.type));
+  await selectActorType('Customer'); assert.match(status(), /Unsaved changes/); // Existing draft is still editable.
+});
+
+for (const multi of [false, true]) test(`cbmx: ${multi ? 'multi-customer' : 'legacy single-customer'} JSON import uses existing versioned save and preserves actor content`, async () => {
+  await mount('cbmx'); const imported = structuredClone(model.rows.cbmx.blueprint_json);
+  if (multi) imported.actors[2].type = 'Customer';
+  model.hold = false; await importActorBlueprint(imported);
+  assert.equal(writes().length, 1); assert.equal(writes()[0].args.p_loaded_version_no, 1);
+  assert.deepEqual(model.rows.cbmx.blueprint_json, imported); assert.equal(model.rows.cbmx.version_no, 2);
+  assert.equal(actorTypeTrigger().textContent, multi ? 'Customer' : 'Other'); assert.equal(timers.size, 0);
 });

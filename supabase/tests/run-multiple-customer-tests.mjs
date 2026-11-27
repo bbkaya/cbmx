@@ -1,0 +1,73 @@
+// Disposable in-memory PostgreSQL only. No env files, URLs or hosted mode.
+// Uses the existing incomplete table fixture and inspected save/link RPC bodies.
+// Run with --pglite-module=/path/to/@electric-sql/pglite/dist/index.js (PostgreSQL 17).
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+import { fixture } from '../../review/cbmx/fixtures.js';
+const flag = process.argv.find(arg => arg.startsWith('--pglite-module='));
+const { PGlite } = await import(flag ? pathToFileURL(flag.slice('--pglite-module='.length)).href : '@electric-sql/pglite');
+const db = new PGlite();
+const owner = '00000000-0000-0000-0000-000000000001';
+const editor = '00000000-0000-0000-0000-000000000002';
+const viewer = '00000000-0000-0000-0000-000000000003';
+const bp = '10000000-0000-0000-0000-000000000001';
+const pcb = '20000000-0000-0000-0000-000000000001';
+const read = name => readFile(new URL(name, import.meta.url), 'utf8');
+const rows = async (sql, params = []) => (await db.query(sql, params)).rows;
+const caller = async user => {
+  await db.exec('reset role; set role authenticated');
+  await db.query("select set_config('request.jwt.claim.sub', $1, false)", [user]);
+};
+const save = async (version, blueprint) => (await rows('select * from public.save_blueprint_with_version($1,$2,$3,$4)', [bp, version, blueprint.meta.name, blueprint]))[0];
+let checks = 0;
+const pass = label => { checks++; console.log('ok - ' + label); };
+try {
+  console.log((await rows('select version() as version'))[0].version);
+  assert.equal(Math.floor(Number((await rows('show server_version_num'))[0].server_version_num) / 10000), 17);
+  await db.exec(await read('fixtures/minimal-schema.sql'));
+  await db.exec(await read('fixtures/process-links.sql'));
+  await db.exec(await read('fixtures/process-link-functions.sql'));
+  await db.exec(`create trigger bump_version before update on public.blueprints for each row execute function public.bump_version_and_updated_at();
+    revoke all on function public.save_blueprint_with_version(uuid,bigint,text,jsonb) from public, anon;
+    grant execute on function public.save_blueprint_with_version(uuid,bigint,text,jsonb) to authenticated;`);
+  await db.exec(await read('../migrations/20261114091941_safe_cbmx_process_deletion.sql'));
+  await db.query('insert into auth.users(id,created_at) values ($1,now()),($2,now()),($3,now())', [owner, editor, viewer]);
+  const original = fixture(5, 'dense'); original.actors[2].type = original.actors[4].type = 'Customer';
+  await caller(owner);
+  await db.query('insert into blueprints(id,owner_user_id,name,blueprint_json) values ($1,$2,$3,$4)', [bp, owner, original.meta.name, original]);
+  assert.deepEqual((await rows('select blueprint_json from blueprints where id=$1', [bp]))[0].blueprint_json, original);
+  pass('owner creation/retrieval retains several Customers, all actor content and ordering');
+  await db.exec('reset role');
+  await db.query("insert into blueprint_members values ($1,$2,'owner'),($1,$3,'editor'),($1,$4,'viewer')", [bp, owner, editor, viewer]);
+  await db.query("insert into process_canvas_blueprints(id,owner_user_id,name,blueprint_json) values ($1,$2,'Canvas',$3)", [pcb, owner, { contents: 'unchanged' }]);
+  await db.query("insert into cbmx_process_links(cbmx_blueprint_id,cbmx_process_id,process_canvas_blueprint_id) values ($1,'P1',$2)", [bp, pcb]);
+  const linksBefore = await rows('select * from cbmx_process_links');
+  const pcbBefore = await rows('select * from process_canvas_blueprints');
+  const changed = structuredClone(original); changed.actors[3].type = 'Customer';
+  await caller(owner); const ownerSave = await save(1, changed);
+  assert.equal(ownerSave.ok, true); assert.equal(ownerSave.version_no, 2); assert.deepEqual(ownerSave.blueprint_json, changed);
+  pass('inspected versioned save accepts an additional Customer and returns unchanged actor attributes/references');
+  await caller(editor); const editorSave = await save(2, original);
+  assert.equal(editorSave.ok, true); assert.equal(editorSave.version_no, 3); assert.deepEqual(editorSave.blueprint_json, original);
+  pass('editor can reclassify a Customer back to Other through the existing RPC');
+  const stale = await save(2, changed); assert.equal(stale.ok, false); assert.equal(stale.reason, 'stale');
+  pass('stale version cannot overwrite the saved actor configuration');
+  await caller(viewer);
+  assert.deepEqual((await rows('select blueprint_json from blueprints where id=$1', [bp]))[0].blueprint_json, original);
+  const denied = await save(3, changed); assert.equal(denied.ok, false); assert.equal(denied.reason, 'forbidden');
+  assert.deepEqual((await rows('select blueprint_json from blueprints where id=$1', [bp]))[0].blueprint_json, original);
+  pass('viewer retrieval retains Customers while mutation stays forbidden');
+  await db.exec('reset role');
+  assert.deepEqual(await rows('select * from cbmx_process_links'), linksBefore);
+  assert.deepEqual(await rows('select * from process_canvas_blueprints'), pcbBefore);
+  pass('actor reclassification leaves all existing Process Canvas links and contents untouched');
+  await caller(owner);
+  const deleted = (await rows('select * from public.delete_cbmx_process_with_version($1,3,$2,$3,$4,null)', [bp, original.meta.name, original, 'P2']))[0];
+  assert.equal(deleted.ok, true); assert.equal(deleted.version_no, 4);
+  assert.deepEqual(deleted.blueprint_json.actors, original.actors);
+  assert.deepEqual(deleted.blueprint_json.coCreationProcesses.map(p => p.id), ['P1', 'P3']);
+  assert.deepEqual((await rows('select blueprint_json from blueprints where id=$1', [bp]))[0].blueprint_json, deleted.blueprint_json);
+  pass('existing safe process deletion and retrieval preserve the complete multi-customer actor array');
+  console.log(`${checks} checks passed. Incomplete local fixture only; the full hosted schema was not verified.`);
+} finally { await db.close(); }

@@ -219,7 +219,7 @@ for (const count of [2, 5, 10]) for (const populated of [false, true]) test(`${c
   rasterize = async exportNode => {
     assert.equal(exportNode.querySelector(controls), null);
     assert.equal(exportNode.querySelectorAll('tbody > tr').length, 13);
-    assert.equal(exportNode.querySelectorAll('.cbmx-row-icon').length, 15);
+    assert.equal(exportNode.querySelectorAll('.cbmx-row-icon').length, 13 + count);
     assert.equal(exportNode.querySelector('.cbmx-row--serviceScenario td:last-child').colSpan, count * 2);
     assert.equal(exportNode.querySelectorAll('.cbmx-row--Financial > td').length, 1 + count * 2);
     assert.equal(exportNode.querySelectorAll('.cbmx-row-label--category').length, 4);
@@ -319,4 +319,22 @@ test('an active editor keeps drafts, focus, scrolling, help and menu while expor
     assert.equal(scroller.scrollLeft, 77); assert.equal(scroller.scrollTop, 33); assert.equal(notifications, 0);
     assert.ok(node.querySelector('[aria-label="Collapse tips panel"]')); assert.ok(node.querySelector('[role="menu"]'));
   } finally { await act(async () => root.unmount()); node.remove(); }
+});
+
+
+test('multi-customer capture shares static labels, actor classes and ordering with the editor', async () => {
+  const data = snapshot(5); data.blueprint.actors[2].type = data.blueprint.actors[4].type = 'Customer';
+  const before = JSON.stringify(data);
+  rasterize = async exportNode => {
+    assert.deepEqual([...exportNode.querySelectorAll('.cbmx-role')].map(n => n.textContent), ['Customer', 'Orchestrator', 'Customer', 'Other', 'Customer']);
+    assert.deepEqual([...exportNode.querySelectorAll('.cbmx-actor-header')].map(n => n.className), [
+      'cbmx-actor-header cbmx-actor--customer', 'cbmx-actor-header cbmx-actor--orchestrator',
+      'cbmx-actor-header cbmx-actor--customer', 'cbmx-actor-header cbmx-actor--other', 'cbmx-actor-header cbmx-actor--customer',
+    ]);
+    assert.equal(exportNode.querySelector(`${controls},.cbmx-role-chevron,.cbmx-role-menu`), null);
+    return 'data:image/png;base64,synthetic';
+  };
+  const png = await capture(document.createElement('div'), data);
+  const pdf = await createBlueprintPdf(png); assert.equal(pdf.images.length, 1);
+  assert.equal(JSON.stringify(data), before);
 });

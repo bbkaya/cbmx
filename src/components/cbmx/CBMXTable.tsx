@@ -3,6 +3,7 @@ import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 
 import EditableText from "./ui/EditableText";
 import EditableProcess from "./ui/EditableProcess";
 import ItemList, { type ListItem } from "./ui/ItemList";
+import ActorTypeLabel from "./ui/ActorTypeLabel";
 import CBMXRowIcon from "./ui/CBMXRowIcon";
 import "./cbmx.css";
 
@@ -14,6 +15,7 @@ import {
   deepClone,
   normalizeActors,
   validateServiceScenario,
+  validateActorTypes,
 } from "./cbmxDomain";
 
 import {
@@ -25,6 +27,7 @@ import {
   commitProcessItem,
   type ActorItemKind,
   setActorName,
+  setActorType,
   setActorVP,
   setNetworkVP,
   setServiceScenario,
@@ -55,6 +58,8 @@ export function validateCBMXBlueprint(bp: CBMXBlueprint): ValidationIssue[] {
 
   const nvp = (bp.networkValueProposition?.statement ?? "").trim();
   if (!nvp) issues.push({ level: "warning", message: "Network Value Proposition is empty." });
+
+  issues.push(...validateActorTypes(bp.actors));
 
   if (!Array.isArray(bp.actors) || bp.actors.length === 0) {
     issues.push({ level: "error", message: "Actors array is missing or empty." });
@@ -104,7 +109,7 @@ export function validateCBMXBlueprint(bp: CBMXBlueprint): ValidationIssue[] {
   }
 
   // Co-creation processes: ids should be unique and participant ids should exist
-  const actorIds = new Set(bp.actors.map((a) => a.id));
+  const actorIds = new Set(bp.actors.map((a) => a?.id));
   const processIds = new Set<string>();
   for (const p of processes) {
     const pidValue = (p?.id ?? "").trim();
@@ -141,9 +146,9 @@ const VALUE_TYPES: { label: string; key: CostBenefitType }[] = [
 /** Tooltip texts for the ⓘ bubbles next to first-column labels */
 const CBMX_HELP = {
   networkValueProposition:
-    "The value the collaborative network collectively offers to a specific customer. It is achieved through joint value creation by the participating actors. (E.g., Provide affordable, flexible, low-emission urban mobility through an e-bike network.)",
+    "The value the collaborative network collectively offers to one or more customers, addressing their problems or needs through joint value creation by the participating actors. (E.g., Provide affordable, flexible, low-emission urban mobility through an e-bike network.)",
   actorType:
-    "The role category of an actor in the network: Customer (problem owner and target), Orchestrator (facilitates interactions and alignment; leadership role), or Other network member.",
+    "The role category of an actor in the collaborative network: Customer (problem owner), Orchestrator (responsible for coordinating collaborative value creation), or Other network member. A blueprint may have multiple Customer actors but exactly one Orchestrator.",
   actor:
     "A role (and optionally the concrete organization(s)) participating in the collaborative business model. (E.g., Traveler, Service Operator, Municipality, Service Provider.)",
   actorValueProposition:
@@ -162,9 +167,9 @@ const CBMX_HELP = {
   actorServices:
     "An actor’s capabilities that collectively realize its value proposition and define how it participates in value co-creation. Services may be detailed into operations (optional), which can map to process tasks/activities. (E.g., Fleet maintenance.)",
   coCreationProcesses:
-    "Processes that operationalize the network value proposition. Multiple actors (potentially including the customer) participate and exchange services with the customer and each other. (E.g., Incident handling (across operator and city authorities).)",
+    "Processes that operationalize the network value proposition. Multiple actors (potentially including customers) participate and exchange services with customers and each other. (E.g., Incident handling (across operator and city authorities).)",
   serviceScenario:
-    "A narrative description of how the network value proposition is realized from the customer's perspective and how other actors contribute to its realization through their activities, interactions, and service exchanges",
+    "A narrative description of how the Network Value Proposition is realized from the customer(s)' perspective and how participating actors contribute to its realization through their activities, interactions and service exchanges.",
 } as const;
 
 type HelpKey = keyof typeof CBMX_HELP;
@@ -398,13 +403,12 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               <td style={rowLabelCell}>
                 <RowLabel exportMode={exportMode} text="Actor Type" helpKey="actorType" />
               </td>
-              {actors.map((a) => (
+              {actors.map((a, index) => (
                 <Fragment key={a.id}>
                   <td colSpan={2} style={cell}>
-                    {a.id.startsWith("EMPTY-") ? "" : a.type === "Other" ? "" : (
-                      <span className={`cbmx-role cbmx-role--${a.type.toLowerCase()}`}>
-                        <CBMXRowIcon kind={a.type === "Customer" ? "actor" : "coCreationProcesses"} />{a.type}
-                      </span>
+                    {a.id.startsWith("EMPTY-") ? "" : (
+                      <ActorTypeLabel actor={a} readOnly={!onChange || index < 2}
+                        onChange={type => updateBlueprint(next => setActorType(next, a.id, type))} />
                     )}
                   </td>
                 </Fragment>
@@ -419,7 +423,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                     <button
                       type="button"
                       onClick={() => updateBlueprint((next) => addActor(next))}
-                      disabled={lock.locked}
+                      disabled={lock.locked || N >= 10}
                       title="Add actor"
                       className="cbmx-add-actor"
                     >
@@ -428,11 +432,11 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                   ) : null}
                 </div>
               </td>
-              {actors.map((a) => (
+              {actors.map((a, index) => (
                 <Fragment key={a.id}>
                   <td colSpan={2} style={{ ...cellLeft, textAlign: "center" }}>
                     {a.id.startsWith("EMPTY-") ? null : (
-                      <div className="cbmx-actor-header">
+                      <div className={`cbmx-actor-header cbmx-actor--${a.type.toLowerCase()}`}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <EditableText
                             label={`Actor name: ${a.name || a.id}`}
@@ -443,7 +447,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                           />
                         </div>
 
-                        {onChange && a.type !== "Customer" && a.type !== "Orchestrator" ? (
+                        {onChange && index >= 2 ? (
                           <button
                             type="button"
                             disabled={lock.locked}
