@@ -73,8 +73,12 @@ for (const count of [2, 5, 10]) test(`${count}-actor capture is clean, canonical
   scroller.scrollLeft = 111; scroller.scrollTop = 222;
   const before = node.outerHTML;
   rasterize = async (exportNode, options) => {
-    assert.equal(exportNode.style.width, `${190 + count * 210 + 16}px`);
+    assert.equal(exportNode.style.width, `${190 + count * 210 + 10}px`);
     assert.equal(exportNode.children.length, 1);
+    assert.equal(exportNode.style.padding, '5px');
+    assert.equal(exportNode.querySelector('table').style.display, 'block');
+    assert.equal(exportNode.querySelector('colgroup').style.display, 'none');
+    assert.equal(exportNode.querySelector('tbody').style.display, 'contents');
     assert.ok(exportNode.firstElementChild.matches(".cbmx-table"));
     assert.equal(exportNode.querySelector(`${controls},.cbmx-matrix-scroll,header,aside`), null);
     assert.equal(exportNode.querySelectorAll('.cbmx-row--actor > td').length, count + 1);
@@ -98,12 +102,12 @@ for (const count of [2, 5, 10]) test(`${count}-actor capture is clean, canonical
 for (const count of Array.from({ length: 9 }, (_, index) => index + 2)) {
   test(`${count} actors: capture encloses fractional last-cell and bottom-content bounds beyond wrapper scroll dimensions`, async () => {
     const original = window.HTMLElement.prototype.getBoundingClientRect;
-    const canonical = 190 + count * 210 + 16;
+    const canonical = 190 + count * 210 + 10;
     const origin = -100000;
     window.HTMLElement.prototype.getBoundingClientRect = function () {
       const rect = (left, top, width, height) => ({ left, top, width, height, right: left + width, bottom: top + height });
       if (this.matches('.cbmx-matrix--export')) return rect(origin, 0, canonical, 800);
-      if (this.matches('table.cbmx-table')) return rect(origin + 8, 8, canonical - 16 + 0.125, 784.25);
+      if (this.matches('table.cbmx-table')) return rect(origin + 8, 8, canonical - 10 + 0.125, 784.25);
       if (this.matches('.cbmx-row--Financial td:last-child')) return rect(origin + canonical - 100, 300, 103.375, 55);
       if (this.matches('.cbmx-row--serviceScenario td:last-child div')) return rect(origin + 204, 750, 300, 58.625);
       return original.call(this);
@@ -111,17 +115,21 @@ for (const count of Array.from({ length: 9 }, (_, index) => index + 2)) {
     // scrollWidth/scrollHeight are zero in happy-dom: a wrapper-only measurement
     // cannot see either overflow. This explicitly fails the old capture code.
     rasterize = async (node, options) => {
-      assert.equal(options.width, canonical + 4);
-      assert.equal(options.height, 809);
+      assert.equal(options.width, canonical + 9);
+      assert.equal(options.height, 814);
       assert.equal(node.style.width, `${options.width}px`);
       assert.equal(node.style.height, `${options.height}px`);
-      assert.equal(node.querySelector('table').style.width, `${canonical - 16 + 0.125}px`);
+      assert.equal(node.querySelector('table').style.width, `${canonical - 10 + 0.125}px`);
       for (const element of [node.querySelector('table'), ...node.querySelectorAll('table *')]) {
         const r = element.getBoundingClientRect();
         if (!r.width && !r.height) continue;
         assert.ok(r.right - origin <= options.width, element.tagName + ' right edge');
         assert.ok(r.bottom <= options.height, element.tagName + ' bottom edge');
       }
+      const last = node.querySelector('.cbmx-row--Financial td:last-child');
+      assert.equal(last.style.position, 'absolute'); assert.equal(last.style.boxSizing, 'border-box');
+      assert.equal(last.style.left, `${canonical - 108}px`); assert.equal(last.style.width, '103.375px');
+      assert.equal(node.querySelector('.cbmx-row--serviceScenario td:last-child').style.position, 'absolute');
       assert.equal(options.pixelRatio, 2);
       return 'data:image/png;base64,synthetic';
     };
@@ -149,6 +157,25 @@ test('export retains computed right and bottom padding when the table exceeds it
   finally { window.HTMLElement.prototype.getBoundingClientRect = original; }
 });
 
+test('uniform export margin adds space outside the measured matrix without reducing its width', async () => {
+  const original = window.HTMLElement.prototype.getBoundingClientRect;
+  window.HTMLElement.prototype.getBoundingClientRect = function () {
+    if (this.matches('.cbmx-matrix--export')) return { left: -100000, top: 0, width: 1460, height: 800, right: -98540, bottom: 800 };
+    if (this.matches('table.cbmx-table')) return { left: -99995, top: 5, width: 1450, height: 790, right: -98545, bottom: 795 };
+    return original.call(this);
+  };
+  rasterize = async (node, options) => {
+    assert.equal(node.style.padding, '5px');
+    assert.equal(options.width, 1450 + 5 * 2); assert.equal(options.height, 790 + 5 * 2);
+    assert.equal(node.querySelector('table').style.width, '1450px');
+    assert.equal(node.querySelector('table').style.height, '790px');
+    assert.equal(options.pixelRatio, 2);
+    return 'data:image/png;base64,synthetic';
+  };
+  try { await capture(document.createElement('div'), snapshot(6)); }
+  finally { window.HTMLElement.prototype.getBoundingClientRect = original; }
+});
+
 test("failed rasterization always removes its offscreen copy", async () => {
   const node = document.createElement("div");
   rasterize = async () => { throw new Error("Synthetic capture failure"); };
@@ -166,7 +193,7 @@ test("responsive editor widths never change the approved export table geometry",
   const node = document.createElement("div");
   node.innerHTML = '<table class="cbmx-table" data-export-width="1240" style="min-width:1190px"><colgroup><col style="width:174px"></colgroup></table>';
   rasterize = async (exportNode) => {
-    assert.equal(exportNode.style.width, "1256px");
+    assert.equal(exportNode.style.width, "1250px");
     assert.equal(exportNode.querySelector("table").style.minWidth, "1240px");
     assert.equal(exportNode.querySelector("col").style.width, "190px");
     return "data:image/png;base64,synthetic";

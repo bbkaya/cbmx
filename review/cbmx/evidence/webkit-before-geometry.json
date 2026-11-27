@@ -1,0 +1,244 @@
+{
+  "metrics": {
+    "environment": {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
+      "devicePixelRatio": 1,
+      "viewport": [
+        1280,
+        900
+      ],
+      "viewportScale": 1
+    },
+    "capture": {
+      "left": 0,
+      "top": 0,
+      "right": 1466,
+      "bottom": 1419,
+      "width": 1466,
+      "height": 1419
+    },
+    "firstCellCloneStyle": {
+      "width": "184px",
+      "inlineSize": "184px",
+      "cssTextWidth": "",
+      "cssTextInlineSize": "",
+      "cssTextBoxSizing": "",
+      "cssTextLength": 0
+    },
+    "tableCloneStyle": {
+      "width": "1450px",
+      "inlineSize": "1450px",
+      "cssTextWidth": "",
+      "cssTextInlineSize": "",
+      "cssTextBoxSizing": "",
+      "cssTextLength": 0
+    },
+    "tableSizing": {
+      "width": "1450px",
+      "borderSpacing": "3px"
+    },
+    "columns": [
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      },
+      {
+        "width": "0px",
+        "measured": 0
+      }
+    ],
+    "firstCell": {
+      "width": "184px",
+      "measured": 190,
+      "padding": "3px",
+      "boxSizing": "content-box"
+    },
+    "table": {
+      "left": 8,
+      "top": 8,
+      "right": 1458,
+      "bottom": 1411,
+      "width": 1450,
+      "height": 1403
+    },
+    "lastBenefit": {
+      "left": 1353.5,
+      "top": 238,
+      "right": 1455,
+      "bottom": 621,
+      "width": 101.5,
+      "height": 383
+    },
+    "scenario": {
+      "left": 204,
+      "top": 960,
+      "right": 1455,
+      "bottom": 1408,
+      "width": 1251,
+      "height": 448
+    },
+    "scrollWidth": 1466,
+    "scrollHeight": 1419,
+    "rasterClone": {
+      "capture": {
+        "left": 0,
+        "top": 0,
+        "right": 1466,
+        "bottom": 1419,
+        "width": 1466,
+        "height": 1419
+      },
+      "firstCellCloneStyle": {
+        "width": "184px",
+        "inlineSize": "184px",
+        "cssTextWidth": "",
+        "cssTextInlineSize": "",
+        "cssTextBoxSizing": "",
+        "cssTextLength": 0
+      },
+      "tableCloneStyle": {
+        "width": "1483px",
+        "inlineSize": "1483px",
+        "cssTextWidth": "",
+        "cssTextInlineSize": "",
+        "cssTextBoxSizing": "",
+        "cssTextLength": 0
+      },
+      "tableSizing": {
+        "width": "1483px",
+        "borderSpacing": "3px"
+      },
+      "columns": [
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        },
+        {
+          "width": "0px",
+          "measured": 0
+        }
+      ],
+      "firstCell": {
+        "width": "184px",
+        "measured": 190,
+        "padding": "3px",
+        "boxSizing": "content-box"
+      },
+      "table": {
+        "left": 8,
+        "top": 8,
+        "right": 1491,
+        "bottom": 1411,
+        "width": 1483,
+        "height": 1403
+      },
+      "lastBenefit": {
+        "left": 1383.75,
+        "top": 238,
+        "right": 1488,
+        "bottom": 621,
+        "width": 104.25,
+        "height": 383
+      },
+      "scenario": {
+        "left": 204,
+        "top": 960,
+        "right": 1488,
+        "bottom": 1408,
+        "width": 1284,
+        "height": 448
+      },
+      "maxRight": 1491,
+      "maxBottom": 1411,
+      "controls": 0
+    }
+  }
+}

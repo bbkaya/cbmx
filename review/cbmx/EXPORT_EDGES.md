@@ -1,5 +1,7 @@
 # Export boundary correction after Phase 4
 
+> Historical checkpoint report. Generated bulk captures were removed during final release preparation after user sign-off. See [current release readiness](RELEASE_READINESS.md) and [retained evidence](evidence/README.md).
+
 Implemented on `codex/cbmx-matrix-visual-redesign`. Recoverable Phase 4 checkpoint: `82998a4` (`Checkpoint approved CBMX Phase 4 presentation and navigation`). Generated outputs from previous phases were excluded from the checkpoint and preserved. No push, merge, deployment, Phase 5 work or database operations were performed.
 
 ## Investigation and correction
@@ -61,19 +63,19 @@ All paths below are relative to this report. PNG files are the actual full-resol
 
 | Actors | PNG | Single-page A4 PDF | PNG dimensions |
 | --- | --- | --- | --- |
-| 5 | [PNG](../../output/cbmx-export-edges-review/5-sparse.png) | [PDF](../../output/cbmx-export-edges-review/5-sparse.pdf) | 2512 × 2924 |
-| 6 | [PNG](../../output/cbmx-export-edges-review/6-sparse.png) | [PDF](../../output/cbmx-export-edges-review/6-sparse.pdf) | 2932 × 2924 |
-| 7 | [PNG](../../output/cbmx-export-edges-review/7-sparse.png) | [PDF](../../output/cbmx-export-edges-review/7-sparse.pdf) | 3352 × 2656 |
-| 10 | [PNG](../../output/cbmx-export-edges-review/10-sparse.png) | [PDF](../../output/cbmx-export-edges-review/10-sparse.pdf) | 4612 × 2628 |
+| 5 | PNG (historical generated artefact; removed at final cleanup) | PDF (historical generated artefact; removed at final cleanup) | 2512 × 2924 |
+| 6 | PNG (historical generated artefact; removed at final cleanup) | PDF (historical generated artefact; removed at final cleanup) | 2932 × 2924 |
+| 7 | PNG (historical generated artefact; removed at final cleanup) | PDF (historical generated artefact; removed at final cleanup) | 3352 × 2656 |
+| 10 | PNG (historical generated artefact; removed at final cleanup) | PDF (historical generated artefact; removed at final cleanup) | 4612 × 2628 |
 
-- [PNG right and bottom edge details](../../output/cbmx-export-edges-review/right-and-bottom-edges.png)
-- [Rendered PDF right and bottom edge details](../../output/cbmx-export-edges-review/pdf-right-and-bottom-edges.png)
-- [All 27 base PNGs: overview](../../output/cbmx-export-edges-review/png-all-counts.png)
-- [All 27 base PDF pages: overview](../../output/cbmx-export-edges-review/pdf-all-counts.png)
-- [Browser context and measured bounds](../../output/cbmx-export-edges-review/verification.json)
-- [PNG boundaries and PDF placement results](../../output/cbmx-export-edges-review/artifact-checks.json)
-- [Full automated test log](../../output/cbmx-export-edges-review/logs/cbmx-edges-tests.log)
-- [New regression tests against the checkpoint module](../../output/cbmx-export-edges-review/logs/cbmx-edges-before-regressions.log)
+- PNG right and bottom edge details (historical generated artefact; removed at final cleanup)
+- Rendered PDF right and bottom edge details (historical generated artefact; removed at final cleanup)
+- All 27 base PNGs: overview (historical generated artefact; removed at final cleanup)
+- All 27 base PDF pages: overview (historical generated artefact; removed at final cleanup)
+- Browser context and measured bounds (historical generated artefact; removed at final cleanup)
+- PNG boundaries and PDF placement results (historical generated artefact; removed at final cleanup)
+- Full automated test log (historical generated artefact; removed at final cleanup)
+- New regression tests against the checkpoint module (historical generated artefact; removed at final cleanup)
 
 The overview sheets and native PNG edge details were visually inspected. Representative PDF pages were additionally rendered at a 6000 px page width for detailed edge inspection. A follow-up smoke capture verifies the extracted diagnostic helper; its output is `6-sparse-diagnostics-check.*` with metadata in `diagnostics-smoke.json`.
 
@@ -90,7 +92,7 @@ Modified:
 New:
 
 - `review/cbmx/exportDiagnostics.js`: preview-only measurement of the offscreen capture and html-to-image's serialized computed-style clone; no production hooks or API changes.
-- `review/cbmx/inspect-export-artifacts.py`: repeatable PNG boundary checks, PDF page/image placement checks and Poppler rendering/contact sheets. Requires Pillow, pypdf and Poppler. Run with a Python environment providing those dependencies and the capture directory as its optional first argument.
+- The historical `review/cbmx/inspect-export-artifacts.py` was superseded and removed at finalization. Use the retained generic `inspect-browser-exports.py` and [current tool guide](README.md) for PNG boundaries, PDF placement and rendered page inspection.
 - `review/cbmx/EXPORT_EDGES.md`: this report.
 
 Generated review evidence is under `output/cbmx-export-edges-review/` and is not staged. Previous output folders remain intact. Interactive styling, item controls, mutators, permissions, persistence, validation and Process Canvas code have no changes after checkpoint `82998a4`.

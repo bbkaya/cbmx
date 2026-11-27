@@ -7,6 +7,30 @@ import CBMXTable from "./CBMXTable";
 import { deepClone, type CBMXBlueprint, type ProcessCanvasLinkSummary } from "./cbmxDomain";
 
 type ExportSnapshot = { blueprint: CBMXBlueprint; processLinks?: ProcessCanvasLinkSummary[] };
+const EXPORT_MARGIN = 5;
+
+/** Freeze measured cells so the rasterizer never runs a second HTML table layout.
+ * WebKit reports zero computed widths for COLs; html-to-image copies those zeros,
+ * then its fixed-table/colspan layout adds spacing again and widens the image.
+ * Keep the shared renderer and its exact geometry, but use positioned blocks in
+ * this disposable copy. No editor DOM or browser-specific detection is involved.
+ */
+function freezeTableLayout(table: HTMLTableElement, fallbackWidth: number) {
+  const bounds = table.getBoundingClientRect();
+  const cells = [...table.querySelectorAll<HTMLElement>("td,th")]
+    .map(cell => ({ cell, rect: cell.getBoundingClientRect() }));
+  Object.assign(table.style, { display: "block", position: "relative",
+    width: `${bounds.width || fallbackWidth}px`, height: `${bounds.height}px`,
+    borderSpacing: "0", padding: "0" });
+  for (const group of table.querySelectorAll<HTMLElement>("colgroup")) group.style.display = "none";
+  for (const row of table.querySelectorAll<HTMLElement>("thead,tbody,tfoot,tr")) row.style.display = "contents";
+  for (const { cell, rect } of cells) {
+    Object.assign(cell.style, { display: "block", position: "absolute", boxSizing: "border-box",
+      left: `${rect.left - bounds.left}px`, top: `${rect.top - bounds.top}px`,
+      width: `${rect.width}px`, height: `${rect.height}px`, margin: "0" });
+  }
+  return bounds;
+}
 
 /** Reuse the matrix renderer, with no editor state, callbacks, or local field drafts. */
 function renderExportTable(snapshot: ExportSnapshot): HTMLTableElement {
@@ -36,7 +60,8 @@ export async function captureBlueprintPng(node: HTMLElement, snapshot: ExportSna
   const capture = document.createElement("div");
   capture.className = "cbmx-matrix cbmx-matrix--export";
   Object.assign(capture.style, {
-    width: `${matrixWidth + 16}px`,
+    width: `${matrixWidth + EXPORT_MARGIN * 2}px`,
+    padding: `${EXPORT_MARGIN}px`,
     position: "fixed",
     left: "-100000px",
     top: "0",
@@ -54,13 +79,10 @@ export async function captureBlueprintPng(node: HTMLElement, snapshot: ExportSna
   document.body.appendChild(capture);
   try {
     await document.fonts.ready;
-    // Pin the laid-out table before sizing the image. Otherwise its 100% width
-    // can grow again when the capture is enlarged to include an overflowing edge.
-    const tableBounds = exportTable.getBoundingClientRect();
-    exportTable.style.width = `${tableBounds.width || matrixWidth}px`;
+    const tableBounds = freezeTableLayout(exportTable, matrixWidth);
     const bounds = capture.getBoundingClientRect();
     const styles = getComputedStyle(capture);
-    let right = Math.max(bounds.width, matrixWidth + 16);
+    let right = Math.max(bounds.width, matrixWidth + EXPORT_MARGIN * 2);
     let bottom = bounds.height;
     // Table layout and fractional column widths can extend beyond the wrapper's
     // integer scroll dimensions. Include actual cells and their wrapped content,

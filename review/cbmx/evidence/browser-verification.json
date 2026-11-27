@@ -1,0 +1,1172 @@
+{
+  "scope": "Historical automated Chrome/WebKit verification; actual Safari sign-off supplied by user on 2026-11-27.",
+  "manualSafari": {
+    "result": "PNG and PDF clipping resolved",
+    "reportedBy": "user",
+    "date": "2026-11-27",
+    "version": "not supplied"
+  },
+  "automatedPairs": 58,
+  "cases": [
+    {
+      "case": "webkit-2-empty",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 2,
+      "density": "empty",
+      "png": [
+        1240,
+        1236
+      ],
+      "sourceTableWidth": 610,
+      "cloneTableWidth": 610,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-2-empty",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 2,
+      "density": "empty",
+      "png": [
+        1240,
+        1252
+      ],
+      "sourceTableWidth": 610,
+      "cloneTableWidth": 610,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-2-sparse",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 2,
+      "density": "sparse",
+      "png": [
+        1240,
+        3480
+      ],
+      "sourceTableWidth": 610,
+      "cloneTableWidth": 610,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-2-sparse",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 2,
+      "density": "sparse",
+      "png": [
+        1240,
+        3604
+      ],
+      "sourceTableWidth": 610,
+      "cloneTableWidth": 610,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-2-dense",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 2,
+      "density": "dense",
+      "png": [
+        1240,
+        9930
+      ],
+      "sourceTableWidth": 610,
+      "cloneTableWidth": 610,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-3-empty",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 3,
+      "density": "empty",
+      "png": [
+        1660,
+        1172
+      ],
+      "sourceTableWidth": 820,
+      "cloneTableWidth": 820,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-2-dense",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 2,
+      "density": "dense",
+      "png": [
+        1240,
+        10316
+      ],
+      "sourceTableWidth": 610,
+      "cloneTableWidth": 610,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-3-sparse",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 3,
+      "density": "sparse",
+      "png": [
+        1660,
+        3118
+      ],
+      "sourceTableWidth": 820,
+      "cloneTableWidth": 820,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-3-empty",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 3,
+      "density": "empty",
+      "png": [
+        1660,
+        1186
+      ],
+      "sourceTableWidth": 820,
+      "cloneTableWidth": 820,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-3-sparse",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 3,
+      "density": "sparse",
+      "png": [
+        1660,
+        3222
+      ],
+      "sourceTableWidth": 820,
+      "cloneTableWidth": 820,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-3-dense",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 3,
+      "density": "dense",
+      "png": [
+        1660,
+        12034
+      ],
+      "sourceTableWidth": 820,
+      "cloneTableWidth": 820,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-4-empty",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 4,
+      "density": "empty",
+      "png": [
+        2080,
+        1136
+      ],
+      "sourceTableWidth": 1030,
+      "cloneTableWidth": 1030,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-3-dense",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 3,
+      "density": "dense",
+      "png": [
+        1660,
+        12494
+      ],
+      "sourceTableWidth": 820,
+      "cloneTableWidth": 820,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-4-sparse",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 4,
+      "density": "sparse",
+      "png": [
+        2080,
+        2826
+      ],
+      "sourceTableWidth": 1030,
+      "cloneTableWidth": 1030,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-4-empty",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 4,
+      "density": "empty",
+      "png": [
+        2080,
+        1144
+      ],
+      "sourceTableWidth": 1030,
+      "cloneTableWidth": 1030,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-4-sparse",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 4,
+      "density": "sparse",
+      "png": [
+        2080,
+        2912
+      ],
+      "sourceTableWidth": 1030,
+      "cloneTableWidth": 1030,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-4-dense",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 4,
+      "density": "dense",
+      "png": [
+        2080,
+        11742
+      ],
+      "sourceTableWidth": 1030,
+      "cloneTableWidth": 1030,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-5-empty",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 5,
+      "density": "empty",
+      "png": [
+        2500,
+        1136
+      ],
+      "sourceTableWidth": 1240,
+      "cloneTableWidth": 1240,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-5-sparse",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 5,
+      "density": "sparse",
+      "png": [
+        2500,
+        2826
+      ],
+      "sourceTableWidth": 1240,
+      "cloneTableWidth": 1240,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-4-dense",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 4,
+      "density": "dense",
+      "png": [
+        2080,
+        12184
+      ],
+      "sourceTableWidth": 1030,
+      "cloneTableWidth": 1030,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-5-empty",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 5,
+      "density": "empty",
+      "png": [
+        2500,
+        1144
+      ],
+      "sourceTableWidth": 1240,
+      "cloneTableWidth": 1240,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-5-sparse",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 5,
+      "density": "sparse",
+      "png": [
+        2500,
+        2912
+      ],
+      "sourceTableWidth": 1240,
+      "cloneTableWidth": 1240,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-5-dense",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 5,
+      "density": "dense",
+      "png": [
+        2500,
+        11730
+      ],
+      "sourceTableWidth": 1240,
+      "cloneTableWidth": 1240,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-6-empty",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 6,
+      "density": "empty",
+      "png": [
+        2920,
+        1136
+      ],
+      "sourceTableWidth": 1450,
+      "cloneTableWidth": 1450,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-6-sparse",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 6,
+      "density": "sparse",
+      "png": [
+        2920,
+        2826
+      ],
+      "sourceTableWidth": 1450,
+      "cloneTableWidth": 1450,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-5-dense",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 5,
+      "density": "dense",
+      "png": [
+        2500,
+        12170
+      ],
+      "sourceTableWidth": 1240,
+      "cloneTableWidth": 1240,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-6-empty",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 6,
+      "density": "empty",
+      "png": [
+        2920,
+        1144
+      ],
+      "sourceTableWidth": 1450,
+      "cloneTableWidth": 1450,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-6-sparse",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 6,
+      "density": "sparse",
+      "png": [
+        2920,
+        2912
+      ],
+      "sourceTableWidth": 1450,
+      "cloneTableWidth": 1450,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-6-dense",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 6,
+      "density": "dense",
+      "png": [
+        2920,
+        11700
+      ],
+      "sourceTableWidth": 1450,
+      "cloneTableWidth": 1450,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-7-empty",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 7,
+      "density": "empty",
+      "png": [
+        3340,
+        1136
+      ],
+      "sourceTableWidth": 1660,
+      "cloneTableWidth": 1660,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-7-sparse",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 7,
+      "density": "sparse",
+      "png": [
+        3340,
+        2570
+      ],
+      "sourceTableWidth": 1660,
+      "cloneTableWidth": 1660,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-6-dense",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 6,
+      "density": "dense",
+      "png": [
+        2920,
+        12138
+      ],
+      "sourceTableWidth": 1450,
+      "cloneTableWidth": 1450,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-7-empty",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 7,
+      "density": "empty",
+      "png": [
+        3340,
+        1144
+      ],
+      "sourceTableWidth": 1660,
+      "cloneTableWidth": 1660,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-7-sparse",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 7,
+      "density": "sparse",
+      "png": [
+        3340,
+        2644
+      ],
+      "sourceTableWidth": 1660,
+      "cloneTableWidth": 1660,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-7-dense",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 7,
+      "density": "dense",
+      "png": [
+        3340,
+        11444
+      ],
+      "sourceTableWidth": 1660,
+      "cloneTableWidth": 1660,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-8-empty",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 8,
+      "density": "empty",
+      "png": [
+        3760,
+        1136
+      ],
+      "sourceTableWidth": 1870,
+      "cloneTableWidth": 1870,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-8-sparse",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 8,
+      "density": "sparse",
+      "png": [
+        3760,
+        2544
+      ],
+      "sourceTableWidth": 1870,
+      "cloneTableWidth": 1870,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-7-dense",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 7,
+      "density": "dense",
+      "png": [
+        3340,
+        11870
+      ],
+      "sourceTableWidth": 1660,
+      "cloneTableWidth": 1660,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-8-empty",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 8,
+      "density": "empty",
+      "png": [
+        3760,
+        1144
+      ],
+      "sourceTableWidth": 1870,
+      "cloneTableWidth": 1870,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-8-sparse",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 8,
+      "density": "sparse",
+      "png": [
+        3760,
+        2616
+      ],
+      "sourceTableWidth": 1870,
+      "cloneTableWidth": 1870,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-8-dense",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 8,
+      "density": "dense",
+      "png": [
+        3760,
+        11444
+      ],
+      "sourceTableWidth": 1870,
+      "cloneTableWidth": 1870,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-9-empty",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 9,
+      "density": "empty",
+      "png": [
+        4180,
+        1136
+      ],
+      "sourceTableWidth": 2080,
+      "cloneTableWidth": 2080,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-9-sparse",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 9,
+      "density": "sparse",
+      "png": [
+        4180,
+        2544
+      ],
+      "sourceTableWidth": 2080,
+      "cloneTableWidth": 2080,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-8-dense",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 8,
+      "density": "dense",
+      "png": [
+        3760,
+        11870
+      ],
+      "sourceTableWidth": 1870,
+      "cloneTableWidth": 1870,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-9-empty",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 9,
+      "density": "empty",
+      "png": [
+        4180,
+        1144
+      ],
+      "sourceTableWidth": 2080,
+      "cloneTableWidth": 2080,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-9-sparse",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 9,
+      "density": "sparse",
+      "png": [
+        4180,
+        2616
+      ],
+      "sourceTableWidth": 2080,
+      "cloneTableWidth": 2080,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-9-dense",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 9,
+      "density": "dense",
+      "png": [
+        4180,
+        11444
+      ],
+      "sourceTableWidth": 2080,
+      "cloneTableWidth": 2080,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-10-empty",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 10,
+      "density": "empty",
+      "png": [
+        4600,
+        1136
+      ],
+      "sourceTableWidth": 2290,
+      "cloneTableWidth": 2290,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-10-sparse",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 10,
+      "density": "sparse",
+      "png": [
+        4600,
+        2544
+      ],
+      "sourceTableWidth": 2290,
+      "cloneTableWidth": 2290,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-9-dense",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 9,
+      "density": "dense",
+      "png": [
+        4180,
+        11870
+      ],
+      "sourceTableWidth": 2080,
+      "cloneTableWidth": 2080,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-10-empty",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 10,
+      "density": "empty",
+      "png": [
+        4600,
+        1144
+      ],
+      "sourceTableWidth": 2290,
+      "cloneTableWidth": 2290,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-10-sparse",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 10,
+      "density": "sparse",
+      "png": [
+        4600,
+        2616
+      ],
+      "sourceTableWidth": 2290,
+      "cloneTableWidth": 2290,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-10-dense",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 10,
+      "density": "dense",
+      "png": [
+        4600,
+        11444
+      ],
+      "sourceTableWidth": 2290,
+      "cloneTableWidth": 2290,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-10-dense",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 10,
+      "density": "dense",
+      "png": [
+        4600,
+        11870
+      ],
+      "sourceTableWidth": 2290,
+      "cloneTableWidth": 2290,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-6-dense-readonly-help-scrolled",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 6,
+      "density": "dense",
+      "png": [
+        2920,
+        12138
+      ],
+      "sourceTableWidth": 1450,
+      "cloneTableWidth": 1450,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-6-dense-readonly-help-scrolled",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 6,
+      "density": "dense",
+      "png": [
+        2920,
+        11700
+      ],
+      "sourceTableWidth": 1450,
+      "cloneTableWidth": 1450,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "webkit-10-dense-readonly-help-scrolled",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 10,
+      "density": "dense",
+      "png": [
+        4600,
+        11444
+      ],
+      "sourceTableWidth": 2290,
+      "cloneTableWidth": 2290,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1
+    },
+    {
+      "case": "chromium-10-dense-readonly-help-scrolled",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 10,
+      "density": "dense",
+      "png": [
+        4600,
+        11870
+      ],
+      "sourceTableWidth": 2290,
+      "cloneTableWidth": 2290,
+      "whiteMarginsPixelsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1
+    }
+  ]
+}

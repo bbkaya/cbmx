@@ -39,7 +39,7 @@ function App() {
   }
   function commit(next) { setBlueprint(next); setChanges(value => value + 1); }
   async function captureFiles() {
-    setStatus('Capturing'); setCapture(''); setPdf('');
+    setStatus('Capturing'); setCapture(''); setPdf(''); setMetrics(null);
     const observer = observeExportCapture(setMetrics);
     try {
       const png = await captureBlueprintPng(document.getElementById('cbmx-canvas'), { blueprint, processLinks });
@@ -78,6 +78,15 @@ function App() {
         <option value="none">No access</option>
       </select></label>
       <button disabled={status === 'Capturing'} onClick={captureFiles}>Capture PNG and PDF</button>
+      <button disabled={!metrics?.rasterClone || status === 'Capturing'} onClick={() => {
+        const image = document.getElementById('capture-result');
+        const data = { actors: count, density, readOnly, ...metrics,
+          image: image ? { width: image.naturalWidth, height: image.naturalHeight } : null };
+        const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+        const anchor = document.createElement('a'); anchor.href = url;
+        anchor.download = `cbmx-export-diagnostics-${count}-${density}.json`; anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }}>Download export diagnostics</button>
     </div>
     <div className="site-shell preview-shell">
       <main className="preview-main">
@@ -106,7 +115,9 @@ function App() {
         </div>
       </main>
     </div>
-    {metrics && <pre id="export-metrics">{JSON.stringify(metrics)}</pre>}
+    {metrics && <details><summary>Export diagnostics</summary>
+      <pre id="export-metrics" style={{ whiteSpace: 'pre-wrap', maxHeight: 180, overflow: 'auto' }}>{JSON.stringify(metrics)}</pre>
+    </details>}
     {capture && <div>
       <img id="capture-result" alt="Synthetic full matrix capture" src={capture} style={{ maxWidth: '100%' }} />
       <a href={capture} download={`synthetic-${count}-${density}.png`}>Download PNG</a>{' · '}

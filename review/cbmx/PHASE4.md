@@ -1,5 +1,7 @@
 # Phase 4 CBMX review
 
+> Historical checkpoint report. Generated bulk captures were removed during final release preparation after user sign-off. See [current release readiness](RELEASE_READINESS.md) and [retained evidence](evidence/README.md).
+
 Phase 4 is complete on `codex/cbmx-matrix-visual-redesign`. The approved Phase 3 refinements were checkpointed locally at `6d46ae7` (`Checkpoint approved CBMX Phase 3 refinements and clean exports`) before implementation. Existing untracked review artifacts were preserved. Phase 4 changes remain uncommitted for review.
 
 ## Implemented changes

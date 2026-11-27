@@ -1,5 +1,7 @@
 # Phase 3 refinements: compact Add controls and clean exports
 
+> Historical checkpoint report. Generated bulk captures were removed during final release preparation after user sign-off. See [current release readiness](RELEASE_READINESS.md) and [retained evidence](evidence/README.md).
+
 These two refinements are complete on `codex/cbmx-matrix-visual-redesign`. The reviewed Phase 3 implementation was checkpointed locally as `141856f` (`Checkpoint reviewed CBMX Phase 3 item management`) before changing source. Existing generated review artifacts were preserved. Refinement changes remain uncommitted for review.
 
 ## Compact Add controls

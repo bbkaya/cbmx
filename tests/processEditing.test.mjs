@@ -420,3 +420,83 @@ for (const flags of [{ has_pcb_access: false, pcb_access_role: 'owner' }, { has_
     await mount(); assert.equal(container.querySelector('.cbmx-pcb-open,.cbmx-pcb-button'), null);
     assert.ok(!container.outerHTML.includes('SECRET')); assert.match(container.textContent, /Linked PCB \(no access\)/); assert.equal(writes().length, 0);
   });
+
+const fileImport = async text => {
+  const field = container.querySelector('input[type="file"]');
+  Object.defineProperty(field, 'files', { configurable: true, value: [{ text: async () => text }] });
+  await act(async () => field.dispatchEvent(new window.Event('change', { bubbles: true })));
+  await flush();
+};
+
+test('release: legacy JSON import/export preserves extension fields and remaps only new process identities', async () => {
+  await mount(); const imported = blueprint(); delete imported.serviceScenario;
+  imported.meta.name = 'Imported legacy'; imported.extension = { nested: ['retain', { value: 3 }] };
+  imported.actors[0].extension = 'actor data'; imported.coCreationProcesses.push({ id: 'P2', name: 'New process', participantActorIds: ['A2'] });
+  await fileImport(JSON.stringify(imported));
+  assert.equal(row.blueprint_json.serviceScenario, undefined); assert.deepEqual(row.blueprint_json.extension, imported.extension);
+  assert.equal(row.blueprint_json.actors[0].extension, 'actor data'); assert.equal(row.blueprint_json.coCreationProcesses[0].id, 'P1');
+  assert.notEqual(row.blueprint_json.coCreationProcesses[1].id, 'P2');
+  assert.equal(writes().at(-1).args.p_loaded_version_no, 1);
+  const blobs = []; const originalURL = URL.createObjectURL; URL.createObjectURL = blob => { blobs.push(blob); return 'blob:synthetic'; };
+  try {
+    await click(button('Export/Import ▾')); await click(button('Export CBMX to JSON'));
+    const exported = JSON.parse(await blobs[0].text());
+    assert.deepEqual(exported, { ...row.blueprint_json, serviceScenario: '' });
+    assert.equal(row.blueprint_json.serviceScenario, undefined, 'export does not mutate the stored legacy object');
+  } finally { URL.createObjectURL = originalURL; }
+});
+
+test('release: malformed JSON import leaves the loaded blueprint and links intact', async () => {
+  links = linked(); await mount(); const original = structuredClone(row);
+  await fileImport('{ invalid JSON'); assert.deepEqual(row, original); assert.deepEqual(links, linked());
+  assert.equal(writes().length, 0); assert.match(alerts.at(-1), /not valid JSON/);
+});
+
+test('release: blocking imported errors remain visible and prevent autosave', async () => {
+  await mount(); const imported = blueprint(); imported.serviceScenario = 42;
+  await fileImport(JSON.stringify(imported)); await waitForAutosave();
+  assert.match(container.textContent, /Saving blocked/); assert.equal(writes().length, 0);
+  await click(container.querySelector('.cbmx-validation-toggle'));
+  assert.match(container.querySelector('.cbmx-validation-messages').textContent, /Service Scenario must be plain text/);
+});
+
+test('release: autosave naming sends the loaded version and retains unrelated modelling and extension data', async () => {
+  row.blueprint_json.extension = { retain: true }; row.blueprint_json.serviceScenario = 'Long\n\nScenario';
+  const expected = structuredClone(row.blueprint_json); await mount();
+  await change(container.querySelector('input[aria-label="Blueprint name"]'), 'Renamed'); await waitForAutosave();
+  expected.meta.name = 'Renamed'; assert.deepEqual(row.blueprint_json, expected);
+  assert.equal(writes().length, 1); assert.equal(writes()[0].args.p_loaded_version_no, 1); assert.equal(row.version_no, 2);
+});
+
+for (const reason of ['stale','forbidden','network']) test(`release: ${reason} autosave follows existing conflict/failure behaviour without overwriting server data`, async () => {
+  await mount();
+  const original = structuredClone(row.blueprint_json);
+  rpcOverride = async (name, args) => {
+    if (name !== 'save_blueprint_with_version') return defaultRpc(name, args);
+    if (reason === 'stale') { row.version_no = 2; row.name = 'Concurrent server name'; row.blueprint_json.meta.name = row.name; }
+    return reason === 'network' ? { data: null, error: { message: 'Synthetic network failure' } } : ok([{ ok: false, reason }]);
+  };
+  await change(container.querySelector('input[aria-label="Blueprint name"]'), 'Local pending name'); await waitForAutosave();
+  assert.equal(writes().length, 1); assert.equal(writes()[0].args.p_loaded_version_no, 1);
+  if (reason === 'stale') {
+    assert.equal(container.querySelector('input[aria-label="Blueprint name"]').value, 'Concurrent server name');
+    assert.deepEqual(row.blueprint_json, { ...original, meta: { ...original.meta, name: 'Concurrent server name' } });
+  } else {
+    assert.equal(container.querySelector('input[aria-label="Blueprint name"]').value, 'Local pending name');
+    assert.deepEqual(row.blueprint_json, original); assert.match(container.querySelector('.cbmx-save-status').textContent, /Unsaved changes/);
+  }
+});
+
+test('release: a pending autosave must preserve a later committed edit', {
+  todo: 'Pre-existing on original base 3282e31 and redesign: late save response replaces newer local edits. Release gate; see RELEASE_READINESS.md.',
+}, async () => {
+  await mount(); let finish;
+  rpcOverride = (name, args) => name === 'save_blueprint_with_version' ? new Promise(resolve => {
+    finish = async () => resolve(await defaultRpc(name, args));
+  }) : defaultRpc(name, args);
+  await change(container.querySelector('input[aria-label="Blueprint name"]'), 'First saved name');
+  await waitForAutosave(); assert.ok(finish);
+  await change(container.querySelector('input[aria-label="Blueprint name"]'), 'Later committed local name');
+  await act(async () => finish()); await flush();
+  assert.equal(container.querySelector('input[aria-label="Blueprint name"]').value, 'Later committed local name');
+});
