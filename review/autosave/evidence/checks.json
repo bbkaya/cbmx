@@ -1,0 +1,159 @@
+{
+  "date": "2026-11-27",
+  "branch": "codex/autosave-reliability",
+  "base": "7d6a560ff7973a4fa50555b3bedec0164ff62a8c",
+  "remoteMainMatchesBase": true,
+  "runtime": {
+    "node": "20.20.2",
+    "platform": "darwin arm64",
+    "deploymentMajor": 20
+  },
+  "baseline": {
+    "passed": 231,
+    "failingTodo": 1,
+    "lintErrors": 39,
+    "lintWarnings": 4
+  },
+  "checks": {
+    "tests": {
+      "command": "npm test",
+      "exitCode": 0,
+      "total": 275,
+      "passed": 275,
+      "failures": 0,
+      "skipped": 0,
+      "todo": 0,
+      "newFocusedTests": 43
+    },
+    "typescript": {
+      "command": "tsc -b",
+      "exitCode": 0
+    },
+    "build": {
+      "command": "npm run build",
+      "exitCode": 0,
+      "existingLargeChunkAdvisory": true
+    },
+    "lint": {
+      "command": "npm run lint",
+      "exitCode": 1,
+      "errors": 37,
+      "warnings": 4,
+      "newNormalizedFindings": 0,
+      "removed": [
+        {
+          "file": "src/pages/EditorPage.tsx",
+          "rule": "@typescript-eslint/no-explicit-any",
+          "count": 2
+        }
+      ]
+    },
+    "sql": {
+      "pglite": "0.3.0",
+      "postgresMajor": 17,
+      "liveConnection": false,
+      "allExitCodes": 0,
+      "administratorChecks": 106,
+      "administrativeArtifactScenarios": 13,
+      "processDeletionScenarios": 15,
+      "processLinkingScenarios": 18
+    },
+    "diffCheck": {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    "representativeExports": {
+      "allExitCodes": 0,
+      "pairs": [
+        {
+          "name": "chromium-6-sparse",
+          "engine": "chromium",
+          "browserVersion": "158.0.8127.37",
+          "count": 6,
+          "density": "sparse",
+          "width": 2920,
+          "height": 2912
+        },
+        {
+          "name": "chromium-10-sparse",
+          "engine": "chromium",
+          "browserVersion": "158.0.8127.37",
+          "count": 10,
+          "density": "sparse",
+          "width": 4600,
+          "height": 2616
+        },
+        {
+          "name": "webkit-6-sparse",
+          "engine": "webkit",
+          "browserVersion": "26.0",
+          "count": 6,
+          "density": "sparse",
+          "width": 2920,
+          "height": 2826
+        },
+        {
+          "name": "webkit-10-sparse",
+          "engine": "webkit",
+          "browserVersion": "26.0",
+          "count": 10,
+          "density": "sparse",
+          "width": 4600,
+          "height": 2544
+        }
+      ],
+      "cleanControlsAndGeometry": true,
+      "actualSafariTested": false
+    }
+  },
+  "sourceFingerprint": {
+    "fileCount": 109,
+    "sha256": "1f8ed4dff1f24f746becfd2ea9bad543dadd1b0243391cfbb349c034298a71f4",
+    "scope": "src, tests, supabase, root runtime/type/lint configuration, deployment workflow and isolated autosave harness source; sorted relative path + NUL + bytes + NUL; excludes documentation, evidence and ignored generated output"
+  },
+  "operations": {
+    "liveDatabase": false,
+    "dependencyChanges": false,
+    "schemaRpcRlsChanges": false,
+    "workflowChanges": false,
+    "committed": false,
+    "pushed": false,
+    "merged": false,
+    "deployed": false,
+    "phase": "Pre-release verification; subsequent merge/deployment results belong to the final release handoff."
+  },
+  "manualSignoff": {
+    "date": "2026-11-27",
+    "source": "User reported successful manual verification in both CBMX and Process Canvas editors and explicitly approved production release.",
+    "acceptedLimitations": [
+      "No guaranteed end-to-end save timeout",
+      "Existing multi-user version-conflict behavior",
+      "No automatic retries",
+      "No browser-local draft recovery"
+    ],
+    "cancellationDeadlineAuthorized": false
+  },
+  "finalVerification": {
+    "date": "2026-11-27",
+    "node": "20.20.2",
+    "npm": "11.8.0",
+    "tests": 275,
+    "failures": 0,
+    "skips": 0,
+    "todos": 0,
+    "lintErrors": 37,
+    "lintWarnings": 4,
+    "lintNormalizedCountsMatchApprovedBaseline": true,
+    "typeScriptExit": 0,
+    "buildExit": 0,
+    "sqlSuiteExits": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "approvedImplementationFingerprintUnchanged": true,
+    "workflowUnchanged": true,
+    "backendOrEnvironmentChangesRequired": false
+  }
+}

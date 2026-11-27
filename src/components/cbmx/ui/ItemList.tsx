@@ -1,3 +1,4 @@
+import { useEditingLock } from "../../../editing/EditingLock";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import EditableText from "./EditableText";
 import CBMXActionIcon from "./CBMXActionIcon";
@@ -20,6 +21,7 @@ export default function ItemList({ items, revision, label, addLabel, readOnly, n
   renderAddition?: (commit: (value: string) => void, cancel: () => void) => ReactNode;
   className?: string;
 }) {
+  const lock = useEditingLock();
   const [view, setView] = useState({ revision, epoch: 0, adding: false, active: [] as string[], notice: "" });
   const listRef = useRef<HTMLDivElement>(null);
   const addRef = useRef<HTMLButtonElement>(null);
@@ -51,6 +53,7 @@ export default function ItemList({ items, revision, label, addLabel, readOnly, n
       active: editing ? [...new Set([...current.active, key])] : current.active.filter(value => value !== key) });
   }
   function commit(key: string, value: string) {
+    if (lock.blocked()) throw new Error("Saving… Please try again when saving finishes.");
     onCommit(key, value); // A stale snapshot or validation failure keeps the editor open.
     editingChange(key, false);
     setFocusTarget({ key });
@@ -60,6 +63,7 @@ export default function ItemList({ items, revision, label, addLabel, readOnly, n
     setFocusTarget({ key: "add" });
   }
   function add(value: string) {
+    if (lock.blocked()) throw new Error("Saving… Please try again when saving finishes.");
     if (!value.trim()) throw new Error("Enter an item before adding it.");
     onAdd(value);
     cancelAddition();
@@ -74,10 +78,11 @@ export default function ItemList({ items, revision, label, addLabel, readOnly, n
         <div className="cbmx-item-content"><EditableText value={item.value} displayValue={item.displayValue}
           label={`${label}, item ${index + 1}`} readOnly={readOnly}
           onEditingChange={editing => editingChange(item.key, editing)} onCommit={value => commit(item.key, value)} /></div>
-        {!readOnly && onRemove && <button type="button" className="cbmx-remove-item"
+        {!readOnly && onRemove && <button type="button" disabled={lock.locked} className="cbmx-remove-item"
           title={`Remove ${label}, item ${index + 1}: ${item.value}`} aria-label={`Remove ${label}, item ${index + 1}: ${item.value}`}
           onClick={() => {
             try {
+              if (lock.blocked()) return;
               onRemove(item.key);
               editingChange(item.key, false);
               setFocusTarget({ position: Math.min(index, items.length - 2) });
@@ -93,7 +98,7 @@ export default function ItemList({ items, revision, label, addLabel, readOnly, n
           label={`New ${label}`} onCommit={add} onCancel={cancelAddition} />}
       </div>}
       <button ref={addRef} type="button" className="cbmx-add-item" title={addLabel} aria-label={`${addLabel}: ${label}`}
-        disabled={view.adding} onClick={() => setView(current => ({ ...current, adding: true, notice: "" }))}><span aria-hidden="true">+</span></button>
+        disabled={view.adding || lock.locked} onClick={() => { if (!lock.blocked()) setView(current => ({ ...current, adding: true, notice: "" })); }}><span aria-hidden="true">+</span></button>
     </>}
   </div>;
 }

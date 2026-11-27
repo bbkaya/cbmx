@@ -1,3 +1,4 @@
+import { useEditingLock } from "../../editing/EditingLock";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import EditableText from "./ui/EditableText";
 import EditableProcess from "./ui/EditableProcess";
@@ -249,6 +250,7 @@ export default function CBMXTable({
   onUnlinkPCBFromProcess?: (processId: string) => void;
   onDeleteProcess?: (processId: string) => Promise<boolean>;
 }) {
+  const lock = useEditingLock();
   const exportMode = presentation === "export";
   const onChange = presentation === "editor" ? requestedOnChange : undefined;
   const { actors, N } = useMemo(() => normalizeActors(blueprint.actors), [blueprint.actors]);
@@ -278,12 +280,13 @@ export default function CBMXTable({
   useLayoutEffect(() => { latestBlueprint.current = blueprint; }, [blueprint]);
 
   function updateBlueprint(mutator: (draft: CBMXBlueprint) => void) {
+    if (lock.blocked()) throw new Error("Saving… Please try again when saving finishes.");
     if (!onChange) return;
     const next = deepClone(latestBlueprint.current);
     mutator(next);
     if (JSON.stringify(next) === JSON.stringify(latestBlueprint.current)) return;
-    latestBlueprint.current = next;
     onChange(next);
+    latestBlueprint.current = next;
   }
 
   function actorItems(a: Actor, kind: ActorItemKind, type?: CostBenefitType): ListItem[] {
@@ -416,6 +419,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                     <button
                       type="button"
                       onClick={() => updateBlueprint((next) => addActor(next))}
+                      disabled={lock.locked}
                       title="Add actor"
                       className="cbmx-add-actor"
                     >
@@ -442,13 +446,14 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                         {onChange && a.type !== "Customer" && a.type !== "Orchestrator" ? (
                           <button
                             type="button"
+                            disabled={lock.locked}
                             title="Remove actor"
                             onClick={() => {
                               const actorLabel = `${a.id} — ${a.name?.trim() || "Unnamed actor"}`;
                               const ok = window.confirm(
                                 `Remove actor ${actorLabel}?\n\nThis will also remove the actor from any participant lists (e.g., co-creation processes).`
                               );
-                              if (!ok) return;
+                              if (!ok || lock.blocked()) return;
                               updateBlueprint((next) => removeActor(next, a.id));
                             }}
                             className="cbmx-remove-actor"
@@ -617,6 +622,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                                 onClick={() =>
                                   setOpenPCBMenuProcessId((current) => (current === p.id ? null : p.id))
                                 }
+                                disabled={lock.locked}
                                 aria-haspopup="menu"
                                 aria-expanded={openPCBMenuProcessId === p.id}
                                 className="cbmx-pcb-button"
@@ -643,7 +649,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                                   {!link?.link_exists ? (
                                     <>
                                       <button
-                                        type="button"
+                                        type="button" disabled={lock.locked}
                                         role="menuitem"
                                         onClick={() =>
                                           runPCBAction(() => onCreatePCBForProcess?.(p.id))
@@ -663,7 +669,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                                         Create Process Canvas
                                       </button>
                                       <button
-                                        type="button"
+                                        type="button" disabled={lock.locked}
                                         role="menuitem"
                                         onClick={() =>
                                           runPCBAction(() => onLinkExistingPCBToProcess?.(p.id))
@@ -715,6 +721,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                                           <button
                                             type="button"
                                             role="menuitem"
+                                            disabled={lock.locked}
                                             onClick={() =>
                                               runPCBAction(() => onCreatePCBForProcess?.(p.id))
                                             }
@@ -735,6 +742,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                                           <button
                                             type="button"
                                             role="menuitem"
+                                            disabled={lock.locked}
                                             onClick={() =>
                                               runPCBAction(() => onLinkExistingPCBToProcess?.(p.id))
                                             }
@@ -755,6 +763,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                                           <button
                                             type="button"
                                             role="menuitem"
+                                            disabled={lock.locked}
                                             onClick={() =>
                                               runPCBAction(() => onUnlinkPCBFromProcess?.(p.id))
                                             }

@@ -1,3 +1,4 @@
+import { EditingLockContext, useSaveLock } from "../editing/EditingLock";
 // src/pages/EditorPage.tsx
 import { captureBlueprintPng, createBlueprintPdf } from "../components/cbmx/cbmxExport";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -38,7 +39,14 @@ type CBMXProcessLinkAccessRow = {
   has_pcb_access: boolean;
 };
 
-export default function EditorPage({ adminView }: { adminView?: AdminViewSession<AdminCBMXArtifact> } = {}) {
+type EditorProps = { adminView?: AdminViewSession<AdminCBMXArtifact> };
+export default function EditorPage(props: EditorProps = {}) {
+  const { blueprintId } = useParams();
+  const { user } = useAuth();
+  return <EditorSession key={`${blueprintId}:${user?.id}:${Boolean(props.adminView)}`} {...props} />;
+}
+
+function EditorSession({ adminView }: EditorProps) {
   const { blueprintId } = useParams<{ blueprintId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -54,7 +62,8 @@ export default function EditorPage({ adminView }: { adminView?: AdminViewSession
   // Tracks last DB-synced state to compute dirtiness (instead of "Save local")
   const [lastSavedHash, setLastSavedHash] = useState<string>("");
   const [processLinks, setProcessLinks] = useState<ProcessCanvasLinkSummary[]>([]);
-  const savingRef = useRef(false);
+  const saveLock = useSaveLock();
+  const savingRef = saveLock.active;
   const deletingRef = useRef(false);
   const [deleting, setDeleting] = useState(false);
   const [deletionStale, setDeletionStale] = useState(false);
@@ -68,7 +77,6 @@ export default function EditorPage({ adminView }: { adminView?: AdminViewSession
   } | null>(null);
 
   // Autosave
-  const [isAutoSaving, setIsAutoSaving] = useState(false);
   const autoSaveTimerRef = useRef<number | null>(null);
 
   // JSON import
@@ -157,6 +165,8 @@ export default function EditorPage({ adminView }: { adminView?: AdminViewSession
     };
   }, [blueprintId, user?.id, adminView, loadProcessLinks]);
 
+  const currentDraft = useRef(draft);
+  currentDraft.current = draft;
   const draftHash = useMemo(() => stableHash(draft), [draft]);
   const isDirty = draftHash !== lastSavedHash;
 
@@ -168,13 +178,20 @@ export default function EditorPage({ adminView }: { adminView?: AdminViewSession
   const hasBlocking = issues.some((x) => x.level === "error");
 
   function setDraftName(name: string) {
-    if (isReadOnly) return;
+    if (isReadOnly || saveLock.blocked() || deletingRef.current) return;
     setDraft((prev) => {
       if (!prev) return prev;
       const next = deepClone(prev);
       next.meta = { ...(next.meta ?? {}), name };
       return next;
     });
+  }
+
+  function changeDraft(next: CBMXBlueprint) {
+    if (isReadOnly || saveLock.blocked() || deletingRef.current) {
+      throw new Error("Editing is temporarily unavailable. Please try again when saving finishes.");
+    }
+    setDraft(next);
   }
 
   // Close menu on outside click / escape
@@ -257,38 +274,42 @@ export default function EditorPage({ adminView }: { adminView?: AdminViewSession
     return nextSuffixName(desired, names);
   }
 
-  function isUniqueViolation(err: any): boolean {
+  function isUniqueViolation(error: unknown): boolean {
+    const err = error as { code?: string; message?: string } | null;
     // PostgREST/Supabase commonly uses 23505 for unique violations
     return err?.code === "23505" || String(err?.message ?? "").toLowerCase().includes("duplicate key");
   }
 
 
 
-function handleBlueprintSaveFailure(
-  reason: "stale" | "forbidden" | "not_found",
-  options?: { silent?: boolean },
-): Promise<boolean> | boolean {
-  if (reason === "stale") {
-    return reloadBlueprintFromDb().then(() => {
+  function handleBlueprintSaveFailure(
+    reason: "stale" | "forbidden" | "not_found",
+    options?: { silent?: boolean },
+  ): Promise<boolean> | boolean {
+    if (reason === "stale") {
+      saveLock.setFailed("Save conflict — reload required");
+      return reloadBlueprintFromDb().then((reloaded) => {
+        if (!saveLock.isCurrent()) return false;
+        if (reloaded) saveLock.setFailed("Save conflict — latest version reloaded");
+        if (!options?.silent) {
+          alert("This blueprint was updated elsewhere. Your local changes were not saved, and the latest version has been reloaded.");
+        }
+        return false;
+      });
+    }
+
+    if (reason === "forbidden") {
       if (!options?.silent) {
-        alert("This blueprint was updated elsewhere. Your local changes were not saved, and the latest version has been reloaded.");
+        alert("You no longer have permission to save changes to this blueprint. Your access may have been changed, or this blueprint may now be view-only.");
       }
       return false;
-    });
-  }
+    }
 
-  if (reason === "forbidden") {
     if (!options?.silent) {
-      alert("You no longer have permission to save changes to this blueprint. Your access may have been changed, or this blueprint may now be view-only.");
+      alert("This blueprint could not be found. It may have been deleted or you may no longer have access to it.");
     }
     return false;
   }
-
-  if (!options?.silent) {
-    alert("This blueprint could not be found. It may have been deleted or you may no longer have access to it.");
-  }
-  return false;
-}
 
   async function saveBlueprintToDbDirect(bp: CBMXBlueprint, options?: { silent?: boolean }): Promise<boolean> {
     if (savingRef.current || deletingRef.current || deletionStale) return false;
@@ -297,79 +318,52 @@ function handleBlueprintSaveFailure(
     if (!user?.id) return false;
     if (loadedVersionNo == null) return false;
 
-    savingRef.current = true;
+    if (!saveLock.begin()) return false;
+    if (autoSaveTimerRef.current != null) window.clearTimeout(autoSaveTimerRef.current);
     setDbBusy(true);
-    const desiredName = normalizeName(bp.meta?.name);
-    let uniqueName = desiredName;
-    const toSave = deepClone(bp);
+    let success = false;
     try {
-      uniqueName = await resolveUniqueNameForOwner(desiredName, blueprintId);
-      toSave.meta = { ...(toSave.meta ?? {}), name: uniqueName };
-      const result = await updateBlueprintWithVersion({
-        blueprintId,
-        loadedVersionNo,
-        userId: user.id,
-        name: uniqueName,
-        blueprint: toSave,
-      });
-
-      if (!result.ok) {
-        return await handleBlueprintSaveFailure(result.reason, options);
-      }
-
-      const saved = result.row;
-      const savedBlueprint = deepClone(saved.blueprint_json);
-      savedBlueprint.meta = { ...(savedBlueprint.meta ?? {}), name: saved.name || uniqueName };
-
-      setDraft(savedBlueprint);
-      setLoadedVersionNo(saved.version_no ?? null);
-      setLastSavedHash(stableHash(savedBlueprint));
-
-      if (saved.name !== desiredName && !options?.silent) {
-        alert(`That name was already used. Saved as “${saved.name}”.`);
-      }
-
-      return true;
-    } catch (error: any) {
-      if (isUniqueViolation(error)) {
-        const bumped = await resolveUniqueNameForOwner(uniqueName, blueprintId);
-        const bumpedSave = deepClone(toSave);
-        bumpedSave.meta = { ...(bumpedSave.meta ?? {}), name: bumped };
-
-        const result = await updateBlueprintWithVersion({
-          blueprintId,
-          loadedVersionNo,
-          userId: user.id,
-          name: bumped,
-          blueprint: bumpedSave,
-        });
-
-        if (!result.ok) {
-          return await handleBlueprintSaveFailure(result.reason, options);
+      const desiredName = normalizeName(bp.meta?.name);
+      const toSave = deepClone(bp);
+      let uniqueName = await resolveUniqueNameForOwner(desiredName, blueprintId);
+      if (!saveLock.isCurrent()) return false;
+      // Preserve the existing one-time duplicate-name resolution, inside the same lock.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        toSave.meta = { ...(toSave.meta ?? {}), name: uniqueName };
+        try {
+          const result = await updateBlueprintWithVersion({ blueprintId, loadedVersionNo,
+            userId: user.id, name: uniqueName, blueprint: toSave });
+          if (!saveLock.isCurrent()) return false;
+          if (!result.ok) return await handleBlueprintSaveFailure(result.reason, options);
+          const saved = deepClone(result.row.blueprint_json);
+          saved.meta = { ...(saved.meta ?? {}), name: result.row.name || uniqueName };
+          currentDraft.current = saved;
+          setDraft(saved);
+          setLoadedVersionNo(result.row.version_no ?? null);
+          setLastSavedHash(stableHash(saved));
+          success = true;
+          if (result.row.name !== desiredName && !options?.silent) {
+            alert(`That name was already used. Saved as “${result.row.name}”.`);
+          }
+          return true;
+        } catch (error) {
+          if (attempt !== 0 || !isUniqueViolation(error)) throw error;
+          uniqueName = await resolveUniqueNameForOwner(uniqueName, blueprintId);
+          if (!saveLock.isCurrent()) return false;
         }
-
-        const saved = result.row;
-        const savedBlueprint = deepClone(saved.blueprint_json);
-        savedBlueprint.meta = { ...(savedBlueprint.meta ?? {}), name: saved.name || bumped };
-
-        setDraft(savedBlueprint);
-        setLoadedVersionNo(saved.version_no ?? null);
-        setLastSavedHash(stableHash(savedBlueprint));
-
-        if (saved.name !== desiredName && !options?.silent) {
-          alert(`That name was already used. Saved as “${saved.name}”.`);
-        }
-
-        return true;
       }
-
-      if (!options?.silent) {
+      return false;
+    } catch (error) {
+      if (saveLock.isCurrent() && !options?.silent) {
         alert(error instanceof Error ? error.message : "Could not save blueprint.");
       }
       return false;
     } finally {
-      savingRef.current = false;
-      setDbBusy(false);
+      if (saveLock.isCurrent()) {
+        if (!success) saveLock.setFailed(previous => previous ?? "Save failed — changes retained");
+        setDbBusy(false);
+      }
+      saveLock.end();
     }
   }
 
@@ -380,12 +374,14 @@ function handleBlueprintSaveFailure(
     if (hasBlocking) throw new Error("Fix blueprint validation errors before deleting a process.");
     const process = findProcessById(processId);
     if (!process) throw new Error("This co-creation process no longer exists. Reload the blueprint.");
+    if (!saveLock.begin()) return false;
     deletingRef.current = true;
     setDeleting(true);
     if (autoSaveTimerRef.current != null) window.clearTimeout(autoSaveTimerRef.current);
     try {
       // Never infer the absence of a link from a cached or failed frontend load.
       const links = await loadProcessLinks(blueprintId);
+      if (!saveLock.isCurrent()) return false;
       const link = links.find((item) => item.cbmx_process_id === processId);
       if (link?.link_exists) {
         if (!link.has_pcb_access || !canRoleMutatePCBLink(link.pcb_access_role)) {
@@ -397,13 +393,15 @@ function handleBlueprintSaveFailure(
             pcbName: link.process_canvas_blueprint_name || "Unnamed Process Canvas", resolve });
         });
         confirmationRef.current = null;
-        if (!confirmed) return false;
+        if (!confirmed || !saveLock.isCurrent()) return false;
       }
       const toSave = deepClone(draft);
       const name = await resolveUniqueNameForOwner(normalizeName(draft.meta?.name), blueprintId);
       toSave.meta = { ...(toSave.meta ?? {}), name };
+      if (!saveLock.isCurrent()) return false;
       const result = await updateBlueprintWithVersion({ blueprintId, loadedVersionNo, userId: user.id,
         name, blueprint: toSave, deletion: { processId, expectedPCBId: link?.link_exists ? link.process_canvas_blueprint_id : null } });
+      if (!saveLock.isCurrent()) return false;
       if (!result.ok) {
         // Retain the draft on failure; do not let autosave overwrite a newer version.
         if (result.reason === "stale") setDeletionStale(true);
@@ -422,7 +420,8 @@ function handleBlueprintSaveFailure(
       throw new Error(error instanceof Error ? error.message : (error as { message?: string })?.message || "Could not delete process. Nothing was removed.");
     } finally {
       deletingRef.current = false;
-      setDeleting(false);
+      if (saveLock.isCurrent()) setDeleting(false);
+      saveLock.end();
     }
   }
 
@@ -454,6 +453,7 @@ function handleBlueprintSaveFailure(
 
       const loadedLinks = administrative?.process_links ?? await loadProcessLinks(blueprintId).catch(() => [] as ProcessCanvasLinkSummary[]);
 
+      if (!saveLock.isCurrent()) return false;
       setDraft(loaded);
       setProcessLinks(loadedLinks);
       setBlueprintOwnerUserId(row.owner_user_id ?? null);
@@ -494,6 +494,7 @@ function handleBlueprintSaveFailure(
       .eq("id", processCanvasBlueprintId)
       .single();
 
+    if (!saveLock.isCurrent()) return { ok: false };
     if (pcbError) {
       alert("Could not validate the selected Process Canvas: " + pcbError.message);
       return { ok: false };
@@ -517,7 +518,8 @@ function handleBlueprintSaveFailure(
   async function refreshProcessLinks() {
     if (!blueprintId) return;
     try {
-      setProcessLinks(await loadProcessLinks(blueprintId));
+      const nextLinks = await loadProcessLinks(blueprintId);
+      if (saveLock.isCurrent()) setProcessLinks(nextLinks);
     } catch (error) {
       const message = (error as { message?: string })?.message ?? "Unknown error";
       alert("Failed to refresh Process Canvas links: " + message + ". Reload the blueprint to see the current association.");
@@ -525,6 +527,7 @@ function handleBlueprintSaveFailure(
   }
 
   async function createPCBForProcess(processId: string) {
+    if (saveLock.blocked() || deletingRef.current) return;
     if (isReadOnly) {
       alert("You have read-only access to this CBMX blueprint.");
       return;
@@ -558,47 +561,60 @@ function handleBlueprintSaveFailure(
     const blankPCB = makeBlankProcessCanvasBlueprint();
     blankPCB.meta.name = desiredName;
 
+    if (!(await ensureSavedBeforeIO()) || saveLock.blocked()) return;
+    if (!saveLock.begin()) return;
     setDbBusy(true);
-    const { data: pcbRow, error: pcbError } = await supabase
-      .from("process_canvas_blueprints")
-      .insert({
-        owner_user_id: user.id,
-        name: desiredName,
-        blueprint_json: blankPCB,
-      })
-      .select("id,name,owner_user_id")
-      .single();
+    try {
+      const { data: pcbRow, error: pcbError } = await supabase
+        .from("process_canvas_blueprints")
+        .insert({
+          owner_user_id: user.id,
+          name: desiredName,
+          blueprint_json: blankPCB,
+        })
+        .select("id,name,owner_user_id")
+        .single();
 
-    if (pcbError) {
+      if (!saveLock.isCurrent()) return;
+      if (pcbError) {
+        setDbBusy(false);
+        alert("Create PCB failed: " + pcbError.message);
+        return;
+      }
+
+      const verified = await verifyEditableArtifacts((pcbRow as ProcessCanvasBlueprintRow).id);
+      if (!saveLock.isCurrent()) return;
+      if (!verified.ok) {
+        setDbBusy(false);
+        return;
+      }
+
+      const { error: linkError } = await supabase.rpc("upsert_cbmx_process_link", {
+        p_cbmx_blueprint_id: blueprintId,
+        p_cbmx_process_id: processId,
+        p_process_canvas_blueprint_id: (pcbRow as ProcessCanvasBlueprintRow).id,
+      });
       setDbBusy(false);
-      alert("Create PCB failed: " + pcbError.message);
-      return;
+
+      if (!saveLock.isCurrent()) return;
+      if (linkError) {
+        alert("PCB was created, but linking failed: " + linkError.message);
+        return;
+      }
+
+      await refreshProcessLinks();
+      alert("The Process Canvas was linked to the CBMX process. This creates only the association between the artefacts; it does not copy access rights automatically.");
+      if (saveLock.isCurrent()) navigate(`/app/pcb/${(pcbRow as ProcessCanvasBlueprintRow).id}`);
+    } catch (error) {
+      if (saveLock.isCurrent()) alert(error instanceof Error ? error.message : "Could not create or link Process Canvas.");
+    } finally {
+      if (saveLock.isCurrent()) setDbBusy(false);
+      saveLock.end();
     }
-
-    const verified = await verifyEditableArtifacts((pcbRow as ProcessCanvasBlueprintRow).id);
-    if (!verified.ok) {
-      setDbBusy(false);
-      return;
-    }
-
-    const { error: linkError } = await supabase.rpc("upsert_cbmx_process_link", {
-      p_cbmx_blueprint_id: blueprintId,
-      p_cbmx_process_id: processId,
-      p_process_canvas_blueprint_id: (pcbRow as ProcessCanvasBlueprintRow).id,
-    });
-    setDbBusy(false);
-
-    if (linkError) {
-      alert("PCB was created, but linking failed: " + linkError.message);
-      return;
-    }
-
-    await refreshProcessLinks();
-    alert("The Process Canvas was linked to the CBMX process. This creates only the association between the artefacts; it does not copy access rights automatically.");
-    navigate(`/app/pcb/${(pcbRow as ProcessCanvasBlueprintRow).id}`);
   }
 
   function linkExistingPCBToProcess(processId: string) {
+    if (saveLock.blocked() || deletingRef.current) return;
     if (isReadOnly) {
       alert("You have read-only access to this CBMX blueprint.");
       return;
@@ -612,17 +628,23 @@ function handleBlueprintSaveFailure(
   }
 
   async function confirmPCBSelection(pcbId: string, expectedCurrentPCBId: string | null) {
+    if (saveLock.blocked()) throw new Error("Saving… Please try linking again when saving finishes.");
     if (!pcbSelection || pcbSelection.blueprintId !== blueprintId || pcbSelection.userId !== user?.id || isReadOnly || deletingRef.current) {
       throw new Error("This blueprint is no longer available for linking. Close the dialog and reload the blueprint.");
     }
     if (!findProcessById(pcbSelection.processId)) throw new Error("This co-creation process no longer exists. Close the dialog and reload the blueprint.");
-    await linkAvailableProcessCanvas({ blueprintId: pcbSelection.blueprintId, processId: pcbSelection.processId, pcbId, expectedCurrentPCBId });
-    await refreshProcessLinks();
-    setPCBSelection(null);
+    if (!(await ensureSavedBeforeIO()) || !saveLock.begin()) throw new Error("Save the blueprint before linking. Please try again when saving finishes.");
+    try {
+      await linkAvailableProcessCanvas({ blueprintId: pcbSelection.blueprintId, processId: pcbSelection.processId, pcbId, expectedCurrentPCBId });
+      if (!saveLock.isCurrent()) return;
+      await refreshProcessLinks();
+      if (saveLock.isCurrent()) setPCBSelection(null);
+    } finally { saveLock.end(); }
   }
 
 
   async function unlinkPCBFromProcess(processId: string) {
+    if (saveLock.blocked() || deletingRef.current) return;
     if (isReadOnly) {
       alert("You have read-only access to this CBMX blueprint.");
       return;
@@ -649,18 +671,26 @@ function handleBlueprintSaveFailure(
 
     const process = findProcessById(processId);
     const ok = window.confirm(`Unlink the Process Canvas from process “${process?.name || processId}”?`);
-    if (!ok) return;
+    if (!ok || !(await ensureSavedBeforeIO()) || !saveLock.begin()) return;
 
-    setDbBusy(true);
-    const { error } = await supabase.rpc("unlink_cbmx_process_link", {
-      p_cbmx_blueprint_id: blueprintId,
-      p_cbmx_process_id: processId,
-    });
-    setDbBusy(false);
+    try {
+      setDbBusy(true);
+      const { error } = await supabase.rpc("unlink_cbmx_process_link", {
+        p_cbmx_blueprint_id: blueprintId,
+        p_cbmx_process_id: processId,
+      });
+      setDbBusy(false);
 
-    if (error) return alert("Unlink failed: " + error.message);
+      if (!saveLock.isCurrent()) return;
+      if (error) return alert("Unlink failed: " + error.message);
 
-    await refreshProcessLinks();
+      await refreshProcessLinks();
+    } catch (error) {
+      if (saveLock.isCurrent()) alert(error instanceof Error ? error.message : "Unlink failed.");
+    } finally {
+      if (saveLock.isCurrent()) setDbBusy(false);
+      saveLock.end();
+    }
   }
 
   function openLinkedPCB(processCanvasBlueprintId: string) {
@@ -700,9 +730,7 @@ function handleBlueprintSaveFailure(
     if (hasBlocking) return false;
     if (!isDirty) return true;
 
-    setIsAutoSaving(true);
     const ok = await saveBlueprintToDbDirect(draft, { silent: true });
-    setIsAutoSaving(false);
     return ok;
   }
 
@@ -712,7 +740,7 @@ function handleBlueprintSaveFailure(
    * The caller controls the continuation (export/import).
    */
   async function ensureSavedBeforeIO(): Promise<boolean> {
-    if (!draft) return false;
+    if (!draft || saveLock.blocked() || deletingRef.current) return false;
     if (isReadOnly) return true;
 
     if (hasBlocking) {
@@ -729,7 +757,7 @@ function handleBlueprintSaveFailure(
   }
 
   useEffect(() => {
-    if (deleting || deletionStale) return;
+    if (deleting || deletionStale || savingRef.current) return;
     if (isReadOnly) return;
     if (!draft) return;
     if (!isDirty) return;
@@ -750,7 +778,7 @@ function handleBlueprintSaveFailure(
         autoSaveTimerRef.current = null;
       }
     };
-  }, [draftHash, isDirty, hasBlocking, blueprintId, deleting, deletionStale]);
+  }, [draftHash, isDirty, hasBlocking, blueprintId, deleting, deletionStale, isReadOnly, user?.id]);
 
   // ---------------- JSON Export/Import ----------------
   function downloadJson(filename: string, obj: unknown) {
@@ -766,15 +794,16 @@ function handleBlueprintSaveFailure(
 
   async function exportJson() {
     const ok = await ensureSavedBeforeIO();
-    if (!ok) return;
+    if (!ok || !saveLock.isCurrent()) return;
     if (!draft) return;
 
     const name = (draft.meta?.name ?? "cbmx-blueprint").trim() || "cbmx-blueprint";
     // Include the field in legacy exports without changing the draft or its saved hash.
-    downloadJson(`${safeFilename(name)}.json`, prepareCBMXJsonExport(draft));
+    downloadJson(`${safeFilename(currentDraft.current?.meta?.name ?? name)}.json`, prepareCBMXJsonExport(currentDraft.current ?? draft));
   }
 
   function openImportDialog() {
+    if (saveLock.blocked() || deletingRef.current) return;
     if (isReadOnly) {
       alert("You have read-only access to this CBMX blueprint.");
       return;
@@ -789,7 +818,9 @@ function handleBlueprintSaveFailure(
       return;
     }
 
+    const initialDraft = draft;
     const text = await file.text();
+    if (saveLock.blocked() || deletingRef.current) return;
 
     let parsed: unknown;
     try {
@@ -824,11 +855,12 @@ function handleBlueprintSaveFailure(
       alert("Could not verify Process Canvas associations. The import was not applied.");
       return;
     }
+    if (saveLock.blocked() || deletingRef.current || currentDraft.current !== initialDraft) return;
     imported.meta = { ...(imported.meta ?? {}), name: normalizeName(imported.meta?.name) };
 
     if (importedErrors.length > 0) {
       setDraft(imported);
-      alert(`Import completed with ${importedErrors.length} validation error(s). Fix them, then click “Save Now”.`);
+      alert(`Import completed with ${importedErrors.length} validation error(s). Fix them to resume autosave.`);
       return;
     }
 
@@ -841,12 +873,12 @@ function handleBlueprintSaveFailure(
   // ---------------- PNG/PDF Export ----------------
   async function exportPng() {
     const ok = await ensureSavedBeforeIO();
-    if (!ok || !draft) return;
+    if (!ok || !draft || !saveLock.isCurrent()) return;
 
     const node = document.getElementById("cbmx-canvas");
     if (!node) return alert("Canvas not found.");
 
-    const dataUrl = await captureBlueprintPng(node, { blueprint: draft, processLinks });
+    const dataUrl = await captureBlueprintPng(node, { blueprint: currentDraft.current ?? draft, processLinks });
     const link = document.createElement("a");
     link.download = "cbmx-blueprint.png";
     link.href = dataUrl;
@@ -855,12 +887,12 @@ function handleBlueprintSaveFailure(
 
   async function exportPdf() {
     const ok = await ensureSavedBeforeIO();
-    if (!ok || !draft) return;
+    if (!ok || !draft || !saveLock.isCurrent()) return;
 
     const node = document.getElementById("cbmx-canvas");
     if (!node) return alert("Canvas not found.");
 
-    const dataUrl = await captureBlueprintPng(node, { blueprint: draft, processLinks });
+    const dataUrl = await captureBlueprintPng(node, { blueprint: currentDraft.current ?? draft, processLinks });
 
     const pdf = await createBlueprintPdf(dataUrl);
     pdf.save("cbmx-blueprint.pdf");
@@ -887,29 +919,32 @@ function handleBlueprintSaveFailure(
   if (!draft) return <div style={{ padding: 16 }}>No blueprint loaded.</div>;
 
   return (
-    <div className="cbmx-editor">
+    <EditingLockContext.Provider value={{ locked: saveLock.locked, blocked: saveLock.blocked }}>
+    <div className="cbmx-editor" data-saving={saveLock.locked}>
       <fieldset disabled={deleting} inert={deleting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       {deletionStale && <p role="alert" style={{ color: "#b91c1c" }}>
         This blueprint changed elsewhere. Your draft is preserved and autosave is paused. {" "}
-        <button type="button" onClick={() => void reloadBlueprintFromDb({ alertOnError: true })}>
+        <button type="button" disabled={saveLock.locked} onClick={() => {
+          if (!saveLock.blocked()) void reloadBlueprintFromDb({ alertOnError: true });
+        }}>
           Reload latest (discard local edits)
         </button>
       </p>}
       <CBMXEditorToolbar name={draft.meta?.name ?? ""} readOnly={isReadOnly} administrative={Boolean(adminView)}
-        autoSaving={isAutoSaving} dirty={isDirty} onNameChange={setDraftName}
+        autoSaving={saveLock.locked} failed={saveLock.failed} pausedMessage={deletionStale ? "Autosave paused — reload required" : hasBlocking ? "Autosave paused — validation errors" : undefined} dirty={isDirty} onNameChange={setDraftName}
         menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((current) => !current)} menuRef={menuRef}>
             {menuOpen ? (
               <div
                 role="menu" className="cbmx-toolbar-menu"
               >
-                <MenuItem label="Export CBMX to JSON" onClick={() => runMenuAction(exportJson)} disabled={isAutoSaving} />
-                <MenuItem label="Export CBMX to PNG" onClick={() => runMenuAction(exportPng)} disabled={isAutoSaving} />
-                <MenuItem label="Export CBMX to PDF" onClick={() => runMenuAction(exportPdf)} disabled={isAutoSaving} />
+                <MenuItem label="Export CBMX to JSON" onClick={() => runMenuAction(exportJson)} disabled={saveLock.locked} />
+                <MenuItem label="Export CBMX to PNG" onClick={() => runMenuAction(exportPng)} disabled={saveLock.locked} />
+                <MenuItem label="Export CBMX to PDF" onClick={() => runMenuAction(exportPdf)} disabled={saveLock.locked} />
 
                 {!isReadOnly ? (
                   <>
                     <div style={{ height: 1, background: "#eee", margin: "6px 0" }} />
-                    <MenuItem label="Import CBMX from JSON" onClick={() => runMenuAction(openImportDialog)} disabled={isAutoSaving} />
+                    <MenuItem label="Import CBMX from JSON" onClick={() => runMenuAction(openImportDialog)} disabled={saveLock.locked} />
                   </>
                 ) : null}
 
@@ -940,7 +975,7 @@ function handleBlueprintSaveFailure(
         <CBMXTable
           blueprint={draft}
           presentation={isReadOnly ? "readonly" : "editor"}
-          onChange={isReadOnly ? undefined : setDraft}
+          onChange={isReadOnly ? undefined : changeDraft}
           processLinks={processLinks}
           onCreatePCBForProcess={isReadOnly ? undefined : (processId) => void createPCBForProcess(processId)}
           onLinkExistingPCBToProcess={isReadOnly ? undefined : (processId) => void linkExistingPCBToProcess(processId)}
@@ -958,6 +993,7 @@ function handleBlueprintSaveFailure(
         blueprintId={pcbSelection.blueprintId} processId={pcbSelection.processId} processName={pcbSelection.processName}
         initiallyLinked={pcbSelection.initiallyLinked} onCancel={() => setPCBSelection(null)} onConfirm={confirmPCBSelection} />}
     </div>
+    </EditingLockContext.Provider>
   );
 }
 

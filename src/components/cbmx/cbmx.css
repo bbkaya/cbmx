@@ -753,3 +753,10 @@
 }
 .cbmx-matrix .cbmx-pcb-open:hover { color: #0d4678; text-decoration-color: currentColor; }
 .cbmx-matrix .cbmx-pcb-open:focus-visible { outline: 2px solid #0d4678; outline-offset: 2px; }
+
+/* Saving keeps the editor structure and active drafts in place. */
+.cbmx-editor .cbmx-save-status[data-state="failed"] { color: #b91c1c; }
+.cbmx-editor .cbmx-save-status[data-state="paused"] { color: #8a5b16; }
+.cbmx-editor .cbmx-blueprint-name:disabled { opacity: .7; }
+.cbmx-matrix [aria-disabled="true"] { cursor: default; opacity: .7; }
+.cbmx-matrix .cbmx-inline-input:read-only { opacity: .8; }

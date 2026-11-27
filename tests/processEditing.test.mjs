@@ -270,7 +270,9 @@ test("deletion cannot race an in-flight autosave", async () => {
   await change(container.querySelector('input[aria-label="Blueprint name"]'), "Changed");
   await waitForAutosave(); assert.equal(typeof release, "function");
   await click(button("Delete"));
-  assert.match(container.querySelector('[role="alert"]').textContent, /save is in progress/);
+  assert.equal(button("Delete").disabled, true);
+  assert.match(container.querySelector('.cbmx-save-status').textContent, /Saving/);
+  assert.ok(input(), "Active process draft remains mounted");
   assert.equal(calls.filter(c => c.name === "delete_cbmx_process_with_version").length, 0);
   await act(async () => release()); await flush();
 });
@@ -483,13 +485,13 @@ for (const reason of ['stale','forbidden','network']) test(`release: ${reason} a
     assert.deepEqual(row.blueprint_json, { ...original, meta: { ...original.meta, name: 'Concurrent server name' } });
   } else {
     assert.equal(container.querySelector('input[aria-label="Blueprint name"]').value, 'Local pending name');
-    assert.deepEqual(row.blueprint_json, original); assert.match(container.querySelector('.cbmx-save-status').textContent, /Unsaved changes/);
+    assert.deepEqual(row.blueprint_json, original); assert.match(container.querySelector('.cbmx-save-status').textContent, /Save failed — changes retained/);
   }
 });
 
-test('release: a pending autosave must preserve a later committed edit', {
-  todo: 'Pre-existing on original base 3282e31 and redesign: late save response replaces newer local edits. Release gate; see RELEASE_READINESS.md.',
-}, async () => {
+// R1: retain the original delayed response and final desired value; the new contract
+// explicitly prevents the vulnerable commit, then permits it after unlocking.
+test('release: a pending autosave blocks a later commit until unlocking, without losing it', async () => {
   await mount(); let finish;
   rpcOverride = (name, args) => name === 'save_blueprint_with_version' ? new Promise(resolve => {
     finish = async () => resolve(await defaultRpc(name, args));
@@ -497,6 +499,12 @@ test('release: a pending autosave must preserve a later committed edit', {
   await change(container.querySelector('input[aria-label="Blueprint name"]'), 'First saved name');
   await waitForAutosave(); assert.ok(finish);
   await change(container.querySelector('input[aria-label="Blueprint name"]'), 'Later committed local name');
+  assert.equal(container.querySelector('input[aria-label="Blueprint name"]').value, 'First saved name', 'The attempted mutation is rejected during the request');
+  assert.equal(container.querySelector('input[aria-label="Blueprint name"]').disabled, true);
   await act(async () => finish()); await flush();
+  assert.equal(container.querySelector('input[aria-label="Blueprint name"]').disabled, false);
+  await change(container.querySelector('input[aria-label="Blueprint name"]'), 'Later committed local name');
   assert.equal(container.querySelector('input[aria-label="Blueprint name"]').value, 'Later committed local name');
+  await waitForAutosave(); await act(async () => finish()); await flush();
+  assert.equal(row.name, 'Later committed local name');
 });
