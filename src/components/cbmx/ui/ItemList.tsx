@@ -7,7 +7,7 @@ export type ListItem = { key: string; value: string; displayValue?: ReactNode };
 type ItemActions = { commit: (value: string) => void; editingChange: (editing: boolean) => void };
 
 /** UI identity is scoped to a complete source-list revision, never to filtered positions. */
-export default function ItemList({ items, revision, label, addLabel, readOnly, numbered, onCommit, onAdd, onRemove, renderItem, renderAddition, className = "" }: {
+export default function ItemList({ items, revision, label, addLabel, readOnly, numbered, onCommit, onAdd, onRemove, onEditingChange, renderItem, renderAddition, className = "" }: {
   items: ListItem[];
   revision: string;
   label: string;
@@ -17,6 +17,7 @@ export default function ItemList({ items, revision, label, addLabel, readOnly, n
   onCommit: (key: string, value: string) => void;
   onAdd: (value: string) => void;
   onRemove?: (key: string) => void;
+  onEditingChange?: (editing: boolean) => void;
   renderItem?: (item: ListItem, actions: ItemActions) => ReactNode;
   renderAddition?: (commit: (value: string) => void, cancel: () => void) => ReactNode;
   className?: string;
@@ -28,6 +29,12 @@ export default function ItemList({ items, revision, label, addLabel, readOnly, n
   const [focusTarget, setFocusTarget] = useState<{ key?: string; position?: number } | null>(null);
 
   const handledFocus = useRef<typeof focusTarget>(null);
+  const hasDraft = view.revision === revision && (view.adding || view.active.length > 0);
+
+  useLayoutEffect(() => {
+    onEditingChange?.(hasDraft);
+    return () => onEditingChange?.(false);
+  }, [hasDraft, onEditingChange]);
 
   if (view.revision !== revision) {
     // Discard stale drafts before React can reuse an index for a different source record.

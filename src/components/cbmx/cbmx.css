@@ -440,6 +440,42 @@
 .cbmx-matrix .cbmx-remove-actor:hover { background: #ffffff26; }
 .cbmx-matrix .cbmx-remove-actor:focus-visible { outline: 2px solid #d8ecff; outline-offset: 2px; }
 
+.cbmx-matrix .cbmx-actor-cell--positioning {
+  position: relative;
+  /* Reserve one compact control line below the shared inline cell padding. */
+  padding-bottom: 36px !important;
+}
+
+.cbmx-matrix .cbmx-actor-position {
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.cbmx-matrix .cbmx-move-actor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #c5d3e2;
+  border-radius: 5px;
+  background: #f6f9fc;
+  color: #45627e;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.cbmx-matrix .cbmx-move-actor:hover:not(:disabled) { background: #e0ecf7; border-color: #adc5de; }
+.cbmx-matrix .cbmx-move-actor:focus-visible { outline: 2px solid #0d4678; outline-offset: 2px; }
+.cbmx-matrix .cbmx-move-actor:disabled { opacity: .4; cursor: default; }
+.cbmx-matrix .cbmx-move-notice { font-size: 11px; font-weight: 400; line-height: 1.35; color: #45627e; }
+
 .cbmx-matrix .cbmx-row--actorVP > td:not(:first-child) {
   background: #f0f5fb;
   border: 1px solid #e0e9f2;

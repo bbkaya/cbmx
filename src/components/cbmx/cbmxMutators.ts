@@ -197,6 +197,16 @@ export function removeProcessById(next: CBMXBlueprint, processId: string) {
 
 /* ---------------- actors ---------------- */
 
+export function moveActor(next: CBMXBlueprint, actorId: string, direction: "left" | "right") {
+  if (direction !== "left" && direction !== "right") return;
+  const index = next.actors.findIndex(actor => actor.id === actorId);
+  if (index < 2) return;
+  const targetIndex = direction === "left" ? index - 1 : index + 1;
+  if (targetIndex < 2 || targetIndex >= next.actors.length) return;
+  const [actor] = next.actors.splice(index, 1);
+  next.actors.splice(targetIndex, 0, actor);
+}
+
 function nextActorNumericId(actors: Actor[]): number {
   let maxN = 0;
   for (const a of actors) {

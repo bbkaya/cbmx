@@ -176,3 +176,144 @@ test('UI removes an additional Customer with confirmation and keeps exactly two 
   window.confirm = () => true; await click(container.querySelector('.cbmx-remove-actor'));
   assert.deepEqual(blueprint.actors.map(a => a.id), ['A1', 'A2', 'A4', 'A5']); assert.ok(blueprint.coCreationProcesses.every(p => !p.participantActorIds.includes('A3')));
 });
+
+const moveButtons = () => [...container.querySelectorAll('.cbmx-move-actor')];
+const moveButton = (index, direction) => container.querySelectorAll('.cbmx-row--actor > td')[index + 1].querySelectorAll('.cbmx-move-actor')[direction === 'left' ? 0 : 1];
+const names = () => [...container.querySelectorAll('.cbmx-actor-header')].map(node => node.textContent.replace('−', '').trim());
+const changeInput = async (input, value) => act(async () => {
+  Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, value);
+  input.dispatchEvent(new window.Event('input', { bubbles: true }));
+});
+
+test('moveActor moves complete objects by stable ID in both directions and preserves all references', () => {
+  blueprint.actors[3].id = 'stable-employer'; blueprint.actors[3].type = 'Customer';
+  blueprint.actors[3].extension = { arbitrary: ['retained'] };
+  blueprint.coCreationProcesses[0].participantActorIds.push('stable-employer');
+  const original = structuredClone(blueprint), array = blueprint.actors, actor = array[3], processes = blueprint.coCreationProcesses;
+  mutators.moveActor(blueprint, actor.id, 'left');
+  assert.equal(blueprint.actors, array); assert.equal(array[2], actor); assert.equal(blueprint.coCreationProcesses, processes);
+  assert.deepEqual(array.map(a => a.id), ['A1', 'A2', 'stable-employer', 'A3', 'A5']);
+  assert.deepEqual([...array].sort((a, b) => a.id.localeCompare(b.id)), [...original.actors].sort((a, b) => a.id.localeCompare(b.id)));
+  assert.deepEqual(blueprint.coCreationProcesses, original.coCreationProcesses);
+  mutators.moveActor(blueprint, actor.id, 'right'); assert.deepEqual(blueprint, original); assert.equal(array[3], actor);
+});
+
+test('moveActor rejects fixed positions, boundaries, unknown IDs and invalid directions without even writing', () => {
+  freeze(blueprint);
+  for (const id of ['A1', 'A2', 'missing']) for (const direction of ['left', 'right']) mutators.moveActor(blueprint, id, direction);
+  mutators.moveActor(blueprint, 'A3', 'left'); mutators.moveActor(blueprint, 'A5', 'right');
+  for (const direction of ['up', '', null, undefined, 1, {}, 'LEFT']) mutators.moveActor(blueprint, 'A4', direction);
+});
+
+test('repeated moves, JSON round trip, normalization, reclassification, append and removal retain intended order', () => {
+  blueprint.actors[2].type = blueprint.actors[4].type = 'Customer';
+  mutators.moveActor(blueprint, 'A5', 'left'); mutators.moveActor(blueprint, 'A5', 'left');
+  mutators.moveActor(blueprint, 'A3', 'right');
+  assert.deepEqual(blueprint.actors.map(a => a.id), ['A1', 'A2', 'A5', 'A4', 'A3']);
+  const imported = JSON.parse(JSON.stringify(domain.prepareCBMXJsonExport(blueprint)));
+  assert.deepEqual(imported, blueprint); assert.deepEqual(domain.normalizeActors(imported.actors).actors, blueprint.actors);
+  assert.deepEqual(domain.validateActorTypes(imported.actors), []);
+  mutators.moveActor(imported, 'A4', 'left'); assert.equal(imported.actors[2].id, 'A4');
+  const ids = blueprint.actors.map(a => a.id); mutators.setActorType(blueprint, 'A4', 'Customer');
+  assert.deepEqual(blueprint.actors.map(a => a.id), ids);
+  mutators.addActor(blueprint); assert.equal(blueprint.actors.at(-1).id, 'A6');
+  mutators.removeActor(blueprint, 'A5'); assert.deepEqual(blueprint.actors.map(a => a.id), ['A1', 'A2', 'A4', 'A3', 'A6']);
+  assert.ok(blueprint.coCreationProcesses.every(p => !p.participantActorIds.includes('A5')));
+});
+
+for (const count of [2, 3, 5, 10]) test(`${count} actors: paired controls protect fixed positions and array boundaries`, async () => {
+  blueprint = fixture(count); await render(); assert.equal(moveButtons().length, Math.max(0, count - 2) * 2);
+  assert.equal(container.querySelectorAll('.cbmx-row--actor > td')[1].querySelector('.cbmx-actor-position'), null);
+  assert.equal(container.querySelectorAll('.cbmx-row--actor > td')[2].querySelector('.cbmx-actor-position'), null);
+  for (let i = 2; i < count; i++) {
+    const left = moveButton(i, 'left'), right = moveButton(i, 'right');
+    assert.equal(left.disabled, i === 2); assert.equal(right.disabled, i === count - 1);
+    assert.equal(left.getAttribute('aria-label'), `Move ${blueprint.actors[i].name} left`);
+    assert.equal(right.title, `Move ${blueprint.actors[i].name} right`);
+    assert.equal(left.getAttribute('type'), 'button');
+  }
+  if (count > 2) { await click(moveButton(2, 'left')); await click(moveButton(count - 1, 'right')); }
+  assert.equal(updates.length, 0);
+});
+
+test('UI moves whole columns in every actor-dependent row and keeps actor text/list drafts attached to stable IDs', async () => {
+  await render(); const actor = blueprint.actors[3];
+  const originalCells = [...container.querySelectorAll('tr')].map(row => {
+    const cells = [...row.children];
+    if (![6, 11].includes(cells.length)) return null;
+    return [row, cells.length === 6 ? [cells[4]] : [cells[7], cells[8]]];
+  }).filter(Boolean);
+  await click(container.querySelectorAll('.cbmx-actor-header [title="Click to edit"]')[3]);
+  const input = container.querySelector('.cbmx-actor-header input'); await changeInput(input, 'Uncommitted employer');
+  const kpiRow = container.querySelector('.cbmx-row--kpis');
+  await click(kpiRow.children[4].querySelector('[title="Click to edit"]'));
+  const kpiDraft = kpiRow.querySelector('input'); await changeInput(kpiDraft, 'Draft KPI');
+  await click(moveButton(3, 'left')); await render(); assert.equal(blueprint.actors[2].id, actor.id);
+  assert.equal(container.querySelector('.cbmx-actor-header input'), input); assert.equal(input.value, 'Uncommitted employer');
+  assert.equal(kpiRow.children[3].querySelector('input'), kpiDraft); assert.equal(kpiDraft.value, 'Draft KPI');
+  for (const [row, cells] of originalCells) {
+    const current = [...row.children]; assert.deepEqual(current.length === 6 ? [current[3]] : [current[5], current[6]], cells);
+  }
+  await key(input, 'Enter'); await render(); assert.equal(blueprint.actors[2].name, 'Uncommitted employer');
+  assert.equal(blueprint.actors[3].name.includes('Service delivery'), true);
+  await key(kpiDraft, 'Enter'); await render(); assert.ok(blueprint.actors[2].kpis.some(k => k.name === 'Draft KPI'));
+});
+
+test('process edit/add disables moves with an explanation, retains draft and unlocks on commit or cancel', async () => {
+  await render(); await click(container.querySelector('.cbmx-process-trigger'));
+  const input = container.querySelector('input[aria-label="Co-creation process"]'); await changeInput(input, 'Draft process (A1, A4)');
+  assert.ok(moveButtons().every(b => b.disabled)); assert.match(container.querySelector('.cbmx-move-notice').textContent, /Finish or cancel/);
+  await click(moveButton(3, 'left')); assert.equal(updates.length, 0); assert.equal(input.value, 'Draft process (A1, A4)');
+  await key(input, 'Enter'); await render(); assert.equal(moveButton(3, 'left').disabled, false);
+  await click(moveButton(3, 'left')); await render(); assert.equal(blueprint.actors[2].id, 'A4');
+  assert.deepEqual(blueprint.coCreationProcesses[0].participantActorIds, ['A1', 'A4']);
+  await click(container.querySelector('.cbmx-process-list .cbmx-add-item'));
+  assert.ok(moveButtons().every(b => b.disabled));
+  await key(container.querySelector('input[aria-label="Co-creation process"]'), 'Escape');
+  assert.equal(moveButton(3, 'left').disabled, false); assert.equal(container.querySelector('.cbmx-move-notice'), null);
+});
+
+test('external reorder invalidates a process draft with the existing visible notice and stale commit guard', async () => {
+  await render(); const revision = mutators.processListRevision(blueprint);
+  await click(container.querySelector('.cbmx-process-trigger'));
+  await changeInput(container.querySelector('input[aria-label="Co-creation process"]'), 'Old draft');
+  mutators.moveActor(blueprint, 'A4', 'left'); blueprint = structuredClone(blueprint); await render();
+  assert.equal(container.querySelector('input[aria-label="Co-creation process"]'), null);
+  assert.match(container.querySelector('.cbmx-list-notice').textContent, /Uncommitted edits were cancelled/);
+  assert.throws(() => mutators.commitProcessItem(blueprint, revision, 'P1', 'Old draft'), /process list changed/);
+  assert.equal(moveButton(3, 'left').disabled, false); assert.equal(updates.length, 0);
+});
+
+test('multiple movements before props rerender serialize against latest array and save locks prevent mutations', async () => {
+  await render(); const right = moveButton(2, 'right');
+  await act(async () => { right.click(); right.click(); });
+  assert.deepEqual(blueprint.actors.map(a => a.id), ['A1', 'A2', 'A4', 'A5', 'A3']); assert.equal(updates.length, 2);
+  locked = true; await click(right); assert.equal(updates.length, 2);
+  await render(); assert.ok(moveButtons().every(b => b.disabled));
+  locked = false; await render(); await click(moveButton(4, 'left')); await render(); assert.equal(blueprint.actors[3].id, 'A3');
+});
+
+test('type menus close on focus leaving for movement; reclassification after a move changes no order', async () => {
+  await render(); await click(triggers()[1]); const arrow = moveButton(3, 'left');
+  await act(async () => arrow.focus()); assert.equal(options().length, 0);
+  await click(arrow); await render(); const order = blueprint.actors.map(a => a.id);
+  await click(triggers()[0]); await click(options()[0]); await render();
+  assert.deepEqual(blueprint.actors.map(a => a.id), order); assert.equal(blueprint.actors[2].type, 'Customer');
+});
+
+for (const props of [{ presentation: 'readonly' }, { presentation: 'export' }, { onChange: undefined }])
+  test(`positioning adds no controls or space in static view ${JSON.stringify(props)}`, async () => {
+    await render(props); assert.equal(container.querySelector('.cbmx-actor-position,.cbmx-move-actor,.cbmx-move-notice'), null);
+    assert.deepEqual(names(), blueprint.actors.map(a => a.name)); assert.equal(updates.length, 0);
+  });
+
+test('movement stays disabled until every concurrent process draft closes, including failed commits', async () => {
+  await render(); const processTriggers = [...container.querySelectorAll('.cbmx-process-trigger')];
+  await click(processTriggers[0]); await click(processTriggers[1]);
+  const fields = [...container.querySelectorAll('input[aria-label="Co-creation process"]')];
+  await changeInput(fields[0], ''); await key(fields[0], 'Enter');
+  assert.match(container.querySelector('[role="alert"]').textContent, /Enter a co-creation process name/);
+  assert.ok(moveButtons().every(button => button.disabled));
+  await key(fields[0], 'Escape'); assert.ok(moveButtons().every(button => button.disabled));
+  await key(fields[1], 'Escape'); assert.equal(moveButton(3, 'left').disabled, false);
+});

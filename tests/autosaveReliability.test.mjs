@@ -319,3 +319,73 @@ for (const multi of [false, true]) test(`cbmx: ${multi ? 'multi-customer' : 'leg
   assert.deepEqual(model.rows.cbmx.blueprint_json, imported); assert.equal(model.rows.cbmx.version_no, 2);
   assert.equal(actorTypeTrigger().textContent, multi ? 'Customer' : 'Other'); assert.equal(timers.size, 0);
 });
+
+const actorMove = (index, direction) => container.querySelectorAll('.cbmx-row--actor > td')[index + 1]?.querySelectorAll('.cbmx-move-actor')[direction === 'left' ? 0 : 1];
+const actorNames = () => [...container.querySelectorAll('.cbmx-actor-header')].map(node => node.textContent.replace('−', '').trim());
+const storedIds = () => model.rows.cbmx.blueprint_json.actors.map(actor => actor.id);
+function fiveActors() {
+  const bp = fixture(5, 'dense'); bp.actors[3].type = bp.actors[4].type = 'Customer';
+  model.rows.cbmx.blueprint_json = bp;
+  return structuredClone(bp);
+}
+for (const role of ['owner', 'editor']) test(`cbmx: ${role} movements debounce together, persist complete JSON and reopen in order`, async () => {
+  const before = fiveActors(); model.role = role; if (role === 'editor') model.user.id = 'editor-id';
+  await mount('cbmx'); await click(actorMove(4, 'left')); await click(actorMove(3, 'left'));
+  await change(nameInput(), 'Unrelated name edit');
+  assert.match(status(), /Unsaved changes/); assert.equal(writes().length, 0); assert.equal(timers.size, 1);
+  await fireAutosave(); assert.equal(writes().length, 1);
+  const expected = structuredClone(before); const [moved] = expected.actors.splice(4, 1); expected.actors.splice(2, 0, moved); expected.meta.name = 'Unrelated name edit';
+  assert.deepEqual(writes()[0].args.p_blueprint_json, expected);
+  assert.ok([...container.querySelectorAll('.cbmx-move-actor')].every(button => button.disabled));
+  await click(actorMove(2, 'right')); assert.equal(writes().length, 1);
+  await finish('ok'); assert.deepEqual(model.rows.cbmx.blueprint_json, expected); assert.equal(model.rows.cbmx.version_no, 2);
+  await act(async () => root.unmount()); root = createRoot(container); await mount('cbmx');
+  assert.deepEqual(actorNames(), expected.actors.map(actor => actor.name)); assert.equal(timers.size, 0);
+  await click(actorMove(2, 'right')); await fireAutosave(); assert.equal(writes()[1].args.p_loaded_version_no, 2);
+  await finish('ok'); assert.deepEqual(storedIds(), ['A1', 'A2', 'A3', 'A5', 'A4']);
+});
+
+test('cbmx: movement during a prior unrelated save is blocked, then succeeds after unlock', async () => {
+  fiveActors(); await mount('cbmx'); await startSave();
+  await click(actorMove(3, 'left')); assert.deepEqual(actorNames(), fixture(5, 'dense').actors.map(actor => actor.name));
+  await finish('ok'); await click(actorMove(3, 'left')); await fireAutosave(); await finish('ok');
+  assert.deepEqual(storedIds(), ['A1', 'A2', 'A4', 'A3', 'A5']);
+});
+
+for (const outcome of ['network', 'forbidden', 'stale']) test(`cbmx: movement keeps existing ${outcome} handling without overwriting unrelated server changes`, async () => {
+  const before = fiveActors(); await mount('cbmx'); await click(actorMove(3, 'left')); await fireAutosave();
+  if (outcome === 'stale') {
+    model.rows.cbmx.version_no = 2; model.rows.cbmx.blueprint_json.networkValueProposition.statement = 'Concurrent unrelated edit';
+    const actors = model.rows.cbmx.blueprint_json.actors; [actors[3], actors[4]] = [actors[4], actors[3]];
+  }
+  const serverSnapshot = structuredClone(model.rows.cbmx.blueprint_json);
+  await finish(outcome); assert.deepEqual(model.rows.cbmx.blueprint_json, serverSnapshot); assert.equal(timers.size, 0);
+  assert.match(status(), outcome === 'stale' ? /conflict.*reloaded/ : /Save failed — changes retained/);
+  assert.deepEqual(actorNames(), (outcome === 'stale' ? serverSnapshot.actors : [before.actors[0], before.actors[1], before.actors[3], before.actors[2], before.actors[4]]).map(actor => actor.name));
+});
+
+test('cbmx: reordered JSON export/import uses production handlers, preserves content and supports subsequent movement', async () => {
+  fiveActors(); await mount('cbmx'); await click(actorMove(3, 'left')); await click(button('Export/Import ▾'));
+  const originalCreate = URL.createObjectURL, originalRevoke = URL.revokeObjectURL, originalClick = window.HTMLAnchorElement.prototype.click;
+  let blob, downloads = 0;
+  URL.createObjectURL = value => { blob = value; return 'blob:synthetic'; }; URL.revokeObjectURL = () => {};
+  window.HTMLAnchorElement.prototype.click = () => { downloads++; };
+  try {
+    await click([...container.querySelectorAll('button')].find(button => /Export .* to JSON/.test(button.textContent)));
+    assert.equal(downloads, 0); await finish('ok'); assert.equal(downloads, 1);
+    const exported = JSON.parse(await blob.text()); assert.deepEqual(exported, model.rows.cbmx.blueprint_json);
+    assert.deepEqual(exported.actors.map(a => a.id), ['A1', 'A2', 'A4', 'A3', 'A5']);
+    model.hold = false; await importActorBlueprint(exported);
+    assert.deepEqual(model.rows.cbmx.blueprint_json.actors, exported.actors);
+    assert.deepEqual(model.rows.cbmx.blueprint_json.coCreationProcesses.map(p => p.participantActorIds), exported.coCreationProcesses.map(p => p.participantActorIds));
+    await click(actorMove(2, 'right')); await fireAutosave();
+    assert.deepEqual(storedIds(), ['A1', 'A2', 'A3', 'A4', 'A5']);
+  } finally { URL.createObjectURL = originalCreate; URL.revokeObjectURL = originalRevoke; window.HTMLAnchorElement.prototype.click = originalClick; }
+});
+
+test('cbmx: viewer has no positioning controls or autosave after loading reordered JSON', async () => {
+  fiveActors(); const actors = model.rows.cbmx.blueprint_json.actors; [actors[2], actors[3]] = [actors[3], actors[2]];
+  model.role = 'viewer'; model.user.id = 'viewer-id'; await mount('cbmx');
+  assert.equal(container.querySelector('.cbmx-actor-position,.cbmx-move-actor'), null);
+  assert.deepEqual(actorNames(), actors.map(a => a.name)); assert.equal(writes().length, 0); assert.equal(timers.size, 0);
+});

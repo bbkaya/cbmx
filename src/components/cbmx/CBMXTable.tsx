@@ -1,9 +1,10 @@
 import { useEditingLock } from "../../editing/EditingLock";
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import EditableText from "./ui/EditableText";
 import EditableProcess from "./ui/EditableProcess";
 import ItemList, { type ListItem } from "./ui/ItemList";
 import ActorTypeLabel from "./ui/ActorTypeLabel";
+import CBMXActionIcon from "./ui/CBMXActionIcon";
 import CBMXRowIcon from "./ui/CBMXRowIcon";
 import "./cbmx.css";
 
@@ -33,6 +34,7 @@ import {
   setServiceScenario,
   addActor,
   removeActor,
+  moveActor,
 } from "./cbmxMutators";
 
 import { cell, cellLeft, networkCell, rowLabelCell, rowLabelIndentCell, thCell } from "./styles";
@@ -150,7 +152,7 @@ const CBMX_HELP = {
   actorType:
     "The role category of an actor in the collaborative network: Customer (problem owner), Orchestrator (responsible for coordinating collaborative value creation), or Other network member. A blueprint may have multiple Customer actors but exactly one Orchestrator.",
   actor:
-    "A role (and optionally the concrete organization(s)) participating in the collaborative business model. (E.g., Traveler, Service Operator, Municipality, Service Provider.)",
+    "A role (and optionally the concrete organization(s)) participating in the collaborative business model. (E.g., Traveler, Service Operator, Municipality, Service Provider.) Additional actors can be repositioned using the left and right controls. The first Customer and Orchestrator remain in fixed positions.",
   actorValueProposition:
     "The distinct value an actor contributes as part of delivering the network value proposition. E.g., Safe public-space integration and policy alignment",
   costsBenefits:
@@ -266,6 +268,9 @@ export default function CBMXTable({
   const [helpOpen, setHelpOpen] = useState(false);
   const [openPCBMenuProcessId, setOpenPCBMenuProcessId] = useState<string | null>(null);
   const pcbMenuRef = useRef<HTMLDivElement | null>(null);
+  const [processEditing, setProcessEditing] = useState(false);
+  const moveNoticeId = useId();
+  const moveRestriction = processEditing ? "Finish or cancel the process edit before moving actors." : lock.locked ? "Saving… Please try again when saving finishes." : "";
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -430,11 +435,15 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                       + Add Actor
                     </button>
                   ) : null}
+                  {onChange && processEditing && N > 2 && <span id={moveNoticeId} role="status" className="cbmx-move-notice">
+                    {moveRestriction}
+                  </span>}
                 </div>
               </td>
               {actors.map((a, index) => (
                 <Fragment key={a.id}>
-                  <td colSpan={2} style={{ ...cellLeft, textAlign: "center" }}>
+                  <td colSpan={2} className={onChange && N > 2 ? "cbmx-actor-cell--positioning" : undefined}
+                    style={{ ...cellLeft, textAlign: "center" }}>
                     {a.id.startsWith("EMPTY-") ? null : (
                       <div className={`cbmx-actor-header cbmx-actor--${a.type.toLowerCase()}`}>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -468,6 +477,20 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
                         ) : null}
                       </div>
                     )}
+                    {onChange && index >= 2 && !a.id.startsWith("EMPTY-") && <div className="cbmx-actor-position" role="group"
+                      aria-label={`Reposition ${a.name || a.id}`} title={moveRestriction || undefined}>
+                      {(["left", "right"] as const).map(direction => {
+                        const label = `Move ${a.name || a.id} ${direction}`;
+                        return <button key={direction} type="button" className="cbmx-move-actor"
+                          aria-label={label} title={moveRestriction || label}
+                          aria-describedby={processEditing ? moveNoticeId : undefined}
+                          disabled={lock.locked || processEditing || (direction === "left" ? index === 2 : index === N - 1)}
+                          onClick={() => {
+                            if (processEditing || lock.blocked()) return;
+                            updateBlueprint(next => moveActor(next, a.id, direction));
+                          }}><CBMXActionIcon kind={direction} /></button>;
+                      })}
+                    </div>}
                   </td>
                 </Fragment>
               ))}
@@ -572,6 +595,7 @@ function canRoleMutatePCBLink(role: "owner" | "editor" | "viewer" | null | undef
               <td colSpan={colspanNetwork} style={cellLeft}>
                 <ItemList className="cbmx-process-list" items={processes.map((p, i) => ({ key: p.id, value: getProcessSlotLine(i) }))}
                   revision={processRevision} label="Co-creation processes" addLabel="Add process" readOnly={!onChange}
+                  onEditingChange={setProcessEditing}
                   onCommit={(id, value) => updateBlueprint(next => commitProcessItem(next, processRevision, id, value))}
                   onAdd={value => updateBlueprint(next => commitProcessItem(next, processRevision, null, value))}
                   renderAddition={(commit, cancel) => <EditableProcess value="" initiallyEditing onCommit={commit} onCancel={cancel} />}

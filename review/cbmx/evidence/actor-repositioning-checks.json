@@ -1,0 +1,467 @@
+{
+  "date": "2026-11-27",
+  "baseCommit": "b9b0d0a44861728a2d3f8c7e399f55b76ee9f472",
+  "automated": {
+    "runtime": "Node 20",
+    "tests": 342,
+    "passed": 342,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "typescript": "passed",
+    "build": "passed",
+    "buildWarnings": [
+      "Existing bundle chunk over 500 kB"
+    ]
+  },
+  "lint": {
+    "before": {
+      "errors": 37,
+      "warnings": 4
+    },
+    "after": {
+      "errors": 37,
+      "warnings": 4
+    },
+    "newIssues": 0,
+    "difference": "Only CBMXTable.tsx export line moved from 46 to 48"
+  },
+  "disposablePostgres": {
+    "engine": "PostgreSQL 17.4 (PGlite)",
+    "actorRepositioning": 7,
+    "multiCustomer": 7,
+    "processLinks": 18,
+    "processDeletion": 15,
+    "hostedAccess": false,
+    "limitations": "Incomplete existing local schema fixtures"
+  },
+  "browserCases": [
+    {
+      "name": "chromium-2-reordered",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 2,
+      "reordered": false,
+      "png": [
+        1240,
+        10316
+      ],
+      "exportNames": [
+        "Customer organization with a deliberately long organization name",
+        "Network coordinator with a deliberately long organization name"
+      ],
+      "exportRoles": [
+        "Customer",
+        "Orchestrator"
+      ],
+      "exportControls": 0,
+      "serializedControls": 0,
+      "allRolesSingleLineAndComplete": true,
+      "extraRows": 0
+    },
+    {
+      "name": "webkit-2-reordered",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 2,
+      "reordered": false,
+      "png": [
+        1240,
+        9930
+      ],
+      "exportNames": [
+        "Customer organization with a deliberately long organization name",
+        "Network coordinator with a deliberately long organization name"
+      ],
+      "exportRoles": [
+        "Customer",
+        "Orchestrator"
+      ],
+      "exportControls": 0,
+      "serializedControls": 0,
+      "allRolesSingleLineAndComplete": true,
+      "extraRows": 0
+    },
+    {
+      "name": "chromium-3-reordered",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 3,
+      "reordered": false,
+      "png": [
+        1660,
+        12494
+      ],
+      "exportNames": [
+        "Customer organization with a deliberately long organization name",
+        "Network coordinator with a deliberately long organization name",
+        "Service delivery partner with a deliberately long organization name"
+      ],
+      "exportRoles": [
+        "Customer",
+        "Orchestrator",
+        "Other"
+      ],
+      "exportControls": 0,
+      "serializedControls": 0,
+      "allRolesSingleLineAndComplete": true,
+      "extraRows": 0
+    },
+    {
+      "name": "webkit-3-reordered",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 3,
+      "reordered": false,
+      "png": [
+        1660,
+        12034
+      ],
+      "exportNames": [
+        "Customer organization with a deliberately long organization name",
+        "Network coordinator with a deliberately long organization name",
+        "Service delivery partner with a deliberately long organization name"
+      ],
+      "exportRoles": [
+        "Customer",
+        "Orchestrator",
+        "Other"
+      ],
+      "exportControls": 0,
+      "serializedControls": 0,
+      "allRolesSingleLineAndComplete": true,
+      "extraRows": 0
+    },
+    {
+      "name": "chromium-5-reordered",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 5,
+      "reordered": true,
+      "png": [
+        2500,
+        12170
+      ],
+      "exportNames": [
+        "Customer organization with a deliberately long organization name",
+        "Network coordinator with a deliberately long organization name",
+        "Service delivery partner with a deliberately long organization name",
+        "Employer with a saved actor draft",
+        "Community association with a deliberately long organization name"
+      ],
+      "exportRoles": [
+        "Customer",
+        "Orchestrator",
+        "Other",
+        "Customer",
+        "Other"
+      ],
+      "exportControls": 0,
+      "serializedControls": 0,
+      "allRolesSingleLineAndComplete": true,
+      "extraRows": 0
+    },
+    {
+      "name": "webkit-5-reordered",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 5,
+      "reordered": true,
+      "png": [
+        2500,
+        11730
+      ],
+      "exportNames": [
+        "Customer organization with a deliberately long organization name",
+        "Network coordinator with a deliberately long organization name",
+        "Service delivery partner with a deliberately long organization name",
+        "Employer with a saved actor draft",
+        "Community association with a deliberately long organization name"
+      ],
+      "exportRoles": [
+        "Customer",
+        "Orchestrator",
+        "Other",
+        "Customer",
+        "Other"
+      ],
+      "exportControls": 0,
+      "serializedControls": 0,
+      "allRolesSingleLineAndComplete": true,
+      "extraRows": 0
+    },
+    {
+      "name": "chromium-10-reordered",
+      "engine": "chromium",
+      "version": "158.0.8127.37",
+      "actors": 10,
+      "reordered": true,
+      "png": [
+        4600,
+        11870
+      ],
+      "exportNames": [
+        "Customer organization with a deliberately long organization name",
+        "Network coordinator with a deliberately long organization name",
+        "Service delivery partner with a deliberately long organization name",
+        "Community association with a deliberately long organization name",
+        "Technology provider with a deliberately long organization name",
+        "Research partner with a deliberately long organization name",
+        "Infrastructure provider with a deliberately long organization name",
+        "Support organization with a deliberately long organization name",
+        "Employer with a saved actor draft",
+        "Regional network with a deliberately long organization name"
+      ],
+      "exportRoles": [
+        "Customer",
+        "Orchestrator",
+        "Other",
+        "Other",
+        "Other",
+        "Other",
+        "Other",
+        "Other",
+        "Customer",
+        "Other"
+      ],
+      "exportControls": 0,
+      "serializedControls": 0,
+      "allRolesSingleLineAndComplete": true,
+      "extraRows": 0
+    },
+    {
+      "name": "webkit-10-reordered",
+      "engine": "webkit",
+      "version": "26.0",
+      "actors": 10,
+      "reordered": true,
+      "png": [
+        4600,
+        11444
+      ],
+      "exportNames": [
+        "Customer organization with a deliberately long organization name",
+        "Network coordinator with a deliberately long organization name",
+        "Service delivery partner with a deliberately long organization name",
+        "Community association with a deliberately long organization name",
+        "Technology provider with a deliberately long organization name",
+        "Research partner with a deliberately long organization name",
+        "Infrastructure provider with a deliberately long organization name",
+        "Support organization with a deliberately long organization name",
+        "Employer with a saved actor draft",
+        "Regional network with a deliberately long organization name"
+      ],
+      "exportRoles": [
+        "Customer",
+        "Orchestrator",
+        "Other",
+        "Other",
+        "Other",
+        "Other",
+        "Other",
+        "Other",
+        "Customer",
+        "Other"
+      ],
+      "exportControls": 0,
+      "serializedControls": 0,
+      "allRolesSingleLineAndComplete": true,
+      "extraRows": 0
+    }
+  ],
+  "interactions": [
+    "Fixed positions and boundaries",
+    "Complete actor cells move in all actor rows",
+    "Keyboard Enter/Space",
+    "Touch",
+    "Active actor name draft survives movement and commits correctly",
+    "Process drafts disable movement with visible explanation",
+    "400 px horizontal scrolling",
+    "Arrow alignment across different name lengths",
+    "Read-only controls absent"
+  ],
+  "nativeSafari": {
+    "version": "27.2 (22625.2.8.11.9)",
+    "tested": false,
+    "reason": "WebDriver session rejected: Allow remote automation is disabled in Safari Settings",
+    "settingChanged": false,
+    "remaining": "Manual native Safari PNG/PDF verification"
+  },
+  "restrictions": {
+    "schemaChanged": false,
+    "dependenciesAdded": false,
+    "processCanvasChanged": false,
+    "committed": false,
+    "deployed": false
+  },
+  "artifacts": [
+    {
+      "name": "chromium-2-reordered",
+      "png": [
+        1240,
+        10316
+      ],
+      "marginsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1,
+      "pdfSamePixels": true,
+      "placement": [
+        71.55362543621558,
+        595.28,
+        385.1681872818922,
+        0
+      ]
+    },
+    {
+      "name": "webkit-2-reordered",
+      "png": [
+        1240,
+        9930
+      ],
+      "marginsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1,
+      "pdfSamePixels": true,
+      "placement": [
+        74.33506545820745,
+        595.28,
+        383.7774672708963,
+        0
+      ]
+    },
+    {
+      "name": "chromium-3-reordered",
+      "png": [
+        1660,
+        12494
+      ],
+      "marginsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1,
+      "pdfSamePixels": true,
+      "placement": [
+        79.09114775092043,
+        595.28,
+        381.3994261245398,
+        0
+      ]
+    },
+    {
+      "name": "webkit-3-reordered",
+      "png": [
+        1660,
+        12034
+      ],
+      "marginsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1,
+      "pdfSamePixels": true,
+      "placement": [
+        82.11440917400698,
+        595.28,
+        379.8877954129965,
+        0
+      ]
+    },
+    {
+      "name": "chromium-5-reordered",
+      "png": [
+        2500,
+        12170
+      ],
+      "marginsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1,
+      "pdfSamePixels": true,
+      "placement": [
+        122.28430566967954,
+        595.28,
+        359.80284716516024,
+        0
+      ]
+    },
+    {
+      "name": "webkit-5-reordered",
+      "png": [
+        2500,
+        11730
+      ],
+      "marginsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1,
+      "pdfSamePixels": true,
+      "placement": [
+        126.87127024722932,
+        595.28,
+        357.50936487638535,
+        0
+      ]
+    },
+    {
+      "name": "chromium-10-reordered",
+      "png": [
+        4600,
+        11870
+      ],
+      "marginsLTRB": [
+        16,
+        16,
+        16,
+        18
+      ],
+      "pdfPages": 1,
+      "pdfSamePixels": true,
+      "placement": [
+        230.68980623420387,
+        595.28,
+        305.6000968828981,
+        0
+      ]
+    },
+    {
+      "name": "webkit-10-reordered",
+      "png": [
+        4600,
+        11444
+      ],
+      "marginsLTRB": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pdfPages": 1,
+      "pdfSamePixels": true,
+      "placement": [
+        239.27717581265293,
+        595.28,
+        301.30641209367354,
+        0
+      ]
+    }
+  ]
+}
