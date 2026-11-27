@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { after, before, test } from "node:test";
 import { act, createElement } from "react";
 import { createServer } from "vite";
@@ -30,6 +31,9 @@ before(async () => {
     Object.defineProperty(globalThis, key, { configurable: true, value: key === "window" ? window : window[key] });
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   globalThis.getComputedStyle = window.getComputedStyle.bind(window);
+  const style = document.createElement('style');
+  style.textContent = await readFile(new URL('../src/components/cbmx/cbmx.css', import.meta.url), 'utf8');
+  document.head.append(style);
   Object.defineProperty(document, "fonts", { value: { ready: Promise.resolve() } });
   globalThis.Image = class {
     constructor() { Object.assign(this, imageDimensions); }
@@ -337,4 +341,28 @@ test('multi-customer capture shares static labels, actor classes and ordering wi
   const png = await capture(document.createElement('div'), data);
   const pdf = await createBlueprintPdf(png); assert.equal(pdf.images.length, 1);
   assert.equal(JSON.stringify(data), before);
+});
+
+
+for (const count of [2, 5, 10]) test(`${count} actors: export pills override cell wrapping without changing label design`, async () => {
+  const data = snapshot(count);
+  if (count > 2) data.blueprint.actors[2].type = 'Customer';
+  data.blueprint.actors.forEach((actor, index) => { actor.name = index % 2 ? 'Long actor name across the collaborative network' : 'A'; });
+  rasterize = async node => {
+    const labels = [...node.querySelectorAll('.cbmx-role')];
+    assert.deepEqual(labels.map(label => label.textContent), data.blueprint.actors.map(actor => actor.type));
+    assert.equal(node.querySelector('.cbmx-role-trigger,.cbmx-role-chevron,.cbmx-role-menu'), null);
+    for (const label of labels) {
+      const css = getComputedStyle(label);
+      assert.equal(css.whiteSpace, 'nowrap');
+      assert.equal(css.overflowWrap, 'normal');
+      assert.equal(css.wordBreak, 'normal');
+      assert.equal(css.display, 'inline-flex');
+      assert.equal(css.fontSize, '11px');
+      assert.equal(css.borderRadius, '20px');
+      assert.equal(label.querySelectorAll('.cbmx-row-icon').length, 1);
+    }
+    return 'data:image/png;base64,synthetic';
+  };
+  await capture(document.createElement('div'), data);
 });

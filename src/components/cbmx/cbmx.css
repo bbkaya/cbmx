@@ -304,6 +304,10 @@
 }
 
 .cbmx-matrix .cbmx-role {
+  /* Keep pills intact when rasterization reflows copied fractional widths. */
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
   display: inline-flex;
   align-items: center;
   justify-content: center;
